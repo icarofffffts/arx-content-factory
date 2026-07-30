@@ -121,7 +121,7 @@ export default function Landing({ onNavigate, user }: { onNavigate: (p: string) 
       {/* PRICING (inline) */}
       {showPricing && (
         <section className="py-20 px-6">
-          <Pricing onNavigate={onNavigate} user={user} />
+          <Pricing onNavigate={onNavigate} user={user} plan={null} />
         </section>
       )}
 

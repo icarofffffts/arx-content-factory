@@ -10,7 +10,7 @@ const FALLBACK_PLANS = [
 export default function Pricing({ onNavigate, user, plan: currentPlan }: {
   onNavigate: (p: string) => void
   user: any
-  plan: any
+  plan?: any
 }) {
   const [plans, setPlans] = useState<any[]>([])
   const [annual, setAnnual] = useState(false)

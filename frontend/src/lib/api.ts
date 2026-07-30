@@ -32,12 +32,12 @@ async function request<T>(path: string, opts: RequestInit = {}): Promise<T> {
 // Auth
 export const api = {
   login: (email: string, password: string) =>
-    request<{ success: boolean; user: any; token: string; plan: any }>('/api/v2/auth/login', {
+    request<{ success: boolean; user?: any; token?: string; plan?: any; error?: string }>('/api/v2/auth/login', {
       method: 'POST', body: JSON.stringify({ email, password })
     }),
 
   register: (email: string, password: string, full_name?: string) =>
-    request<{ success: boolean; user: any; token: string }>('/api/v2/auth/register', {
+    request<{ success: boolean; user?: any; token?: string; error?: string }>('/api/v2/auth/register', {
       method: 'POST', body: JSON.stringify({ email, password, full_name })
     }),
 
