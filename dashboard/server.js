@@ -56,11 +56,13 @@ app.post('/api/logout', (req, res) => {
   return res.json({ success: true });
 });
 
-// Auth Middleware for Protected API Endpoints & Dashboard HTML
+// Auth Middleware — only protect /api/ and /dashboard/; React landing page is public
 app.use((req, res, next) => {
-  if (req.path.startsWith('/r/') || req.path === '/login.html' || req.path === '/api/login'
-      || req.path === '/api/v2/auth/register' || req.path === '/api/v2/auth/login'
-      || req.path === '/api/v2/plans') {
+  const isProtected = req.path.startsWith('/api/') || req.path.startsWith('/dashboard/');
+  if (!isProtected) return next();
+
+  if (req.path === '/api/login' || req.path === '/api/v2/auth/login'
+      || req.path === '/api/v2/auth/register' || req.path === '/api/v2/plans') {
     return next();
   }
 
@@ -74,7 +76,7 @@ app.use((req, res, next) => {
     return next();
   }
 
-  if (req.accepts('html') || req.path === '/' || req.path === '/index.html') {
+  if (req.accepts('html')) {
     return res.sendFile(path.join(__dirname, 'public', 'login.html'));
   }
 
@@ -82,7 +84,7 @@ app.use((req, res, next) => {
 });
 
 // Serve Static Dashboard Files AFTER Auth Middleware
-app.use(express.static(path.join(__dirname, 'public')));
+app.use('/dashboard', express.static(path.join(__dirname, 'public')));
 
 // 2. API: Get Pipeline Metrics
 app.get('/api/metrics', async (req, res) => {
@@ -975,7 +977,7 @@ if (fs.existsSync(frontendDist)) {
 
   // SPA fallback: todas as rotas React servem index.html (exceto API, /r/, /dashboard/)
   app.get('*', (req, res) => {
-    if (req.path.startsWith('/api/') || req.path.startsWith('/r/') || req.path.startsWith('/dashboard/')) {
+    if (req.path.startsWith('/api/') || req.path.startsWith('/r/')) {
       return res.status(404).json({ error: 'Not found' });
     }
     res.sendFile(path.join(frontendDist, 'index.html'));
