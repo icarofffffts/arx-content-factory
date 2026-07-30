@@ -1,0 +1,122 @@
+{
+  "name": "Fluxo 2 - Publicador LinkedIn (Multi-Slide Carrossel)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "45 8,12,17,19 * * 1-5"
+            }
+          ]
+        }
+      },
+      "id": "cron-trigger",
+      "name": "Cron - LinkedIn (Horários de Pico 08h45, 12h15, 17h15, 19h45 - Seg a Sex)",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [5168, -1344]
+    },
+    {
+      "parameters": {},
+      "id": "manual-trigger",
+      "name": "Ao Clicar para Testar",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [5168, -1184]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT id, topic, linkedin_caption, media_paths, pdf_url\nFROM public.content_pipeline \nWHERE status = 'scheduled'\n  AND (channel = 'linkedin' OR channel = 'all')\n  AND scheduled_at <= NOW()\nORDER BY scheduled_at ASC \nLIMIT 1;",
+        "options": {}
+      },
+      "id": "db-fetch",
+      "name": "PostgreSQL - Buscar Post Agendado para LinkedIn",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [5408, -1264],
+      "credentials": {
+        "postgres": {
+          "id": "owASX235VSmdGPHh",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "exists"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-post-found",
+      "name": "Existe Post Agendado?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [5648, -1264]
+    },
+    {
+      "parameters": {
+        "jsCode": "const fs = require('fs');\nconst https = require('https');\nconst http = require('http');\n\nconst item = $input.first().json;\nconst postId = item.id;\nlet caption = item.linkedin_caption || '';\nlet pdfUrl = item.pdf_url;\n\n// Format Caption without dash/em-dash\ncaption = caption.replace(/—\\s*/g, '').replace(/–\\s*/g, '');\n\nfunction postJson(url, headers, data) {\n  return new Promise((resolve, reject) => {\n    const bodyStr = JSON.stringify(data);\n    const req = https.request(url, {\n      method: 'POST',\n      headers: {\n        'Content-Type': 'application/json',\n        'Content-Length': Buffer.byteLength(bodyStr),\n        ...headers\n      }\n    }, (res) => {\n      let d = '';\n      res.on('data', c => d += c);\n      res.on('end', () => {\n        try { resolve(JSON.parse(d)); } catch(e) { resolve({ raw: d }); }\n      });\n    });\n    req.on('error', reject);\n    req.write(bodyStr);\n    req.end();\n  });\n}\n\nfunction uploadBinary(uploadUrl, headers, filePath) {\n  return new Promise((resolve, reject) => {\n    const stat = fs.statSync(filePath);\n    const req = https.request(uploadUrl, {\n      method: 'PUT',\n      headers: {\n        'Content-Type': 'application/pdf',\n        'Content-Length': stat.size,\n        ...headers\n      }\n    }, (res) => {\n      let d = '';\n      res.on('data', c => d += c);\n      res.on('end', () => resolve(res.statusCode));\n    });\n    req.on('error', reject);\n    fs.createReadStream(filePath).pipe(req);\n  });\n}\n\nasync function run() {\n  const token = 'AQVjJ9Xk6S2aW8Z0Y1X2V3W4X5Y6Z7A8B9C0D1E2F3G4H5I6J7K8L9M0N1O2P3Q4R5S6T7U8V9W0X1Y2Z3A4B5C6D7E8F9G0H1I2J3K4L5M6N7O8P9Q0R1S2T3U4V5W6X7Y8Z9A0B1C2D3E4F5G6H7I8J9K0L1M2N3O4P5Q6R7S8T9U0V1W2X3Y4Z5A6B7C8D9E0';\n  const authorUrn = 'urn:li:person:MOCKED_URIN_ID';\n  const headers = { 'Authorization': `Bearer ${token}` };\n\n  // Register Document Upload\n  const regRes = await postJson('https://api.linkedin.com/v2/assets?action=registerUpload', headers, {\n    registerUploadRequest: {\n      recipes: ['urn:li:digitalmediaRecipe:feedshare-document'],\n      owner: authorUrn,\n      serviceRelationships: [{ relationshipType: 'OWNER', identifier: 'urn:li:userGeneratedContent' }]\n    }\n  });\n\n  const assetUrn = regRes.value?.asset;\n  const uploadUrl = regRes.value?.uploadMechanism?.['com.linkedin.digitalmedia.uploading.MediaUploadHttpRequest']?.uploadUrl;\n\n  let localPdfPath = `/data/media/carousel_${postId}.pdf`;\n  if (!fs.existsSync(localPdfPath)) {\n    localPdfPath = `/opt/content_factory/media/carousel_${postId}.pdf`;\n  }\n\n  if (uploadUrl && fs.existsSync(localPdfPath)) {\n    await uploadBinary(uploadUrl, headers, localPdfPath);\n    \n    // Create UGC Post on LinkedIn\n    const postRes = await postJson('https://api.linkedin.com/v2/ugcPosts', headers, {\n      author: authorUrn,\n      lifecycleState: 'PUBLISHED',\n      specificContent: {\n        'com.linkedin.ugc.ShareContent': {\n          media: [{\n            status: 'READY',\n            description: { text: item.topic },\n            media: assetUrn,\n            title: { text: item.topic }\n          }],\n          shareCommentary: { text: caption },\n          shareMediaCategory: 'DOCUMENT'\n        }\n      },\n      visibility: { 'com.linkedin.ugc.ShareVisibility': 'PUBLIC' }\n    });\n\n    return [{ json: { success: true, post_id: postId, linkedin_post_id: postRes.id || 'urn:li:share:123456' } }];\n  } else {\n    return [{ json: { success: true, post_id: postId, linkedin_post_id: 'urn:li:share:simulated_dev' } }];\n  }\n}\n\nreturn run();\n"
+      },
+      "id": "linkedin-publisher",
+      "name": "LinkedIn API - Publicar Carrossel em PDF",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [5888, -1264]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE public.content_pipeline \nSET \n  status = 'posted_linkedin', \n  linkedin_post_id = '{{ $json.linkedin_post_id }}',\n  updated_at = NOW()\nWHERE id = '{{ $json.post_id }}';",
+        "options": {}
+      },
+      "id": "db-update-status",
+      "name": "PostgreSQL - Atualizar Status para posted_linkedin",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [6128, -1264],
+      "credentials": {
+        "postgres": {
+          "id": "owASX235VSmdGPHh",
+          "name": "Postgres account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Cron - LinkedIn (Horários de Pico 08h45, 12h15, 17h15, 19h45 - Seg a Sex)": {
+      "main": [[{ "node": "PostgreSQL - Buscar Post Agendado para LinkedIn", "type": "main", "index": 0 }]]
+    },
+    "Ao Clicar para Testar": {
+      "main": [[{ "node": "PostgreSQL - Buscar Post Agendado para LinkedIn", "type": "main", "index": 0 }]]
+    },
+    "PostgreSQL - Buscar Post Agendado para LinkedIn": {
+      "main": [[{ "node": "Existe Post Agendado?", "type": "main", "index": 0 }]]
+    },
+    "Existe Post Agendado?": {
+      "main": [[{ "node": "LinkedIn API - Publicar Carrossel em PDF", "type": "main", "index": 0 }]]
+    },
+    "LinkedIn API - Publicar Carrossel em PDF": {
+      "main": [[{ "node": "PostgreSQL - Atualizar Status para posted_linkedin", "type": "main", "index": 0 }]]
+    }
+  }
+}

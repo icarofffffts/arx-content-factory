@@ -1,0 +1,1 @@
+SELECT "versionId", "workflowId", "nodes", "connections" FROM workflow_history WHERE "versionId" IN ('04c8ebd2-a9ee-43d5-a145-bf3b3bb35ab9', 'a6bf244e-ce8c-4431-abd5-9848daea27a4', '962ad58d-b51c-46d8-aa52-75b342314d2b');

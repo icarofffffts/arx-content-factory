@@ -1,0 +1,105 @@
+{
+  "name": "WhatsApp - Teste Basico Evolution Go Node (funciona)",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [-480, -32],
+      "id": "3d438d79-4d12-499d-bbb7-13caa3ec9209",
+      "name": "When clicking 'Execute workflow'"
+    },
+    {
+      "parameters": {
+        "resource": "sendMessage",
+        "instanceApiKey": "26cbfa77-76c5-489c-9c98-bd2ce4ed6e8d",
+        "sendTextNumber": "5531995398002",
+        "sendTextContent": "teste",
+        "sendTextDelay": 1000,
+        "sendTextAdditionalFields": {},
+        "requestOptions": {}
+      },
+      "type": "n8n-nodes-evolution-go.evoGo",
+      "typeVersion": 1,
+      "position": [-128, 96],
+      "id": "4a8a4f5a-8132-4380-9de4-c237fa51e784",
+      "name": "Send text message",
+      "credentials": {
+        "evoGoApi": {
+          "id": "pJuORISTpF0VjreA",
+          "name": "EvoGo account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "sendMessage",
+        "operation": "sendButton",
+        "instanceApiKey": "26cbfa77-76c5-489c-9c98-bd2ce4ed6e8d",
+        "sendButtonNumber": "553195398002",
+        "sendButtonTitle": "teste",
+        "sendButtonDescription": "teste",
+        "sendButtonFooter": "teste",
+        "sendButtonButtons": {
+          "values": [
+            {
+              "copyCode": "teste",
+              "displayText": "teste",
+              "id": "teste",
+              "key": "teste",
+              "name": "teste"
+            }
+          ]
+        },
+        "sendButtonAdditionalFields": {},
+        "requestOptions": {}
+      },
+      "type": "n8n-nodes-evolution-go.evoGo",
+      "typeVersion": 1,
+      "position": [0, 240],
+      "id": "137d3547-f95f-40e3-b088-b2ff466c442b",
+      "name": "Send button message",
+      "credentials": {
+        "evoGoApi": {
+          "id": "pJuORISTpF0VjreA",
+          "name": "EvoGo account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "sendMessage",
+        "operation": "sendMedia",
+        "sendMediaAdditionalFields": {},
+        "requestOptions": {}
+      },
+      "type": "n8n-nodes-evolution-go.evoGo",
+      "typeVersion": 1,
+      "position": [-272, -32],
+      "id": "869dad6c-63c9-4d54-95d5-b2e0cdcb2d28",
+      "name": "Send media from URL",
+      "credentials": {
+        "evoGoApi": {
+          "id": "pJuORISTpF0VjreA",
+          "name": "EvoGo account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "When clicking 'Execute workflow'": {
+      "main": [[{"node": "Send media from URL", "type": "main", "index": 0}]]
+    },
+    "Send text message": {
+      "main": [[{"node": "Send button message", "type": "main", "index": 0}]]
+    },
+    "Send media from URL": {
+      "main": [[{"node": "Send text message", "type": "main", "index": 0}]]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "d2b14291e08fc90a2553aa1545ab4ac59501cf87f57b361f133301661f8e4f80"
+  }
+}

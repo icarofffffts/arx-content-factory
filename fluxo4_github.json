@@ -1,0 +1,178 @@
+{
+  "name": "Fluxo 4 - Atualizador GitHub Profile (README Live Feed)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 22 * * 1-5"
+            }
+          ]
+        }
+      },
+      "id": "6891d266-8f6f-4a9a-8a3b-a9e6da0e6565",
+      "name": "Cron - GitHub (22h - Seg a Sex)",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [2752, -576]
+    },
+    {
+      "parameters": {},
+      "id": "94aeb847-b8a1-4d7c-96d4-f769ac565162",
+      "name": "Ao Clicar para Testar",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [2752, -416]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT id, topic, linkedin_caption, pdf_url\nFROM public.content_pipeline \nWHERE status IN ('posted_linkedin', 'posted_instagram')\n  AND (channel = 'github' OR channel = 'all')\nORDER BY created_at ASC \nLIMIT 1;",
+        "options": {}
+      },
+      "id": "4c360e91-3692-4083-b702-62a3c8c15ade",
+      "name": "PostgreSQL - Buscar Post para GitHub",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [2992, -496],
+      "credentials": {
+        "postgres": {
+          "id": "owASX235VSmdGPHh",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "664e93e5-54f5-4d47-8da5-7665c09ceca0",
+      "name": "Existe post agendado?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [3232, -496]
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first().json;\nconst shortId = (item.id || 'post').split('-')[0];\nconst cleanName = item.topic\n  .toLowerCase()\n  .normalize('NFD').replace(/[\\u0300-\\u036f]/g, '')\n  .replace(/[^a-z0-9]/g, '-')\n  .replace(/-+/g, '-')\n  .replace(/^-|-$/g, '');\n\nconst repoName = `ai-${cleanName.substring(0, 25)}-${shortId}`.replace(/^-|-$/g, '');\nconst readmeText = `# ${item.topic}\n\n${item.linkedin_caption}\n\n---\n\n### 📄 Download do Carrossel em PDF\n👉 [Baixar Carrossel PDF completo](${item.pdf_url})\n\n---\n*Gerado automaticamente pela Content Factory de IA de @__icarofernandes*`;\nconst b64Content = Buffer.from(readmeText).toString('base64');\n\nreturn [{\n  json: {\n    repo_name: repoName,\n    topic: item.topic,\n    caption: item.linkedin_caption,\n    pdf_url: item.pdf_url,\n    post_id: item.id,\n    readme_content: readmeText,\n    b64_content: b64Content\n  }\n}];\n"
+      },
+      "id": "80f42222-9586-47d6-b799-924c41acd004",
+      "name": "Formatar Markdown & Nome do Repo",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [3472, -496]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.github.com/user/repos",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "githubApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"name\": \"{{ $json.repo_name }}\",\n  \"description\": \"Conteúdo sobre {{ $json.topic }} por Ícaro Fernandes\",\n  \"private\": false,\n  \"auto_init\": false\n}",
+        "options": {}
+      },
+      "id": "3539af29-473b-441f-a5a6-a2015460057d",
+      "name": "GitHub - Criar Repositório do Post",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [3712, -496],
+      "credentials": {
+        "githubApi": {
+          "id": "lk44WnEAXPNHeiCV",
+          "name": "GitHub account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "=https://api.github.com/repos/{{ $json.owner?.login || 'icarofernandes' }}/{{ $('Formatar Markdown & Nome do Repo').first().json.repo_name }}/contents/README.md",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "githubApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"message\": \"docs: adicionar material do post\",\n  \"content\": \"{{ $('Formatar Markdown & Nome do Repo').first().json.b64_content }}\"\n}",
+        "options": {}
+      },
+      "id": "b14e28e2-b38c-416d-b28e-419496ef68be",
+      "name": "GitHub - Criar README.md no Repositório",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [3952, -496],
+      "credentials": {
+        "githubApi": {
+          "id": "lk44WnEAXPNHeiCV",
+          "name": "GitHub account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE public.content_pipeline \nSET status = 'published', updated_at = NOW()\nWHERE id = '{{ $('Formatar Markdown & Nome do Repo').first().json.post_id }}';",
+        "options": {}
+      },
+      "id": "9e829bae-59e8-49f1-a984-fcb1c2d2c127",
+      "name": "PostgreSQL - Atualizar Status Final",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [4192, -496],
+      "credentials": {
+        "postgres": {
+          "id": "owASX235VSmdGPHh",
+          "name": "Postgres account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Cron - GitHub (22h - Seg a Sex)": {
+      "main": [[{ "node": "PostgreSQL - Buscar Post para GitHub", "type": "main", "index": 0 }]]
+    },
+    "Ao Clicar para Testar": {
+      "main": [[{ "node": "PostgreSQL - Buscar Post para GitHub", "type": "main", "index": 0 }]]
+    },
+    "PostgreSQL - Buscar Post para GitHub": {
+      "main": [[{ "node": "Existe post agendado?", "type": "main", "index": 0 }]]
+    },
+    "Existe post agendado?": {
+      "main": [[{ "node": "Formatar Markdown & Nome do Repo", "type": "main", "index": 0 }]]
+    },
+    "Formatar Markdown & Nome do Repo": {
+      "main": [[{ "node": "GitHub - Criar Repositório do Post", "type": "main", "index": 0 }]]
+    },
+    "GitHub - Criar Repositório do Post": {
+      "main": [[{ "node": "GitHub - Criar README.md no Repositório", "type": "main", "index": 0 }]]
+    },
+    "GitHub - Criar README.md no Repositório": {
+      "main": [[{ "node": "PostgreSQL - Atualizar Status Final", "type": "main", "index": 0 }]]
+    }
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true
+  }
+}

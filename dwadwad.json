@@ -1,0 +1,858 @@
+{
+    "nodes": [
+        {
+            "parameters": {
+                "options": {}
+            },
+            "type": "@n8n/n8n-nodes-langchain.lmChatDeepSeek",
+            "typeVersion": 1,
+            "position": [
+                27120,
+                -3056
+            ],
+            "id": "e7751e09-1ba7-4ed2-a17c-4bf53799beb9",
+            "name": "DeepSeek Chat Model",
+            "credentials": {
+                "deepSeekApi": {
+                    "id": "tL41LEaB5cBNYnqy",
+                    "name": "DeepSeek account"
+                }
+            }
+        },
+        {
+            "parameters": {},
+            "id": "41f2f972-bfaa-406d-8bc9-07fca15ae76a",
+            "name": "Ao Clicar para Testar",
+            "type": "n8n-nodes-base.manualTrigger",
+            "typeVersion": 1,
+            "position": [
+                24976,
+                -3376
+            ]
+        },
+        {
+            "parameters": {
+                "path": "content-factory",
+                "options": {}
+            },
+            "id": "af1d3bf0-53d8-4f84-86d6-46c7fcab58c8",
+            "name": "Webhook - Receber Tema",
+            "type": "n8n-nodes-base.webhook",
+            "typeVersion": 1,
+            "position": [
+                24976,
+                -3216
+            ],
+            "webhookId": "content-factory-trigger"
+        },
+        {
+            "parameters": {
+                "rule": {
+                    "interval": [
+                        {
+                            "field": "cronExpression",
+                            "expression": "0 8 * * 1-5"
+                        }
+                    ]
+                }
+            },
+            "id": "891e28f2-dffe-40b0-9f19-f5b179359d06",
+            "name": "Cron - Geração Diária 08h (Seg a Sex)",
+            "type": "n8n-nodes-base.scheduleTrigger",
+            "typeVersion": 1.2,
+            "position": [
+                24976,
+                -3056
+            ]
+        },
+        {
+            "parameters": {
+                "operation": "executeQuery",
+                "query": "SELECT topic FROM public.content_pipeline ORDER BY created_at DESC LIMIT 30;",
+                "options": {}
+            },
+            "id": "838c54c6-219c-441b-a29c-f1f6cdb5f705",
+            "name": "PostgreSQL - Buscar Temas Recentes",
+            "type": "n8n-nodes-base.postgres",
+            "typeVersion": 2.4,
+            "position": [
+                25216,
+                -3216
+            ],
+            "credentials": {
+                "postgres": {
+                    "id": "owASX235VSmdGPHh",
+                    "name": "Postgres account"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "jsCode": "// Sistema de Rotação Automática de Fontes (Round-Robin)\nconst staticData = $getWorkflowStaticData('global');\nif (staticData.rotationIndex === undefined) staticData.rotationIndex = 0;\n\nconst selectedIndex = staticData.rotationIndex;\nstaticData.rotationIndex = (selectedIndex + 1) % 6;\n\nconst sources = [\n  { name: \"TechCrunch\", category: \"Startups, Funding & Negócios\", hashtag: \"#Startups #Funding\" },\n  { name: \"VentureBeat\", category: \"Tech News Geral & Produtos\", hashtag: \"#Tech #Gadgets\" },\n  { name: \"HackerNews\", category: \"Open Source & Dev Community\", hashtag: \"#OpenSource #Dev\" },\n  { name: \"Ars Technica\", category: \"Ciência, Segurança & Política Tech\", hashtag: \"#Ciencia #Seguranca\" },\n  { name: \"Wired\", category: \"Cultura Digital & Futuro\", hashtag: \"#Inovacao #CulturaDigital\" },\n  { name: \"HubSpot Marketing\", category: \"Marketing Digital & Vendas\", hashtag: \"#Marketing #Vendas\" }\n];\n\nreturn [{ json: { \n  selected_index: selectedIndex,\n  source_name: sources[selectedIndex].name,\n  foco_do_dia: sources[selectedIndex].category,\n  hashtag_do_dia: sources[selectedIndex].hashtag,\n  rotation_total: 6\n} }];"
+            },
+            "id": "6f393d66-569c-4991-a8e4-b271cfb3320a",
+            "name": "Código - Rotação de Fontes (Round-Robin)",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                25424,
+                -3216
+            ]
+        },
+        {
+            "parameters": {
+                "workflowId": {
+                    "__rl": true,
+                    "value": "MKVB5SZiZdYHc3Nf",
+                    "mode": "list",
+                    "cachedResultUrl": "/workflow/MKVB5SZiZdYHc3Nf",
+                    "cachedResultName": "Sub-Workflow - Validador de Notícias & Checador de Fatos"
+                },
+                "options": {}
+            },
+            "id": "e113c9c5-8745-4d03-8c3e-5c201832da14",
+            "name": "Sub-Workflow - Checar Recência & Fatos",
+            "type": "n8n-nodes-base.executeWorkflow",
+            "typeVersion": 1.1,
+            "position": [
+                27440,
+                -3264
+            ],
+            "onError": "continueRegularOutput"
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "https://api.tavily.com/search",
+                "sendBody": true,
+                "specifyBody": "json",
+                "jsonBody": "={\n  \"api_key\": \"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\",\n  \"query\": \"{{ JSON.parse($('IA - Selecionar Conteúdo Inédito & Recente').first().json.text.match(/\\{[\\s\\S]*\\}/)[0]).image_search_query || JSON.parse($('IA - Selecionar Conteúdo Inédito & Recente').first().json.text.match(/\\{[\\s\\S]*\\}/)[0]).topic }}\",\n  \"search_depth\": \"basic\",\n  \"include_images\": true,\n  \"max_results\": 6,\n  \"include_raw_content\": false\n}",
+                "options": {}
+            },
+            "id": "29073c9c-eb21-484f-864a-38aad7e3b4a2",
+            "name": "Tavily - Buscar Fotos Direcionadas (6 Fotos para Todos os Slides)",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.2,
+            "position": [
+                27680,
+                -3264
+            ]
+        },
+        {
+            "parameters": {
+                "jsCode": "const aiText = $('IA - Selecionar Conteúdo Inédito & Recente').first().json.text;\nconst tavilyJson = $input.first().json;\n\nconst aiData = JSON.parse(aiText.match(/\\{[\\s\\S]*\\}/)[0]);\nconst rawImages = tavilyJson.images || [];\n\nconst validImages = rawImages.filter(url => {\n  if (!url || typeof url !== 'string') return false;\n  const lower = url.toLowerCase();\n  if (lower.includes('lookaside') || lower.includes('facebook.com') || lower.includes('instagram.com') || lower.includes('gemini-generated') || lower.includes('cnews24')) return false;\n  return true;\n});\n\nconst fallbackPhotos = [\n  \"https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=1080&q=80\",\n  \"https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&w=1080&q=80\",\n  \"https://images.unsplash.com/photo-1558494949-ef010cbdcc31?auto=format&fit=crop&w=1080&q=80\",\n  \"https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=1080&q=80\",\n  \"https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=1080&q=80\"\n];\n\nif (Array.isArray(aiData.slides)) {\n  aiData.slides = aiData.slides.map((slide, idx) => {\n    if (validImages.length > 0) {\n      slide.image_url = validImages[idx % validImages.length];\n    } else {\n      slide.image_url = fallbackPhotos[idx % fallbackPhotos.length];\n    }\n    return slide;\n  });\n}\n\nconst cleanTopic = (aiData.topic || '').replace(/—\\s*/g, '').replace(/–\\s*/g, '');\nconst cleanCaption = (aiData.linkedin_caption || '').replace(/—\\s*/g, '').replace(/–\\s*/g, '');\nconst slidesJsonStr = JSON.stringify(aiData.slides).replace(/—\\s*/g, '').replace(/–\\s*/g, '');\n\nconst topicSql = cleanTopic.replace(/'/g, \"''\");\nconst captionSql = cleanCaption.replace(/'/g, \"''\");\nconst slidesSql = slidesJsonStr.replace(/'/g, \"''\");\n\nreturn [{ \n  json: { \n    ai_data: aiData, \n    tavily_images: validImages,\n    topic_sql: topicSql,\n    caption_sql: captionSql,\n    slides_sql: slidesSql\n  } \n}];\n"
+            },
+            "id": "b29a193b-39c3-455e-b3f7-7cdb4faa99b2",
+            "name": "Vincular Fotos Reais a TODOS os Slides",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                27920,
+                -3264
+            ]
+        },
+        {
+            "parameters": {
+                "operation": "executeQuery",
+                "query": "INSERT INTO public.content_pipeline (topic, slides_data, linkedin_caption, status, channel) \nVALUES (\n  '{{ $json.topic_sql }}', \n  '{{ $json.slides_sql }}'::jsonb,\n  '{{ $json.caption_sql }}',\n  'rendering',\n  'all'\n) \nRETURNING id, slides_data, linkedin_caption;",
+                "options": {}
+            },
+            "id": "40241f61-7a01-4768-85d9-64f7ac55313f",
+            "name": "PostgreSQL - Criar Post no Pipeline",
+            "type": "n8n-nodes-base.postgres",
+            "typeVersion": 2.4,
+            "position": [
+                28160,
+                -3264
+            ],
+            "credentials": {
+                "postgres": {
+                    "id": "owASX235VSmdGPHh",
+                    "name": "Postgres account"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "jsCode": "const fs = require('fs');\nconst http = require('http');\nconst https = require('https');\n\nconst tplLinkedin = fs.readFileSync('/data/media/template_linkedin.html', 'utf8');\nconst tplInstagram = fs.readFileSync('/data/media/template_instagram.html', 'utf8');\n\nconst inputItem = $input.first().json;\nconst postId = inputItem.id || 'test_post';\nlet linkedinCaption = (inputItem.linkedin_caption || '').replace(/—\\s*/g, '').replace(/–\\s*/g, '');\n\nlet rawSlides = inputItem.slides_data || inputItem.slides;\nif (typeof rawSlides === 'string') {\n  try { rawSlides = JSON.parse(rawSlides); } catch(e) {}\n}\n\nlet slidesData = [];\nif (Array.isArray(rawSlides)) {\n  slidesData = rawSlides;\n} else if (rawSlides && typeof rawSlides === 'object') {\n  if (Array.isArray(rawSlides.slides)) slidesData = rawSlides.slides;\n  else if (Array.isArray(rawSlides.data)) slidesData = rawSlides.data;\n}\n\nfunction downloadImage(url, destPath) {\n  return new Promise((resolve) => {\n    if (!url || !url.startsWith('http')) return resolve('');\n    const client = url.startsWith('https') ? https : http;\n    const req = client.get(url, (res) => {\n      if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {\n        return downloadImage(res.headers.location, destPath).then(resolve);\n      }\n      if (res.statusCode !== 200) return resolve('');\n      const chunks = [];\n      res.on('data', c => chunks.push(c));\n      res.on('end', () => {\n        const buf = Buffer.concat(chunks);\n        if (buf.length > 3000) {\n          fs.writeFileSync(destPath, buf);\n          fs.chmodSync(destPath, 0o644);\n          resolve(true);\n        } else resolve('');\n      });\n    });\n    req.on('error', () => resolve(''));\n    req.setTimeout(8000, () => { req.destroy(); resolve(''); });\n  });\n}\n\nfunction postToBrowserless(html) {\n  return new Promise((resolve, reject) => {\n    const postData = JSON.stringify({\n      html: html,\n      viewport: { width: 1080, height: 1350, deviceScaleFactor: 2 }\n    });\n    const req = http.request({\n      hostname: 'content_browserless',\n      port: 3000,\n      path: '/screenshot?token=senha_segura_123',\n      method: 'POST',\n      headers: {\n        'Content-Type': 'application/json',\n        'Content-Length': Buffer.byteLength(postData)\n      }\n    }, (res) => {\n      const chunks = [];\n      res.on('data', c => chunks.push(c));\n      res.on('end', () => resolve(Buffer.concat(chunks)));\n    });\n    req.on('error', reject);\n    req.write(postData);\n    req.end();\n  });\n}\n\nfunction callPdfBuilder(postId) {\n  return new Promise((resolve) => {\n    const req = http.request({\n      hostname: '172.18.0.1',\n      port: 9876,\n      path: `/build-pdf?post_id=${postId}`,\n      method: 'GET'\n    }, (res) => {\n      const chunks = [];\n      res.on('data', c => chunks.push(c));\n      res.on('end', () => resolve(Buffer.concat(chunks).toString()));\n    });\n    req.on('error', (e) => resolve('PDF_ERROR: ' + e.message));\n    req.setTimeout(30000, () => { req.destroy(); resolve('PDF_TIMEOUT'); });\n    req.end();\n  });\n}\n\nasync function run() {\n  const linkedinMediaUrls = [];\n  const instagramMediaUrls = [];\n  if (slidesData.length === 0) {\n    throw new Error('Nenhum slide encontrado na entrada!');\n  }\n\n  for (const slide of slidesData) {\n    const num = slide.slide_number || 1;\n    const tot = slide.total_slides || slidesData.length;\n    let title = (slide.title || '').replace(/—\\s*/g, '').replace(/–\\s*/g, '');\n    let body = (slide.body || '').replace(/—\\s*/g, '').replace(/–\\s*/g, '');\n    let imageUrl = slide.image_url || '';\n\n    let coverHtml = '';\n    if (imageUrl) {\n      const localImgName = `tavily_web_${postId}_${num}.jpg`;\n      const localImgPath = `/data/media/${localImgName}`;\n      const downloaded = await downloadImage(imageUrl, localImgPath);\n      if (downloaded) {\n        const imgBuf = fs.readFileSync(localImgPath);\n        const base64Img = imgBuf.toString('base64');\n        const ext = localImgName.endsWith('.png') ? 'png' : 'jpg';\n        coverHtml = `<div class=\"cover-image-box\"><img src=\"data:image/${ext};base64,${base64Img}\" /></div>`;\n      }\n    }\n\n    const quote = (slide.quote || '').replace(/—\\s*/g, '').replace(/–\\s*/g, '');\n    const quoteHtml = quote ? `<div class=\"quote-box\" style=\"white-space: pre-wrap; font-family: monospace; font-style: normal; font-size: 24px;\">${quote}</div>` : '';\n\n    // Renderizar Slide LinkedIn\n    const renderedLinkedin = tplLinkedin\n      .replace('{{SLIDE_TITLE}}', title)\n      .replace('{{SLIDE_BODY}}', body)\n      .replace('{{HIGHLIGHT_BOX}}', quoteHtml)\n      .replace('{{COVER_IMAGE_HTML}}', coverHtml);\n\n    const linkedinImgBuf = await postToBrowserless(renderedLinkedin);\n    const linkedinFilename = `carousel_${postId}_slide_${num}.png`;\n    fs.writeFileSync(`/data/media/${linkedinFilename}`, linkedinImgBuf);\n    fs.chmodSync(`/data/media/${linkedinFilename}`, 0o644);\n    linkedinMediaUrls.push(`https://conteudos.icarodev.cloud/${linkedinFilename}`);\n\n    // Renderizar Slide Instagram\n    const renderedInstagram = tplInstagram\n      .replace('{{SLIDE_NUMBER}}', String(num))\n      .replace('{{TOTAL_SLIDES}}', String(tot))\n      .replace('{{SLIDE_TITLE}}', title)\n      .replace('{{SLIDE_BODY}}', body)\n      .replace('{{HIGHLIGHT_BOX}}', quoteHtml)\n      .replace('{{COVER_IMAGE_HTML}}', coverHtml);\n\n    const instagramImgBuf = await postToBrowserless(renderedInstagram);\n    const instagramFilename = `instagram_${postId}_slide_${num}.png`;\n    fs.writeFileSync(`/data/media/${instagramFilename}`, instagramImgBuf);\n    fs.chmodSync(`/data/media/${instagramFilename}`, 0o644);\n    instagramMediaUrls.push(`https://conteudos.icarodev.cloud/${instagramFilename}`);\n  }\n\n  const pdfResult = await callPdfBuilder(postId);\n  const pdfUrl = `https://conteudos.icarodev.cloud/carousel_${postId}.pdf`;\n  return [{\n    json: {\n      id: postId,\n      media_urls: linkedinMediaUrls,\n      instagram_media_urls: instagramMediaUrls,\n      pdf_url: pdfUrl,\n      linkedin_caption: linkedinCaption\n    }\n  }];\n}\n\nreturn run();"
+            },
+            "id": "69a83af5-efe7-471e-a9df-847695b4e310",
+            "name": "Renderizador - Injetar HTML & Salvar PNGs",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                28400,
+                -3264
+            ]
+        },
+        {
+            "parameters": {
+                "operation": "executeQuery",
+                "query": "UPDATE public.content_pipeline \nSET \n  media_paths = '{{ JSON.stringify($json.media_urls) }}'::jsonb, \n  instagram_media_paths = '{{ JSON.stringify($json.instagram_media_urls) }}'::jsonb,\n  pdf_url = '{{ $json.pdf_url }}',\n  status = 'draft', \n  scheduled_at = (\n    CASE \n      WHEN EXTRACT(DOW FROM NOW() AT TIME ZONE 'America/Sao_Paulo') IN (1, 2, 3, 4) \n        AND EXTRACT(HOUR FROM NOW() AT TIME ZONE 'America/Sao_Paulo') < 19 THEN\n        ((NOW() AT TIME ZONE 'America/Sao_Paulo')::date + CASE \n          WHEN EXTRACT(HOUR FROM NOW() AT TIME ZONE 'America/Sao_Paulo') < 8 THEN TIME '08:45'\n          WHEN EXTRACT(HOUR FROM NOW() AT TIME ZONE 'America/Sao_Paulo') < 12 THEN TIME '12:15'\n          WHEN EXTRACT(HOUR FROM NOW() AT TIME ZONE 'America/Sao_Paulo') < 17 THEN TIME '17:15'\n          ELSE TIME '19:45'\n        END) AT TIME ZONE 'America/Sao_Paulo'\n      WHEN EXTRACT(DOW FROM NOW() AT TIME ZONE 'America/Sao_Paulo') = 5 THEN \n        ((NOW() AT TIME ZONE 'America/Sao_Paulo')::date + INTERVAL '3 days' + TIME '08:45') AT TIME ZONE 'America/Sao_Paulo'\n      WHEN EXTRACT(DOW FROM NOW() AT TIME ZONE 'America/Sao_Paulo') = 6 THEN \n        ((NOW() AT TIME ZONE 'America/Sao_Paulo')::date + INTERVAL '2 days' + TIME '08:45') AT TIME ZONE 'America/Sao_Paulo'\n      WHEN EXTRACT(DOW FROM NOW() AT TIME ZONE 'America/Sao_Paulo') = 0 THEN \n        ((NOW() AT TIME ZONE 'America/Sao_Paulo')::date + INTERVAL '1 day' + TIME '08:45') AT TIME ZONE 'America/Sao_Paulo'\n      ELSE \n        ((NOW() AT TIME ZONE 'America/Sao_Paulo')::date + INTERVAL '1 day' + TIME '08:45') AT TIME ZONE 'America/Sao_Paulo'\n    END\n  ),\n  updated_at = NOW()\nWHERE id = '{{ $json.id }}';",
+                "options": {}
+            },
+            "id": "ce87c947-9909-4ced-9a5e-98123f1c8b9b",
+            "name": "PostgreSQL - Atualizar URLs e Agendar",
+            "type": "n8n-nodes-base.postgres",
+            "typeVersion": 2.4,
+            "position": [
+                28640,
+                -3264
+            ],
+            "credentials": {
+                "postgres": {
+                    "id": "owASX235VSmdGPHh",
+                    "name": "Postgres account"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "promptType": "define",
+                "text": "=DATA DE HOJE: {{ new Date().toLocaleDateString(\"pt-BR\", {timeZone: \"America/Sao_Paulo\"}) }}\n\nVocê é o estrategista de conteúdo tech da Arx Devs para LinkedIn/Instagram de Icaro Silva (@__icarofernandes).\n\n--- FOCO DESTA EDIÇÃO ---\n{{ $json.foco_do_dia }}\n\nFonte: {{ $json.source_name }}\n\nPILARES:\n1. ESCOLHA 1 ÚNICA NOTÍCIA dos candidatos abaixo\n2. TODOS OS 5 SLIDES devem ser sobre ESTA MESMA NOTÍCIA\n3. NÃO mude de assunto entre os slides - é uma história única\n4. Slide 4: inclua comando real de terminal / exemplo de código relacionado ao tema\n5. Slide 5: conclusão ou próximos passos\n\nNotícias Candidatas:\n{{ JSON.stringify($json.candidate_articles) }}\n\nREGRAS OBRIGATÓRIAS:\n- Escolha a MELHOR notícia mais relevante para devs brasileiros\n- TODOS os 5 slides devem ser APENAS sobre este único tópico\n- Os slides devem contar uma história coesa: problema → contexto → impacto → código/dado → conclusão\n- Slide 4 OBRIGATORIAMENTE: comando real de terminal ou snippet de código\n- NÃO coloque \"tutorial nos comentários\", \"chama no direct\" ou \"segue o perfil\"\n- Legenda LinkedIn: profissional, terminando com pergunta de engajamento\n- NUNCA invente preços ou URLs. Use dados reais da notícia.\n- Hashtags no final da legenda: {{ $json.hashtag_do_dia }} #ArxDevs #Tecnologia\n\nEXEMPLO DE ESTRUTURA (5 slides, mesmo assunto):\nSlide 1: Título impactante + visão geral da notícia\nSlide 2: Contexto / por que isso importa agora\nSlide 3: Impacto para devs e mercado\nSlide 4: Comando real / código / dado técnico\nSlide 5: Conclusão ou próximo passo\n\nFormato resposta (JSON válido, SEM ```json):\n{\n  \"topic\": \"Título único impactante em Português sem travessão\",\n  \"image_search_query\": \"termo busca inglês curto para fotos\",\n  \"linkedin_caption\": \"Texto completo LinkedIn com emojis e pergunta de engajamento no final. Hashtags: {{ $json.hashtag_do_dia }} #ArxDevs #Tecnologia\",\n  \"slides\": [\n    { \"slide_number\": 1, \"total_slides\": 5, \"title\": \"Título do Slide\", \"body\": \"Explicação em 2-3 frases\", \"quote\": \"Destaque técnico ou dado\" }\n  ]\n}"
+            },
+            "type": "@n8n/n8n-nodes-langchain.chainLlm",
+            "typeVersion": 1.5,
+            "position": [
+                27120,
+                -3280
+            ],
+            "id": "51227cae-8627-4e91-b869-b10a4b34d4ce",
+            "name": "IA - Selecionar Conteúdo Inédito & Recente"
+        },
+        {
+            "parameters": {
+                "url": "https://techcrunch.com/feed/",
+                "options": {}
+            },
+            "id": "48003092-1913-46ce-b43a-077876322cc3",
+            "name": "TechCrunch - RSS (Startups)",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.2,
+            "position": [
+                26096,
+                -3632
+            ],
+            "onError": "continueRegularOutput"
+        },
+        {
+            "parameters": {
+                "jsCode": "const srcName = \"TechCrunch - RSS (Startups)\";\nconst category = \"Startups, Funding & Negócios (rodadas de investimento, IPOs, aquisições, unicórnios)\";\nconst rawData = $input.first().json;\n\nconst items = [];\nlet feedData = rawData;\n\n// Try RSS 2.0 format\nif (feedData.rss && feedData.rss.channel && feedData.rss.channel.item) {\n  const itemArr = Array.isArray(feedData.rss.channel.item) ? feedData.rss.channel.item : [feedData.rss.channel.item];\n  itemArr.slice(0, 6).forEach(item => {\n    items.push({\n      source: srcName,\n      title: item.title || '',\n      link: item.link || '',\n      desc: (item.description || '').replace(/<[^>]+>/g, '').substring(0, 300),\n      pubDate: item.pubDate || ''\n    });\n  });\n}\n\nreturn [{ json: {\n  candidate_articles: items.slice(0, 6),\n  source_name: srcName,\n  foco_do_dia: category,\n  hashtag_do_dia: \"#Startups #Funding #Negocios\",\n  total_sources: 6\n} }];"
+            },
+            "id": "8267a7d1-9202-4c1b-81b5-ec95a1c79f5a",
+            "name": "Extrair - TechCrunch",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                26448,
+                -3632
+            ]
+        },
+        {
+            "parameters": {
+                "url": "https://venturebeat.com/feed/",
+                "options": {}
+            },
+            "id": "38b69a13-b02b-416d-b62a-41728a3a82e6",
+            "name": "VentureBeat - RSS (Tech)",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.2,
+            "position": [
+                26096,
+                -3456
+            ],
+            "onError": "continueRegularOutput"
+        },
+        {
+            "parameters": {
+                "jsCode": "const srcName = \"VentureBeat - RSS (Tech)\";\nconst category = \"Tech News Geral & Produtos (lançamentos, gadgets, hardware, smartfones, reviews)\";\nconst rawData = $input.first().json;\n\nconst items = [];\nlet feedData = rawData;\n\n// Try RSS 2.0 format\nif (feedData.rss && feedData.rss.channel && feedData.rss.channel.item) {\n  const itemArr = Array.isArray(feedData.rss.channel.item) ? feedData.rss.channel.item : [feedData.rss.channel.item];\n  itemArr.slice(0, 6).forEach(item => {\n    items.push({\n      source: srcName,\n      title: item.title || '',\n      link: item.link || '',\n      desc: (item.description || '').replace(/<[^>]+>/g, '').substring(0, 300),\n      pubDate: item.pubDate || ''\n    });\n  });\n}\n\nreturn [{ json: {\n  candidate_articles: items.slice(0, 6),\n  source_name: srcName,\n  foco_do_dia: category,\n  hashtag_do_dia: \"#Tech #Gadgets #Produtos\",\n  total_sources: 6\n} }];"
+            },
+            "id": "b7828400-bec0-4786-9008-4e7b4430e17b",
+            "name": "Extrair - VentureBeat",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                26448,
+                -3456
+            ]
+        },
+        {
+            "parameters": {
+                "url": "https://hnrss.org/frontpage?count=10",
+                "options": {}
+            },
+            "id": "d7222ee0-54e5-430f-8555-95f6c63d4804",
+            "name": "HackerNews - RSS (Dev)",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.2,
+            "position": [
+                26096,
+                -3280
+            ],
+            "onError": "continueRegularOutput"
+        },
+        {
+            "parameters": {
+                "jsCode": "const srcName = \"HackerNews - RSS (Dev)\";\nconst category = \"Open Source & Dev Community (projetos novos, GitHub trending, Linux, frameworks, tutoriais, carreira)\";\nconst rawData = $input.first().json;\n\nconst items = [];\nlet feedData = rawData;\n\n// Try RSS 2.0 format\nif (feedData.rss && feedData.rss.channel && feedData.rss.channel.item) {\n  const itemArr = Array.isArray(feedData.rss.channel.item) ? feedData.rss.channel.item : [feedData.rss.channel.item];\n  itemArr.slice(0, 6).forEach(item => {\n    items.push({\n      source: srcName,\n      title: item.title || '',\n      link: item.link || '',\n      desc: (item.description || '').replace(/<[^>]+>/g, '').substring(0, 300),\n      pubDate: item.pubDate || ''\n    });\n  });\n}\n\nreturn [{ json: {\n  candidate_articles: items.slice(0, 6),\n  source_name: srcName,\n  foco_do_dia: category,\n  hashtag_do_dia: \"#OpenSource #Dev #Programacao\",\n  total_sources: 6\n} }];"
+            },
+            "id": "eeebada8-bc53-48d9-819b-829eebc25c69",
+            "name": "Extrair - HackerNews",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                26448,
+                -3280
+            ]
+        },
+        {
+            "parameters": {
+                "url": "https://feeds.arstechnica.com/arstechnica/index",
+                "options": {}
+            },
+            "id": "77ac077c-2522-481a-bbf2-60f5a3fba656",
+            "name": "Ars Technica - RSS (Ciência/Segurança)",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.2,
+            "position": [
+                26096,
+                -3120
+            ],
+            "onError": "continueRegularOutput"
+        },
+        {
+            "parameters": {
+                "jsCode": "const srcName = \"Ars Technica - RSS (Ciência/Segurança)\";\nconst category = \"Ciência, Segurança & Política Tech (cyber attacks, vulnerabilidades, zero-day, LGPD, pesquisa)\";\nconst rawData = $input.first().json;\n\nconst items = [];\nlet feedData = rawData;\n\n// Try RSS 2.0 format\nif (feedData.rss && feedData.rss.channel && feedData.rss.channel.item) {\n  const itemArr = Array.isArray(feedData.rss.channel.item) ? feedData.rss.channel.item : [feedData.rss.channel.item];\n  itemArr.slice(0, 6).forEach(item => {\n    items.push({\n      source: srcName,\n      title: item.title || '',\n      link: item.link || '',\n      desc: (item.description || '').replace(/<[^>]+>/g, '').substring(0, 300),\n      pubDate: item.pubDate || ''\n    });\n  });\n}\n\nreturn [{ json: {\n  candidate_articles: items.slice(0, 6),\n  source_name: srcName,\n  foco_do_dia: category,\n  hashtag_do_dia: \"#Ciencia #Seguranca #Pesquisa\",\n  total_sources: 6\n} }];"
+            },
+            "id": "65ce0f4e-81d5-46af-8b2d-e7aed27dc4e3",
+            "name": "Extrair - Ars Technica",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                26448,
+                -3120
+            ]
+        },
+        {
+            "parameters": {
+                "url": "https://www.wired.com/feed/rss",
+                "options": {}
+            },
+            "id": "7305c774-63cd-4e58-a400-1d826906f863",
+            "name": "Wired - RSS (Cultura Tech)",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.2,
+            "position": [
+                26096,
+                -2944
+            ],
+            "onError": "continueRegularOutput"
+        },
+        {
+            "parameters": {
+                "jsCode": "const srcName = \"Wired - RSS (Cultura Tech)\";\nconst category = \"Cultura Digital & Futuro (inovação, tendências, comportamento tech, criatividade, sociedade)\";\nconst rawData = $input.first().json;\n\nconst items = [];\nlet feedData = rawData;\n\n// Try RSS 2.0 format\nif (feedData.rss && feedData.rss.channel && feedData.rss.channel.item) {\n  const itemArr = Array.isArray(feedData.rss.channel.item) ? feedData.rss.channel.item : [feedData.rss.channel.item];\n  itemArr.slice(0, 6).forEach(item => {\n    items.push({\n      source: srcName,\n      title: item.title || '',\n      link: item.link || '',\n      desc: (item.description || '').replace(/<[^>]+>/g, '').substring(0, 300),\n      pubDate: item.pubDate || ''\n    });\n  });\n}\n\nreturn [{ json: {\n  candidate_articles: items.slice(0, 6),\n  source_name: srcName,\n  foco_do_dia: category,\n  hashtag_do_dia: \"#Inovacao #CulturaDigital #Futuro\",\n  total_sources: 6\n} }];"
+            },
+            "id": "e8005ceb-eaa9-4e2d-94f0-6843547895b1",
+            "name": "Extrair - Wired",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                26448,
+                -2944
+            ]
+        },
+        {
+            "parameters": {
+                "url": "https://blog.hubspot.com/marketing/rss.xml",
+                "options": {}
+            },
+            "id": "2b226ae0-4bad-41bf-8457-eebc39ed9b4f",
+            "name": "HubSpot Marketing - RSS (Vendas)",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.2,
+            "position": [
+                26096,
+                -2768
+            ],
+            "onError": "continueRegularOutput"
+        },
+        {
+            "parameters": {
+                "jsCode": "const srcName = \"HubSpot Marketing - RSS (Vendas)\";\nconst category = \"Marketing Digital & Vendas (inbound, CRM, funil de vendas, SEO, tráfego, conversão, estratégias)\";\nconst rawData = $input.first().json;\n\nconst items = [];\nlet feedData = rawData;\n\n// Try RSS 2.0 format\nif (feedData.rss && feedData.rss.channel && feedData.rss.channel.item) {\n  const itemArr = Array.isArray(feedData.rss.channel.item) ? feedData.rss.channel.item : [feedData.rss.channel.item];\n  itemArr.slice(0, 6).forEach(item => {\n    items.push({\n      source: srcName,\n      title: item.title || '',\n      link: item.link || '',\n      desc: (item.description || '').replace(/<[^>]+>/g, '').substring(0, 300),\n      pubDate: item.pubDate || ''\n    });\n  });\n}\n\nreturn [{ json: {\n  candidate_articles: items.slice(0, 6),\n  source_name: srcName,\n  foco_do_dia: category,\n  hashtag_do_dia: \"#Marketing #Vendas #CRM\",\n  total_sources: 6\n} }];"
+            },
+            "id": "d894e821-7ca3-4930-91a8-30a1e241296f",
+            "name": "Extrair - HubSpot Marketing",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                26448,
+                -2768
+            ]
+        },
+        {
+            "parameters": {
+                "rules": {
+                    "values": [
+                        {
+                            "conditions": {
+                                "options": {
+                                    "caseSensitive": true,
+                                    "leftValue": "",
+                                    "typeValidation": "strict",
+                                    "version": 3
+                                },
+                                "conditions": [
+                                    {
+                                        "leftValue": "={{ $json.selected_index }}",
+                                        "rightValue": 0,
+                                        "operator": {
+                                            "type": "number",
+                                            "operation": "equals"
+                                        },
+                                        "id": "b6451f66-285b-4289-8f4b-ae123292127b"
+                                    }
+                                ],
+                                "combinator": "and"
+                            }
+                        },
+                        {
+                            "conditions": {
+                                "options": {
+                                    "caseSensitive": true,
+                                    "leftValue": "",
+                                    "typeValidation": "strict",
+                                    "version": 3
+                                },
+                                "conditions": [
+                                    {
+                                        "id": "44267828-3402-4bf6-b5ef-ac4798518edf",
+                                        "leftValue": "={{ $json.selected_index }}",
+                                        "rightValue": 1,
+                                        "operator": {
+                                            "type": "number",
+                                            "operation": "equals"
+                                        }
+                                    }
+                                ],
+                                "combinator": "and"
+                            }
+                        },
+                        {
+                            "conditions": {
+                                "options": {
+                                    "caseSensitive": true,
+                                    "leftValue": "",
+                                    "typeValidation": "strict",
+                                    "version": 3
+                                },
+                                "conditions": [
+                                    {
+                                        "id": "8655ad7e-5f49-4667-8299-a3027ef48ad3",
+                                        "leftValue": "={{ $json.selected_index }}",
+                                        "rightValue": 2,
+                                        "operator": {
+                                            "type": "number",
+                                            "operation": "equals"
+                                        }
+                                    }
+                                ],
+                                "combinator": "and"
+                            }
+                        },
+                        {
+                            "conditions": {
+                                "options": {
+                                    "caseSensitive": true,
+                                    "leftValue": "",
+                                    "typeValidation": "strict",
+                                    "version": 3
+                                },
+                                "conditions": [
+                                    {
+                                        "id": "0aa0db87-c3af-493c-b49d-a2c87c59e151",
+                                        "leftValue": "={{ $json.selected_index }}",
+                                        "rightValue": 3,
+                                        "operator": {
+                                            "type": "number",
+                                            "operation": "equals"
+                                        }
+                                    }
+                                ],
+                                "combinator": "and"
+                            }
+                        },
+                        {
+                            "conditions": {
+                                "options": {
+                                    "caseSensitive": true,
+                                    "leftValue": "",
+                                    "typeValidation": "strict",
+                                    "version": 3
+                                },
+                                "conditions": [
+                                    {
+                                        "id": "fdab2d1c-a145-4769-9656-f5ae0115249d",
+                                        "leftValue": "={{ $json.selected_index }}",
+                                        "rightValue": 4,
+                                        "operator": {
+                                            "type": "number",
+                                            "operation": "equals"
+                                        }
+                                    }
+                                ],
+                                "combinator": "and"
+                            }
+                        },
+                        {
+                            "conditions": {
+                                "options": {
+                                    "caseSensitive": true,
+                                    "leftValue": "",
+                                    "typeValidation": "strict",
+                                    "version": 3
+                                },
+                                "conditions": [
+                                    {
+                                        "id": "ec180220-a4ce-4790-96f5-a1439d6da75f",
+                                        "leftValue": "={{ $json.selected_index }}",
+                                        "rightValue": 5,
+                                        "operator": {
+                                            "type": "number",
+                                            "operation": "equals"
+                                        }
+                                    }
+                                ],
+                                "combinator": "and"
+                            }
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "type": "n8n-nodes-base.switch",
+            "typeVersion": 3.4,
+            "position": [
+                25680,
+                -3216
+            ],
+            "id": "8c6d85b7-7540-4c05-a520-58ca810caa0b",
+            "name": "Switch"
+        }
+    ],
+    "connections": {
+        "DeepSeek Chat Model": {
+            "ai_languageModel": [
+                [
+                    {
+                        "node": "IA - Selecionar Conteúdo Inédito & Recente",
+                        "type": "ai_languageModel",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Ao Clicar para Testar": {
+            "main": [
+                [
+                    {
+                        "node": "PostgreSQL - Buscar Temas Recentes",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Webhook - Receber Tema": {
+            "main": [
+                [
+                    {
+                        "node": "PostgreSQL - Buscar Temas Recentes",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Cron - Geração Diária 08h (Seg a Sex)": {
+            "main": [
+                [
+                    {
+                        "node": "PostgreSQL - Buscar Temas Recentes",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "PostgreSQL - Buscar Temas Recentes": {
+            "main": [
+                [
+                    {
+                        "node": "Código - Rotação de Fontes (Round-Robin)",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Código - Rotação de Fontes (Round-Robin)": {
+            "main": [
+                [
+                    {
+                        "node": "Switch",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Sub-Workflow - Checar Recência & Fatos": {
+            "main": [
+                [
+                    {
+                        "node": "Tavily - Buscar Fotos Direcionadas (6 Fotos para Todos os Slides)",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Tavily - Buscar Fotos Direcionadas (6 Fotos para Todos os Slides)": {
+            "main": [
+                [
+                    {
+                        "node": "Vincular Fotos Reais a TODOS os Slides",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Vincular Fotos Reais a TODOS os Slides": {
+            "main": [
+                [
+                    {
+                        "node": "PostgreSQL - Criar Post no Pipeline",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "PostgreSQL - Criar Post no Pipeline": {
+            "main": [
+                [
+                    {
+                        "node": "Renderizador - Injetar HTML & Salvar PNGs",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Renderizador - Injetar HTML & Salvar PNGs": {
+            "main": [
+                [
+                    {
+                        "node": "PostgreSQL - Atualizar URLs e Agendar",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "IA - Selecionar Conteúdo Inédito & Recente": {
+            "main": [
+                [
+                    {
+                        "node": "Sub-Workflow - Checar Recência & Fatos",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "TechCrunch - RSS (Startups)": {
+            "main": [
+                [
+                    {
+                        "node": "Extrair - TechCrunch",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Extrair - TechCrunch": {
+            "main": [
+                [
+                    {
+                        "node": "IA - Selecionar Conteúdo Inédito & Recente",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "VentureBeat - RSS (Tech)": {
+            "main": [
+                [
+                    {
+                        "node": "Extrair - VentureBeat",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Extrair - VentureBeat": {
+            "main": [
+                [
+                    {
+                        "node": "IA - Selecionar Conteúdo Inédito & Recente",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "HackerNews - RSS (Dev)": {
+            "main": [
+                [
+                    {
+                        "node": "Extrair - HackerNews",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Extrair - HackerNews": {
+            "main": [
+                [
+                    {
+                        "node": "IA - Selecionar Conteúdo Inédito & Recente",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Ars Technica - RSS (Ciência/Segurança)": {
+            "main": [
+                [
+                    {
+                        "node": "Extrair - Ars Technica",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Extrair - Ars Technica": {
+            "main": [
+                [
+                    {
+                        "node": "IA - Selecionar Conteúdo Inédito & Recente",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Wired - RSS (Cultura Tech)": {
+            "main": [
+                [
+                    {
+                        "node": "Extrair - Wired",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Extrair - Wired": {
+            "main": [
+                [
+                    {
+                        "node": "IA - Selecionar Conteúdo Inédito & Recente",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "HubSpot Marketing - RSS (Vendas)": {
+            "main": [
+                [
+                    {
+                        "node": "Extrair - HubSpot Marketing",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Extrair - HubSpot Marketing": {
+            "main": [
+                [
+                    {
+                        "node": "IA - Selecionar Conteúdo Inédito & Recente",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Switch": {
+            "main": [
+                [
+                    {
+                        "node": "TechCrunch - RSS (Startups)",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "VentureBeat - RSS (Tech)",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "HackerNews - RSS (Dev)",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "Ars Technica - RSS (Ciência/Segurança)",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "Wired - RSS (Cultura Tech)",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "HubSpot Marketing - RSS (Vendas)",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    },
+    "pinData": {},
+    "meta": {
+        "templateCredsSetupCompleted": true,
+        "instanceId": "d2b14291e08fc90a2553aa1545ab4ac59501cf87f57b361f133301661f8e4f80"
+    }
+}

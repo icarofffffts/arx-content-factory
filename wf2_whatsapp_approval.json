@@ -1,0 +1,196 @@
+{
+  "name": "WhatsApp - Notificacao Automatica com Aprovacao",
+  "nodes": [
+    {
+      "parameters": {
+        "path": "notify-draft",
+        "options": {}
+      },
+      "name": "Webhook - Receber ID do Draft",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [-720, -320],
+      "webhookId": "notify-draft"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT id, topic, slides_data, media_paths, instagram_media_paths, pdf_url, linkedin_caption FROM public.content_pipeline WHERE id = '{{ $json.body.post_id }}';",
+        "options": {}
+      },
+      "name": "PG - Buscar Detalhes do Draft",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [-560, -320],
+      "credentials": {
+        "postgres": {
+          "id": "owASX235VSmdGPHh",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const d = $input.first().json;\nif (!d || !d.id) {\n  return [{ json: { error: 'Draft nao encontrado', found: false } }];\n}\n\nlet mediaPaths = d.media_paths || d.instagram_media_paths || [];\nif (typeof mediaPaths === 'string') {\n  try { mediaPaths = JSON.parse(mediaPaths); } catch(e) { mediaPaths = []; }\n}\nconst imgUrl = Array.isArray(mediaPaths) && mediaPaths.length > 0 ? mediaPaths[0] : '';\n\nlet slides = d.slides_data || [];\nif (typeof slides === 'string') {\n  try { slides = JSON.parse(slides); } catch(e) { slides = []; }\n}\nlet slidePreview = '';\nif (Array.isArray(slides)) {\n  slidePreview = slides.slice(0, 3).map(s => { let t = s.title || s.content || ''; return t.length > 80 ? t.substring(0, 80) + '...' : t; }).join('\\n');\n}\n\nreturn [{\n  json: {\n    id: d.id,\n    topic: d.topic || 'Sem titulo',\n    caption: d.linkedin_caption || '',\n    image_url: imgUrl,\n    slide_preview: slidePreview,\n    found: true\n  }\n}];"
+      },
+      "name": "Code - Preparar Dados",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-400, -320]
+    },
+    {
+      "parameters": {
+        "dataType": "boolean",
+        "conditions": [
+          {
+            "id": "found-check",
+            "leftValue": "={{ $json.found }}",
+            "type": "boolean",
+            "rightValue": true
+          }
+        ],
+        "combineOperation": "all",
+        "options": {}
+      },
+      "name": "IF - Draft Existe?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [-240, -320]
+    },
+    {
+      "parameters": {
+        "resource": "sendMessage",
+        "operation": "sendMedia",
+        "instanceApiKey": "26cbfa77-76c5-489c-9c98-bd2ce4ed6e8d",
+        "sendMediaNumber": "5531995398002",
+        "sendMediaUrl": "={{ $json.image_url }}",
+        "sendMediaCaption": "={{ $json.topic.substring(0, 100) }}",
+        "sendMediaDelay": 1000,
+        "sendMediaAdditionalFields": {},
+        "requestOptions": {}
+      },
+      "name": "Enviar Imagem do Draft",
+      "type": "n8n-nodes-evolution-go.evoGo",
+      "typeVersion": 1,
+      "position": [-80, -400],
+      "credentials": {
+        "evoGoApi": {
+          "id": "pJuORISTpF0VjreA",
+          "name": "EvoGo account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "resource": "sendMessage",
+        "instanceApiKey": "26cbfa77-76c5-489c-9c98-bd2ce4ed6e8d",
+        "sendTextNumber": "5531995398002",
+        "sendTextContent": "=📋 *NOVO CONTEUDO PARA REVISAO!*\n\n*Topico:* {{ $json.topic }}\n\n{{ $json.slide_preview }}\n\nDeseja publicar este conteudo agora?",
+        "sendTextDelay": 1500,
+        "sendTextAdditionalFields": {},
+        "requestOptions": {}
+      },
+      "name": "Enviar Texto Preview",
+      "type": "n8n-nodes-evolution-go.evoGo",
+      "typeVersion": 1,
+      "position": [80, -240],
+      "credentials": {
+        "evoGoApi": {
+          "id": "pJuORISTpF0VjreA",
+          "name": "EvoGo account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "resource": "sendMessage",
+        "operation": "sendButton",
+        "instanceApiKey": "26cbfa77-76c5-489c-9c98-bd2ce4ed6e8d",
+        "sendButtonNumber": "5531995398002",
+        "sendButtonTitle": "Publicar Conteudo?",
+        "sendButtonDescription": "={{ $json.topic }}",
+        "sendButtonFooter": "Arx Content Factory",
+        "sendButtonButtons": {
+          "values": [
+            {
+              "copyCode": "",
+              "displayText": "✅ Aprovar",
+              "id": "=approve_{{ $json.id }}",
+              "key": "approve",
+              "name": "Aprovar"
+            },
+            {
+              "copyCode": "",
+              "displayText": "❌ Rejeitar",
+              "id": "=reject_{{ $json.id }}",
+              "key": "reject",
+              "name": "Rejeitar"
+            }
+          ]
+        },
+        "sendButtonAdditionalFields": {},
+        "requestOptions": {}
+      },
+      "name": "Enviar Botoes Aprovar/Rejeitar",
+      "type": "n8n-nodes-evolution-go.evoGo",
+      "typeVersion": 1,
+      "position": [240, -80],
+      "credentials": {
+        "evoGoApi": {
+          "id": "pJuORISTpF0VjreA",
+          "name": "EvoGo account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE public.content_pipeline SET status = 'awaiting_approval', updated_at = NOW() WHERE id = '{{ $json.id }}';",
+        "options": {}
+      },
+      "name": "PG - Marcar como Aguardando Aprovacao",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [400, -80],
+      "credentials": {
+        "postgres": {
+          "id": "owASX235VSmdGPHh",
+          "name": "Postgres account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Webhook - Receber ID do Draft": {
+      "main": [[{"node": "PG - Buscar Detalhes do Draft", "type": "main", "index": 0}]]
+    },
+    "PG - Buscar Detalhes do Draft": {
+      "main": [[{"node": "Code - Preparar Dados", "type": "main", "index": 0}]]
+    },
+    "Code - Preparar Dados": {
+      "main": [[{"node": "IF - Draft Existe?", "type": "main", "index": 0}]]
+    },
+    "IF - Draft Existe?": {
+      "main": [
+        [{"node": "Enviar Imagem do Draft", "type": "main", "index": 0}]
+      ]
+    },
+    "Enviar Imagem do Draft": {
+      "main": [[{"node": "Enviar Texto Preview", "type": "main", "index": 0}]]
+    },
+    "Enviar Texto Preview": {
+      "main": [[{"node": "Enviar Botoes Aprovar/Rejeitar", "type": "main", "index": 0}]]
+    },
+    "Enviar Botoes Aprovar/Rejeitar": {
+      "main": [[{"node": "PG - Marcar como Aguardando Aprovacao", "type": "main", "index": 0}]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "America/Sao_Paulo"
+  },
+  "active": false,
+  "tags": []
+}

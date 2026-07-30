@@ -1,0 +1,188 @@
+{
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "manual-trigger-id",
+      "name": "Ao Clicar para Testar",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [2144, -448]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "instagram-publish",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [2352, -256],
+      "id": "webhook-id",
+      "name": "Webhook",
+      "webhookId": "ig-45011652"
+    },
+    {
+      "parameters": {
+        "rule": { "interval": [{ "field": "cronExpression", "expression": "*/15 * * * *" }] }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [2288, -624],
+      "id": "cron-id",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT id, topic, linkedin_caption, instagram_caption, media_paths, instagram_media_paths, instagram_post_id\nFROM public.content_pipeline \nWHERE id = $1\n  AND (\n    (status = 'posted_linkedin' AND channel = 'all')\n    OR\n    (status = 'scheduled' AND channel = 'instagram')\n  );",
+        "options": {}
+      },
+      "id": "pg-webhook-id",
+      "name": "PostgreSQL - Por ID (Webhook)",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [2648, -400],
+      "credentials": { "postgres": { "id": "owASX235VSmdGPHh", "name": "Postgres account" } }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT id, topic, linkedin_caption, instagram_caption, media_paths, instagram_media_paths, instagram_post_id\nFROM public.content_pipeline \nWHERE (\n  (status = 'posted_linkedin' AND channel = 'all')\n  OR\n  (status = 'scheduled' AND channel = 'instagram')\n)\n  AND scheduled_at <= (NOW() + INTERVAL '15 minutes')\nORDER BY scheduled_at ASC \nLIMIT 1;",
+        "options": {}
+      },
+      "id": "pg-cron-id",
+      "name": "PostgreSQL - Padrao (Cron/Manual)",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [2648, -720],
+      "credentials": { "postgres": { "id": "owASX235VSmdGPHh", "name": "Postgres account" } }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict", "version": 1 },
+          "conditions": [{ "leftValue": "={{ $json.id }}", "operator": { "type": "string", "operation": "notEmpty", "singleValue": true } }],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-id",
+      "name": "IF - Tem Post?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [2896, -560]
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first().json;\nlet rawUrls = item.instagram_media_paths;\nif (!rawUrls || (Array.isArray(rawUrls) && rawUrls.length === 0)) { rawUrls = item.media_paths; }\nlet mediaUrls = [];\nif (Array.isArray(rawUrls)) { mediaUrls = rawUrls; }\nelse if (typeof rawUrls === 'string') { try { mediaUrls = JSON.parse(rawUrls); } catch(e) {} }\nelse if (rawUrls && typeof rawUrls === 'object') { mediaUrls = Object.values(rawUrls); }\nlet caption = (item.instagram_caption || item.linkedin_caption || item.topic || '').replace(/-\\s*/g, '').replace(/-\\s*/g, '');\nreturn mediaUrls.map((url, idx) => ({ json: { post_id: item.id, topic: item.topic, caption: caption, image_url: String(url), index: idx } }));"
+      },
+      "id": "prep-id",
+      "name": "Preparar Lista de Slides",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [3136, -560]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v19.0/{{ $vars.INSTAGRAM_USER_ID || '17841409408339004' }}/media",
+        "sendBody": true,
+        "bodyParameters": { "parameters": [
+          { "name": "image_url", "value": "={{ $json.image_url }}" },
+          { "name": "is_carousel_item", "value": "true" },
+          { "name": "access_token", "value": "=EAAYps4BvAckBSNRBBC7SriVrhB1UkD1SftgqwyHVc3Eb3ZC46uE3teA70ddotYTSOVDB9HZB6zZCkr7aZBhRPq9hWAOMajw6wFLp1f2xLxGY3TZBOrcqPVWeviaBXlB2QV1ZAAnGQL29suUu8mTIqYiwZA42rkVLlMuvqNbnGrEoJiERxoU0m0rSR2HZBQkdTM7u" }
+        ]},
+        "options": {}
+      },
+      "id": "container-id",
+      "name": "Instagram - Criar Container de Cada Slide",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [3376, -560]
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst containerIds = items.map(i => i.json.id);\nconst firstInput = $('Preparar Lista de Slides').first().json;\nreturn [{ json: { post_id: firstInput.post_id, caption: firstInput.caption, children_ids: containerIds } }];"
+      },
+      "id": "group-id",
+      "name": "Agrupar IDs dos Slides",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [3616, -560]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v19.0/{{ $vars.INSTAGRAM_USER_ID || '17841409408339004' }}/media",
+        "sendBody": true,
+        "bodyParameters": { "parameters": [
+          { "name": "media_type", "value": "CAROUSEL" },
+          { "name": "caption", "value": "={{ $json.caption }}" },
+          { "name": "children", "value": "={{ $json.children_ids.join(',') }}" },
+          { "name": "access_token", "value": "=EAAYps4BvAckBSNRBBC7SriVrhB1UkD1SftgqwyHVc3Eb3ZC46uE3teA70ddotYTSOVDB9HZB6zZCkr7aZBhRPq9hWAOMajw6wFLp1f2xLxGY3TZBOrcqPVWeviaBXlB2QV1ZAAnGQL29suUu8mTIqYiwZA42rkVLlMuvqNbnGrEoJiERxoU0m0rSR2HZBQkdTM7u" }
+        ]},
+        "options": {}
+      },
+      "id": "pai-id",
+      "name": "Instagram - Criar Container Pai",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [3856, -560]
+    },
+    {
+      "parameters": { "amount": 10, "unit": "seconds" },
+      "id": "wait-id",
+      "name": "Aguardar Processamento",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1,
+      "position": [4080, -560],
+      "webhookId": "ig-wait-b0987d42"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v19.0/{{ $vars.INSTAGRAM_USER_ID || '17841409408339004' }}/media_publish",
+        "sendBody": true,
+        "bodyParameters": { "parameters": [
+          { "name": "creation_id", "value": "={{ $json.id }}" },
+          { "name": "access_token", "value": "=EAAYps4BvAckBSNRBBC7SriVrhB1UkD1SftgqwyHVc3Eb3ZC46uE3teA70ddotYTSOVDB9HZB6zZCkr7aZBhRPq9hWAOMajw6wFLp1f2xLxGY3TZBOrcqPVWeviaBXlB2QV1ZAAnGQL29suUu8mTIqYiwZA42rkVLlMuvqNbnGrEoJiERxoU0m0rSR2HZBQkdTM7u" }
+        ]},
+        "options": {}
+      },
+      "id": "publish-id",
+      "name": "Instagram - Publicar Carrossel",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [4352, -560]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE public.content_pipeline \nSET \n  status = 'posted_instagram', \n  instagram_post_id = '{{ $json.id }}',\n  updated_at = NOW() \nWHERE id = '{{ $('Agrupar IDs dos Slides').first().json.post_id }}';",
+        "options": {}
+      },
+      "id": "update-id",
+      "name": "PostgreSQL - Marcar Publicado",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [4560, -560],
+      "credentials": { "postgres": { "id": "owASX235VSmdGPHh", "name": "Postgres account" } }
+    }
+  ],
+  "connections": {
+    "Webhook": { "main": [[{ "node": "PostgreSQL - Por ID (Webhook)", "type": "main", "index": 0 }]] },
+    "Schedule Trigger": { "main": [[{ "node": "PostgreSQL - Padrao (Cron/Manual)", "type": "main", "index": 0 }]] },
+    "Ao Clicar para Testar": { "main": [[{ "node": "PostgreSQL - Padrao (Cron/Manual)", "type": "main", "index": 0 }]] },
+    "PostgreSQL - Por ID (Webhook)": { "main": [[{ "node": "IF - Tem Post?", "type": "main", "index": 0 }]] },
+    "PostgreSQL - Padrao (Cron/Manual)": { "main": [[{ "node": "IF - Tem Post?", "type": "main", "index": 0 }]] },
+    "IF - Tem Post?": { "main": [[{ "node": "Preparar Lista de Slides", "type": "main", "index": 0 }]] },
+    "Preparar Lista de Slides": { "main": [[{ "node": "Instagram - Criar Container de Cada Slide", "type": "main", "index": 0 }]] },
+    "Instagram - Criar Container de Cada Slide": { "main": [[{ "node": "Agrupar IDs dos Slides", "type": "main", "index": 0 }]] },
+    "Agrupar IDs dos Slides": { "main": [[{ "node": "Instagram - Criar Container Pai", "type": "main", "index": 0 }]] },
+    "Instagram - Criar Container Pai": { "main": [[{ "node": "Aguardar Processamento", "type": "main", "index": 0 }]] },
+    "Aguardar Processamento": { "main": [[{ "node": "Instagram - Publicar Carrossel", "type": "main", "index": 0 }]] },
+    "Instagram - Publicar Carrossel": { "main": [[{ "node": "PostgreSQL - Marcar Publicado", "type": "main", "index": 0 }]] }
+  },
+  "pinData": {},
+  "meta": { "templateCredsSetupCompleted": true, "instanceId": "d2b14291e08fc90a2553aa1545ab4ac59501cf87f57b361f133301661f8e4f80" }
+}

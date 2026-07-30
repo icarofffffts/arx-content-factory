@@ -1,0 +1,284 @@
+{
+  "name": "Fluxo 5 - Auto DM Instagram com Trava de Seguidor & Mapeamento Dinâmico de Posts",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "GET",
+        "path": "instagram-comment-webhook",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-comment-get",
+      "name": "Webhook Meta - Verificação GET",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1.1,
+      "position": [304, -280],
+      "webhookId": "instagram-comment-webhook"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "instagram-comment-webhook",
+        "options": {}
+      },
+      "id": "webhook-comment-trigger",
+      "name": "Webhook - Novo Comentário POST",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1.1,
+      "position": [304, -80],
+      "webhookId": "instagram-comment-webhook"
+    },
+    {
+      "parameters": {},
+      "id": "manual-test-trigger",
+      "name": "Ao Clicar para Testar (Simulação)",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [304, 120]
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ $json.query['hub.challenge'] }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "respond-meta-challenge",
+      "name": "Responder Desafio da Meta (hub.challenge)",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [544, -280]
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\n\nconst body = input.body || input;\nconst entry = (body.entry && body.entry[0]) || {};\nconst changes = (entry.changes && entry.changes[0]) || {};\nconst value = changes.value || body;\n\nconst commentText = (value.text || value.comment_text || value.message || 'IA').toLowerCase();\nconst username = value.from?.username || value.username || 'usuario_teste';\nconst userId = value.from?.id || value.user_id || value.sender_id || '12345678';\nconst commentId = value.comment_id || value.id || 'comment_123';\nconst instagramPostId = value.media?.id || value.post_id || value.media_id || '';\n\nconst keywords = ['ia', 'links', 'vagas', 'pdf', 'curso', 'material', 'github'];\nconst hasKeyword = keywords.some(kw => commentText.includes(kw));\n\nreturn [{\n  json: {\n    user_id: userId,\n    username: username,\n    comment_id: commentId,\n    instagram_post_id: instagramPostId,\n    comment_text: commentText,\n    is_valid_lead: hasKeyword\n  }\n}];\n"
+      },
+      "id": "parse-comment-data",
+      "name": "Filtrar Palavras-Chave & Identificar Lead",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [544, -80]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.is_valid_lead }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-valid-lead",
+      "name": "IF - Comentou Palavra Chave?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [784, -80]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT id, topic, pdf_url \nFROM public.content_pipeline \nWHERE instagram_post_id = '{{ $json.instagram_post_id }}'\n   OR status IN ('posted_instagram', 'published')\nORDER BY created_at DESC \nLIMIT 1;",
+        "options": {}
+      },
+      "id": "db-fetch-post-content",
+      "name": "PostgreSQL - Mapear Conteúdo Específico do Post",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [1024, -80],
+      "credentials": {
+        "postgres": {
+          "id": "owASX235VSmdGPHh",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://graph.facebook.com/v19.0/{{ $('Filtrar Palavras-Chave & Identificar Lead').first().json.user_id }}",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "fields",
+              "value": "name,username,is_user_follow_business"
+            },
+            {
+              "name": "access_token",
+              "value": "={{ $vars.INSTAGRAM_ACCESS_TOKEN }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "check-follower-status",
+      "name": "Meta API - Checar se Usuário Segue @_icarofernandes",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1264, -80],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.is_user_follow_business || false }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-is-following",
+      "name": "IF - Já Segue o Perfil?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1504, -80]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v19.0/{{ $vars.INSTAGRAM_USER_ID || '17841409408339004' }}/messages",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "recipient",
+              "value": "={ \"id\": \"{{ $('Filtrar Palavras-Chave & Identificar Lead').first().json.user_id }}\" }"
+            },
+            {
+              "name": "message",
+              "value": "={ \"text\": \"Fala {{ $('Filtrar Palavras-Chave & Identificar Lead').first().json.username }}! 👋 Como você já segue o perfil @_icarofernandes, aqui está o material exclusivo do post:\\n\\n📌 Materias de: {{ $('PostgreSQL - Mapear Conteúdo Específico do Post').first().json.topic }}\\n📄 Baixar Carrossel PDF: {{ $('PostgreSQL - Mapear Conteúdo Específico do Post').first().json.pdf_url }}\\n🔗 Ver Código no GitHub: https://github.com/icarofffffts\\n\\nBons estudos! 📥✨\" }"
+            },
+            {
+              "name": "access_token",
+              "value": "={{ $vars.INSTAGRAM_ACCESS_TOKEN }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "send-direct-unlocked",
+      "name": "Instagram - Enviar Material Direct (Seguidor Confirmado)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1744, -180]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v19.0/{{ $('Filtrar Palavras-Chave & Identificar Lead').first().json.comment_id }}/replies",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "message",
+              "value": "=Te enviei o material completo deste post no Direct! Dá uma olhada nas suas mensagens 📥✨"
+            },
+            {
+              "name": "access_token",
+              "value": "={{ $vars.INSTAGRAM_ACCESS_TOKEN }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "reply-comment-unlocked",
+      "name": "Instagram - Responder ao Comentário (Sucesso)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1984, -180]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v19.0/{{ $vars.INSTAGRAM_USER_ID || '17841409408339004' }}/messages",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "recipient",
+              "value": "={ \"id\": \"{{ $('Filtrar Palavras-Chave & Identificar Lead').first().json.user_id }}\" }"
+            },
+            {
+              "name": "message",
+              "value": "={ \"attachment\": { \"type\": \"template\", \"payload\": { \"template_type\": \"button\", \"text\": \"Fala! 👋 Vi seu comentário no post sobre {{ $('PostgreSQL - Mapear Conteúdo Específico do Post').first().json.topic }}!\\n\\n🔒 O download do PDF e dos links de código é exclusivo para seguidores de @_icarofernandes.\\n\\nSiga o perfil e clique no botão abaixo para liberar:\", \"buttons\": [ { \"type\": \"web_url\", \"url\": \"https://instagram.com/__icarofernandes\", \"title\": \"👉 SEGUIR PERFIL\" }, { \"type\": \"postback\", \"title\": \"🔓 LIBERAR MATERIAL\", \"payload\": \"UNLOCK_LEAD\" } ] } } } }"
+            },
+            {
+              "name": "access_token",
+              "value": "={{ $vars.INSTAGRAM_ACCESS_TOKEN }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "send-direct-lock-gate",
+      "name": "Instagram - Enviar Trava de Seguidor com Botões Interativos",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1744, 30]
+    }
+  ],
+  "connections": {
+    "Webhook Meta - Verificação GET": {
+      "main": [[{ "node": "Responder Desafio da Meta (hub.challenge)", "type": "main", "index": 0 }]]
+    },
+    "Webhook - Novo Comentário POST": {
+      "main": [[{ "node": "Filtrar Palavras-Chave & Identificar Lead", "type": "main", "index": 0 }]]
+    },
+    "Ao Clicar para Testar (Simulação)": {
+      "main": [[{ "node": "Filtrar Palavras-Chave & Identificar Lead", "type": "main", "index": 0 }]]
+    },
+    "Filtrar Palavras-Chave & Identificar Lead": {
+      "main": [[{ "node": "IF - Comentou Palavra Chave?", "type": "main", "index": 0 }]]
+    },
+    "IF - Comentou Palavra Chave?": {
+      "main": [[{ "node": "PostgreSQL - Mapear Conteúdo Específico do Post", "type": "main", "index": 0 }]]
+    },
+    "PostgreSQL - Mapear Conteúdo Específico do Post": {
+      "main": [[{ "node": "Meta API - Checar se Usuário Segue @_icarofernandes", "type": "main", "index": 0 }]]
+    },
+    "Meta API - Checar se Usuário Segue @_icarofernandes": {
+      "main": [[{ "node": "IF - Já Segue o Perfil?", "type": "main", "index": 0 }]]
+    },
+    "IF - Já Segue o Perfil?": {
+      "main": [
+        [{ "node": "Instagram - Enviar Material Direct (Seguidor Confirmado)", "type": "main", "index": 0 }],
+        [{ "node": "Instagram - Enviar Trava de Seguidor com Botões Interativos", "type": "main", "index": 0 }]
+      ]
+    },
+    "Instagram - Enviar Material Direct (Seguidor Confirmado)": {
+      "main": [[{ "node": "Instagram - Responder ao Comentário (Sucesso)", "type": "main", "index": 0 }]]
+    }
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true
+  }
+}

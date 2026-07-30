@@ -1,0 +1,1 @@
+SELECT we."webhookPath", we."method", we."workflowId", we."node", we."webhookId", we."pathLength" FROM webhook_entity we WHERE we."workflowId" IN ('Id3FzEJC4bA4FCVI', 'AckgqzMmYGlvhcND', '0uahIzCUQYRU3xmh');

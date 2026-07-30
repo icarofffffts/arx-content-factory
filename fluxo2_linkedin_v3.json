@@ -1,0 +1,204 @@
+{
+  "nodes": [
+    {
+      "parameters": { "options": {} },
+      "id": "manual-trigger-id",
+      "name": "Ao Clicar para Testar",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [2144, -448]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "linkedin-publish",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [2352, -256],
+      "id": "webhook-id",
+      "name": "Webhook",
+      "webhookId": "45011652-3c9c-44ea-ad3c-a45917ec9788"
+    },
+    {
+      "parameters": {
+        "rule": { "interval": [{ "field": "cronExpression", "expression": "*/15 * * * *" }] }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [2288, -624],
+      "id": "cron-id",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT id, topic, linkedin_caption, media_paths, pdf_url\nFROM public.content_pipeline \nWHERE id = $1\n  AND status IN ('scheduled', 'posted_instagram')\n  AND channel IN ('linkedin', 'all');",
+        "options": {}
+      },
+      "id": "pg-webhook-id",
+      "name": "PostgreSQL - Por ID (Webhook)",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [2648, -400],
+      "credentials": { "postgres": { "id": "owASX235VSmdGPHh", "name": "Postgres account" } }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT id, topic, linkedin_caption, media_paths, pdf_url\nFROM public.content_pipeline \nWHERE status IN ('scheduled', 'posted_instagram')\n  AND channel IN ('linkedin', 'all')\n  AND scheduled_at <= (NOW() + INTERVAL '15 minutes')\nORDER BY scheduled_at ASC \nLIMIT 1;",
+        "options": {}
+      },
+      "id": "pg-cron-id",
+      "name": "PostgreSQL - Padrao (Cron/Manual)",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [2648, -720],
+      "credentials": { "postgres": { "id": "owASX235VSmdGPHh", "name": "Postgres account" } }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict", "version": 1 },
+          "conditions": [{ "leftValue": "={{ $json.id }}", "operator": { "type": "string", "operation": "notEmpty", "singleValue": true } }],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-id",
+      "name": "IF - Tem Post?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [2896, -560]
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first().json;\nlet mediaUrls = [];\nif (typeof item.media_paths === 'string') {\n  try { mediaUrls = JSON.parse(item.media_paths); } catch(e) {}\n} else if (Array.isArray(item.media_paths)) {\n  mediaUrls = item.media_paths;\n}\nreturn mediaUrls.map((url, idx) => ({\n  json: { image_url: url, index: idx, post_id: item.id, topic: item.topic, caption: item.linkedin_caption }\n}));"
+      },
+      "id": "prep-id",
+      "name": "Preparar Lista de Slides",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [3136, -560]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.linkedin.com/v2/assets?action=registerUpload",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": { "parameters": [{ "name": "X-Restli-Protocol-Version", "value": "2.0.0" }, { "name": "Content-Type", "value": "application/json" }] },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"registerUploadRequest\": {\n    \"recipes\": [\"urn:li:digitalmediaRecipe:feedshare-image\"],\n    \"owner\": \"urn:li:person:sezTQL8IJe\",\n    \"serviceRelationships\": [{ \"relationshipType\": \"OWNER\", \"identifier\": \"urn:li:userGeneratedContent\" }]\n  }\n}",
+        "options": {}
+      },
+      "id": "reg-id",
+      "name": "LinkedIn - Registrar Upload",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [3376, -560],
+      "credentials": { "httpHeaderAuth": { "id": "7nX9AmJXdDXVfkqy", "name": "Header Auth account" } }
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst originalSlides = $('Preparar Lista de Slides').all();\nreturn items.map((item, idx) => {\n  const uploadUrl = item.json.value.uploadMechanism['com.linkedin.digitalmedia.uploading.MediaUploadHttpRequest'].uploadUrl;\n  const assetUrn = item.json.value.asset;\n  const orig = originalSlides[idx] ? originalSlides[idx].json : {};\n  return { json: { image_url: orig.image_url, upload_url: uploadUrl, asset_urn: assetUrn, post_id: orig.post_id, topic: orig.topic, caption: orig.caption } };\n});"
+      },
+      "id": "attach-id",
+      "name": "Anexar UploadUrl ao Slide",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [3616, -560]
+    },
+    {
+      "parameters": { "url": "={{ $json.image_url }}", "options": { "response": { "response": { "responseFormat": "file" } } } },
+      "id": "dl-id",
+      "name": "Baixar Imagem",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [3856, -560]
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "={{ $json.upload_url }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": { "parameters": [{ "name": "Content-Type", "value": "image/png" }] },
+        "sendBody": true,
+        "contentType": "binaryData",
+        "inputDataFieldName": "data",
+        "options": {}
+      },
+      "id": "upload-id",
+      "name": "LinkedIn - Enviar Slide",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [4096, -560],
+      "credentials": { "httpHeaderAuth": { "id": "7nX9AmJXdDXVfkqy", "name": "Header Auth account" } }
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst slidesInfo = $('Anexar UploadUrl ao Slide').all();\nconst mediaArray = slidesInfo.map(item => ({ status: 'READY', media: item.json.asset_urn }));\nconst firstItem = slidesInfo[0].json;\nlet caption = (firstItem.caption || firstItem.topic || '').replace(/-\\s*/g, '').replace(/-\\s*/g, '');\nconst body = {\n  author: 'urn:li:person:sezTQL8IJe',\n  lifecycleState: 'PUBLISHED',\n  specificContent: { 'com.linkedin.ugc.ShareContent': { shareCommentary: { text: caption }, shareMediaCategory: 'IMAGE', media: mediaArray } },\n  visibility: { 'com.linkedin.ugc.MemberNetworkVisibility': 'PUBLIC' }\n};\nreturn [{ json: { linkedin_body: body, post_id: firstItem.post_id } }];"
+      },
+      "id": "group-id",
+      "name": "Agrupar Carrossel",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [4336, -560]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.linkedin.com/v2/ugcPosts",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": { "parameters": [{ "name": "X-Restli-Protocol-Version", "value": "2.0.0" }, { "name": "Content-Type", "value": "application/json" }] },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.linkedin_body) }}",
+        "options": {}
+      },
+      "id": "pub-id",
+      "name": "HTTP Request - Publicar no LinkedIn",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [4576, -560],
+      "credentials": { "httpHeaderAuth": { "id": "7nX9AmJXdDXVfkqy", "name": "Header Auth account" } }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE public.content_pipeline \nSET status = CASE WHEN status = 'posted_instagram' THEN 'published' ELSE 'posted_linkedin' END, \n    updated_at = NOW() \nWHERE id = '{{ $('Agrupar Carrossel').first().json.post_id }}';",
+        "options": {}
+      },
+      "id": "update-id",
+      "name": "PostgreSQL - Marcar Publicado",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [4816, -560],
+      "credentials": { "postgres": { "id": "owASX235VSmdGPHh", "name": "Postgres account" } }
+    }
+  ],
+  "connections": {
+    "Webhook": { "main": [[{ "node": "PostgreSQL - Por ID (Webhook)", "type": "main", "index": 0 }]] },
+    "Schedule Trigger": { "main": [[{ "node": "PostgreSQL - Padrao (Cron/Manual)", "type": "main", "index": 0 }]] },
+    "Ao Clicar para Testar": { "main": [[{ "node": "PostgreSQL - Padrao (Cron/Manual)", "type": "main", "index": 0 }]] },
+    "PostgreSQL - Por ID (Webhook)": { "main": [[{ "node": "IF - Tem Post?", "type": "main", "index": 0 }]] },
+    "PostgreSQL - Padrao (Cron/Manual)": { "main": [[{ "node": "IF - Tem Post?", "type": "main", "index": 0 }]] },
+    "IF - Tem Post?": { "main": [[{ "node": "Preparar Lista de Slides", "type": "main", "index": 0 }]] },
+    "Preparar Lista de Slides": { "main": [[{ "node": "LinkedIn - Registrar Upload", "type": "main", "index": 0 }]] },
+    "LinkedIn - Registrar Upload": { "main": [[{ "node": "Anexar UploadUrl ao Slide", "type": "main", "index": 0 }]] },
+    "Anexar UploadUrl ao Slide": { "main": [[{ "node": "Baixar Imagem", "type": "main", "index": 0 }]] },
+    "Baixar Imagem": { "main": [[{ "node": "LinkedIn - Enviar Slide", "type": "main", "index": 0 }]] },
+    "LinkedIn - Enviar Slide": { "main": [[{ "node": "Agrupar Carrossel", "type": "main", "index": 0 }]] },
+    "Agrupar Carrossel": { "main": [[{ "node": "HTTP Request - Publicar no LinkedIn", "type": "main", "index": 0 }]] },
+    "HTTP Request - Publicar no LinkedIn": { "main": [[{ "node": "PostgreSQL - Marcar Publicado", "type": "main", "index": 0 }]] }
+  },
+  "pinData": {},
+  "meta": { "templateCredsSetupCompleted": true, "instanceId": "d2b14291e08fc90a2553aa1545ab4ac59501cf87f57b361f133301661f8e4f80" }
+}

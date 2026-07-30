@@ -1,0 +1,184 @@
+{
+  "name": "WhatsApp - Resposta do Botao (Aprovar/Rejeitar)",
+  "nodes": [
+    {
+      "parameters": {
+        "path": "whatsapp-button-reply",
+        "options": {}
+      },
+      "name": "Webhook - Receber Click do Botao",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [-480, -320],
+      "webhookId": "whatsapp-button-reply"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Evolution Go webhook payload format (adjust if different)\n// Common formats for button click webhooks:\n// Format A: { event: 'messages.upsert', data: { message: { interactiveResponseMessage: { nativeFlowResponseMessage: { paramsJson: '{\"id\":\"approve_123\"}' } } } } }\n// Format B: { event: 'messages.upsert', data: { key: {}, message: { interactiveResponseMessage: { nativeFlowResponseMessage: { ... } } } } }\n// Format C: { event: 'action', instanceId: '...', data: { id: 'approve_123' } }\n\nconst body = $input.first().json;\nlet buttonId = '';\nlet fromNumber = '';\n\n// Try to extract from various payload formats\nif (body.data) {\n  // Try interactiveResponseMessage (WhatsApp Business API)\n  const msg = body.data.message || body.data;\n  if (msg && msg.interactiveResponseMessage) {\n    const nativeFlow = msg.interactiveResponseMessage.nativeFlowResponseMessage;\n    if (nativeFlow && nativeFlow.paramsJson) {\n      try {\n        const params = JSON.parse(nativeFlow.paramsJson);\n        buttonId = params.id || '';\n      } catch(e) {}\n    }\n  }\n  // Try direct id field\n  if (!buttonId && body.data.id) {\n    buttonId = body.data.id;\n  }\n  // Extract sender number\n  if (body.data.key && body.data.key.remoteJid) {\n    fromNumber = body.data.key.remoteJid.split('@')[0];\n  }\n}\n\n// Fallback: check top-level fields\nif (!buttonId && body.id) {\n  buttonId = body.id;\n}\nif (!fromNumber && body.from) {\n  fromNumber = body.from.split('@')[0];\n}\n\n// Parse button ID: approve_123 or reject_123\nlet action = '';\nlet postId = '';\n\nif (buttonId) {\n  const parts = buttonId.split('_');\n  action = parts[0] || ''; // 'approve' or 'reject'\n  postId = parts.slice(1).join('_'); // the rest is the post ID\n}\n\nreturn [{\n  json: {\n    raw_body: JSON.stringify(body),\n    button_id: buttonId,\n    action: action,\n    post_id: postId,\n    from_number: fromNumber,\n    parsed: action && postId ? true : false\n  }\n}];"
+      },
+      "name": "Code - Parsear Click do Botao",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-320, -320]
+    },
+    {
+      "parameters": {
+        "dataType": "boolean",
+        "conditions": [
+          {
+            "id": "parsed-check",
+            "leftValue": "={{ $json.parsed }}",
+            "type": "boolean",
+            "rightValue": true
+          }
+        ],
+        "combineOperation": "all",
+        "options": {}
+      },
+      "name": "IF - Button Parseado?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [-160, -320]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Aprovar: update status to 'scheduled'\n// scheduled_at = NOW() so next cron picks it up\nconst action = $input.first().json.action;\nconst postId = $input.first().json.post_id;\n\nif (action === 'approve') {\n  return [{ json: { action: 'approve', post_id: postId, status: 'scheduled' } }];\n} else if (action === 'reject') {\n  return [{ json: { action: 'reject', post_id: postId, status: 'deleted' } }];\n} else {\n  return [{ json: { action: 'unknown', post_id: postId } }];\n}"
+      },
+      "name": "Code - Decidir Acao",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [0, -400]
+    },
+    {
+      "parameters": {
+        "dataType": "string",
+        "conditions": [
+          {
+            "id": "action-approve",
+            "leftValue": "={{ $json.action }}",
+            "type": "string",
+            "rightValue": "approve"
+          }
+        ],
+        "combineOperation": "all",
+        "options": {}
+      },
+      "name": "IF - Aprovado?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [160, -400]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE public.content_pipeline SET status = 'scheduled', scheduled_at = NOW(), updated_at = NOW() WHERE id = '{{ $json.post_id }}' AND status = 'awaiting_approval';",
+        "options": {}
+      },
+      "name": "PG - Aprovar e Agendar",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [320, -480],
+      "credentials": {
+        "postgres": {
+          "id": "owASX235VSmdGPHh",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "DELETE FROM public.content_pipeline WHERE id = '{{ $json.post_id }}' AND status = 'awaiting_approval';",
+        "options": {}
+      },
+      "name": "PG - Rejeitar e Remover",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [320, -240],
+      "credentials": {
+        "postgres": {
+          "id": "owASX235VSmdGPHh",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "sendMessage",
+        "instanceApiKey": "26cbfa77-76c5-489c-9c98-bd2ce4ed6e8d",
+        "sendTextNumber": "5531995398002",
+        "sendTextContent": "=✅ *Conteudo Aprovado!*\n\nPost \"{{ $json.topic || $json.post_id }}\" foi agendado para publicacao em breve.",
+        "sendTextDelay": 1000,
+        "sendTextAdditionalFields": {},
+        "requestOptions": {}
+      },
+      "name": "Enviar Confirmacao Aprovacao",
+      "type": "n8n-nodes-evolution-go.evoGo",
+      "typeVersion": 1,
+      "position": [480, -480],
+      "credentials": {
+        "evoGoApi": {
+          "id": "pJuORISTpF0VjreA",
+          "name": "EvoGo account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "resource": "sendMessage",
+        "instanceApiKey": "26cbfa77-76c5-489c-9c98-bd2ce4ed6e8d",
+        "sendTextNumber": "5531995398002",
+        "sendTextContent": "=❌ *Conteudo Rejeitado!*\n\nPost foi removido do pipeline.",
+        "sendTextDelay": 1000,
+        "sendTextAdditionalFields": {},
+        "requestOptions": {}
+      },
+      "name": "Enviar Confirmacao Rejeicao",
+      "type": "n8n-nodes-evolution-go.evoGo",
+      "typeVersion": 1,
+      "position": [480, -240],
+      "credentials": {
+        "evoGoApi": {
+          "id": "pJuORISTpF0VjreA",
+          "name": "EvoGo account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    }
+  ],
+  "connections": {
+    "Webhook - Receber Click do Botao": {
+      "main": [[{"node": "Code - Parsear Click do Botao", "type": "main", "index": 0}]]
+    },
+    "Code - Parsear Click do Botao": {
+      "main": [[{"node": "IF - Button Parseado?", "type": "main", "index": 0}]]
+    },
+    "IF - Button Parseado?": {
+      "main": [[{"node": "Code - Decidir Acao", "type": "main", "index": 0}]]
+    },
+    "Code - Decidir Acao": {
+      "main": [[{"node": "IF - Aprovado?", "type": "main", "index": 0}]]
+    },
+    "IF - Aprovado?": {
+      "main": [
+        [{"node": "PG - Aprovar e Agendar", "type": "main", "index": 0}]
+      ],
+      "main_1": [
+        [{"node": "PG - Rejeitar e Remover", "type": "main", "index": 0}]
+      ]
+    },
+    "PG - Aprovar e Agendar": {
+      "main": [[{"node": "Enviar Confirmacao Aprovacao", "type": "main", "index": 0}]]
+    },
+    "PG - Rejeitar e Remover": {
+      "main": [[{"node": "Enviar Confirmacao Rejeicao", "type": "main", "index": 0}]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "America/Sao_Paulo"
+  },
+  "active": false,
+  "tags": []
+}

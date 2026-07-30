@@ -1,0 +1,149 @@
+{
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "manual-trigger-id",
+      "name": "Ao Clicar para Testar",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [3328, -560]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "github-publish",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [3328, -416],
+      "id": "webhook-id",
+      "name": "Webhook",
+      "webhookId": "gh-78ccfd2c"
+    },
+    {
+      "parameters": {
+        "rule": { "interval": [{ "field": "cronExpression", "expression": "0 22 * * 1-5" }] }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [3328, -720],
+      "id": "cron-id",
+      "name": "Cron - GitHub (22h - Seg a Sex)"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT id, topic, linkedin_caption, pdf_url\nFROM public.content_pipeline \nWHERE id = $1\n  AND status IN ('posted_linkedin', 'posted_instagram')\n  AND (channel = 'github' OR channel = 'all');",
+        "options": {}
+      },
+      "id": "pg-webhook-id",
+      "name": "PostgreSQL - Por ID (Webhook)",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [3568, -480],
+      "credentials": { "postgres": { "id": "owASX235VSmdGPHh", "name": "Postgres account" } }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT id, topic, linkedin_caption, pdf_url\nFROM public.content_pipeline \nWHERE status IN ('posted_linkedin', 'posted_instagram')\n  AND (channel = 'github' OR channel = 'all')\n  AND scheduled_at <= (NOW() + INTERVAL '15 minutes')\nORDER BY scheduled_at ASC \nLIMIT 1;",
+        "options": {}
+      },
+      "id": "pg-cron-id",
+      "name": "PostgreSQL - Padrao (Cron/Manual)",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [3568, -800],
+      "credentials": { "postgres": { "id": "owASX235VSmdGPHh", "name": "Postgres account" } }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict", "version": 1 },
+          "conditions": [{ "leftValue": "={{ $json.id }}", "rightValue": "", "operator": { "type": "string", "operation": "notEmpty", "singleValue": true } }],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-id",
+      "name": "IF - Tem Post?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [3808, -640]
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first().json;\nconst shortId = (item.id || 'post').split('-')[0];\nconst cleanName = item.topic\n  .toLowerCase()\n  .normalize('NFD').replace(/[\\u0300-\\u036f]/g, '')\n  .replace(/[^a-z0-9]/g, '-')\n  .replace(/-+/g, '-')\n  .replace(/^-|-$/g, '');\nconst repoName = `ai-${cleanName.substring(0, 25)}-${shortId}`.replace(/^-|-$/g, '');\nconst readmeText = `# ${item.topic}\n\n${item.linkedin_caption}\n\n---\n\n### 📄 Download do Carrossel em PDF\n👉 [Baixar Carrossel PDF completo](${item.pdf_url})\n\n---\n*Gerado automaticamente pela Content Factory de IA de @__icarofernandes*`;\nconst b64Content = Buffer.from(readmeText).toString('base64');\nreturn [{ json: { repo_name: repoName, topic: item.topic, caption: item.linkedin_caption, pdf_url: item.pdf_url, post_id: item.id, b64_content: b64Content } }];"
+      },
+      "id": "format-id",
+      "name": "Formatar Markdown & Nome do Repo",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [4048, -640]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.github.com/user/repos",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "githubApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"name\": \"{{ $json.repo_name }}\",\n  \"description\": \"Conteudo sobre {{ $json.topic }} por Icaro Fernandes\",\n  \"private\": false,\n  \"auto_init\": false\n}",
+        "options": {}
+      },
+      "id": "create-repo-id",
+      "name": "GitHub - Criar Repositorio",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [4288, -640],
+      "credentials": { "githubApi": { "id": "lk44WnEAXPNHeiCV", "name": "GitHub account" } },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "=https://api.github.com/repos/{{ $json.owner?.login || 'icarofernandes' }}/{{ $('Formatar Markdown & Nome do Repo').first().json.repo_name }}/contents/README.md",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "githubApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"message\": \"docs: adicionar material do post\",\n  \"content\": \"{{ $('Formatar Markdown & Nome do Repo').first().json.b64_content }}\"\n}",
+        "options": {}
+      },
+      "id": "readme-id",
+      "name": "GitHub - Criar README.md",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [4528, -640],
+      "credentials": { "githubApi": { "id": "lk44WnEAXPNHeiCV", "name": "GitHub account" } }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE public.content_pipeline \nSET status = 'published', updated_at = NOW()\nWHERE id = '{{ $('Formatar Markdown & Nome do Repo').first().json.post_id }}';",
+        "options": {}
+      },
+      "id": "update-id",
+      "name": "PostgreSQL - Marcar Finalizado",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [4768, -640],
+      "credentials": { "postgres": { "id": "owASX235VSmdGPHh", "name": "Postgres account" } }
+    }
+  ],
+  "connections": {
+    "Webhook": { "main": [[{ "node": "PostgreSQL - Por ID (Webhook)", "type": "main", "index": 0 }]] },
+    "Cron - GitHub (22h - Seg a Sex)": { "main": [[{ "node": "PostgreSQL - Padrao (Cron/Manual)", "type": "main", "index": 0 }]] },
+    "Ao Clicar para Testar": { "main": [[{ "node": "PostgreSQL - Padrao (Cron/Manual)", "type": "main", "index": 0 }]] },
+    "PostgreSQL - Por ID (Webhook)": { "main": [[{ "node": "IF - Tem Post?", "type": "main", "index": 0 }]] },
+    "PostgreSQL - Padrao (Cron/Manual)": { "main": [[{ "node": "IF - Tem Post?", "type": "main", "index": 0 }]] },
+    "IF - Tem Post?": { "main": [[{ "node": "Formatar Markdown & Nome do Repo", "type": "main", "index": 0 }]] },
+    "Formatar Markdown & Nome do Repo": { "main": [[{ "node": "GitHub - Criar Repositorio", "type": "main", "index": 0 }]] },
+    "GitHub - Criar Repositorio": { "main": [[{ "node": "GitHub - Criar README.md", "type": "main", "index": 0 }]] },
+    "GitHub - Criar README.md": { "main": [[{ "node": "PostgreSQL - Marcar Finalizado", "type": "main", "index": 0 }]] }
+  },
+  "pinData": {},
+  "meta": { "templateCredsSetupCompleted": true, "instanceId": "d2b14291e08fc90a2553aa1545ab4ac59501cf87f57b361f133301661f8e4f80" }
+}

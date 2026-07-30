@@ -1,0 +1,1124 @@
+﻿{
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "7612c474-5924-4b33-9238-71283112af94",
+      "name": "Manual - Testar Fluxo",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        6272,
+        3792
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "notify-draft",
+        "options": {}
+      },
+      "id": "7c82f6c1-2d7e-4946-ab69-50a0c738fd68",
+      "name": "Webhook - Receber ID do Draft",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        6496,
+        3952
+      ],
+      "webhookId": "notify-draft"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT id, topic, slides_data, media_paths, instagram_media_paths, pdf_url, linkedin_caption FROM public.content_pipeline WHERE id = '{{ $json.body.post_id }}';",
+        "options": {}
+      },
+      "id": "d9ac00f0-c2a7-4739-8514-ea92358cfe3f",
+      "name": "PG - Buscar Detalhes do Draft",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [
+        6752,
+        3952
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "owASX235VSmdGPHh",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const d = $input.first().json;\nif (!d || !d.id) {\n  return [{ json: { found: false, error: 'Draft nao encontrado' } }];\n}\n\nconst pdfUrl = d.pdf_url || '';\n\nlet slides = d.slides_data || [];\nif (typeof slides === 'string') {\n  try { slides = JSON.parse(slides); } catch(e) { slides = []; }\n}\nlet slidePreview = '';\nif (Array.isArray(slides)) {\n  slidePreview = slides.slice(0, 3).map(s => {\n    let t = s.title || s.content || '';\n    return t.length > 80 ? t.substring(0, 80) + '...' : t;\n  }).join('\\n');\n}\n\nreturn [{\n  json: {\n    id: d.id,\n    topic: d.topic || 'Sem titulo',\n    caption: d.linkedin_caption || '',\n    pdf_url: pdfUrl,\n    slide_preview: slidePreview,\n    found: true\n  }\n}];"
+      },
+      "id": "9ed65377-b712-4ca1-ba16-d8480100a1a5",
+      "name": "Code - Preparar Dados do Draft",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        6912,
+        3952
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "found-check",
+              "leftValue": "={{ $json.found }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "1647cf6b-c027-4d6f-9896-54ecf40ac506",
+      "name": "IF - Draft Existe?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        7072,
+        3952
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "sendMessage",
+        "operation": "sendMedia",
+        "instanceApiKey": "26cbfa77-76c5-489c-9c98-bd2ce4ed6e8d",
+        "sendMediaNumber": "5531995398002",
+        "sendMediaUrl": "={{ $json.pdf_url }}",
+        "sendMediaCaption": "=📃 *NOVO CONTEUDO PARA REVISAO!*\n\n*Topico:* {{ $('Code - Preparar Dados do Draft').item.json.topic }}\n\n{{ $('Code - Preparar Dados do Draft').item.json.slide_preview }}.",
+        "sendMediaFilename": "conteudo.pdf",
+        "sendMediaDelay": 1000,
+        "sendMediaAdditionalFields": {},
+        "requestOptions": {}
+      },
+      "id": "c8be11d8-9988-4c62-a5d5-d46c5b412c60",
+      "name": "Enviar PDF do Draft",
+      "type": "n8n-nodes-evolution-go.evoGo",
+      "typeVersion": 1,
+      "position": [
+        7232,
+        3872
+      ],
+      "credentials": {
+        "evoGoApi": {
+          "id": "pJuORISTpF0VjreA",
+          "name": "EvoGo account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "resource": "sendMessage",
+        "operation": "sendButton",
+        "instanceApiKey": "26cbfa77-76c5-489c-9c98-bd2ce4ed6e8d",
+        "sendButtonNumber": "5531995398002",
+        "sendButtonTitle": "Publicar Conteudo?",
+        "sendButtonDescription": "=Deseja publicar este conteudo agora?",
+        "sendButtonFooter": "Arx Content Factory",
+        "sendButtonButtons": {
+          "values": [
+            {
+              "displayText": "🟢 Aprovar",
+              "id": "={{ 'approve_' + $('Code - Preparar Dados do Draft').item.json.id }}",
+              "key": "approve",
+              "name": "Aprovar"
+            },
+            {
+              "displayText": "🔴 Rejeitar",
+              "id": "={{ 'reject_' + $('Code - Preparar Dados do Draft').item.json.id }}",
+              "key": "reject",
+              "name": "Rejeitar"
+            }
+          ]
+        },
+        "sendButtonAdditionalFields": {},
+        "requestOptions": {}
+      },
+      "id": "61f664fa-8758-473b-ad03-c2680dc27d3b",
+      "name": "Enviar Botoes Aprovar/Rejeitar",
+      "type": "n8n-nodes-evolution-go.evoGo",
+      "typeVersion": 1,
+      "position": [
+        7392,
+        4064
+      ],
+      "credentials": {
+        "evoGoApi": {
+          "id": "pJuORISTpF0VjreA",
+          "name": "EvoGo account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE public.content_pipeline SET status = 'awaiting_approval', updated_at = NOW() WHERE id = '{{ $('PG - Buscar Detalhes do Draft').item.json.id }}';",
+        "options": {}
+      },
+      "id": "b311beb3-8506-48c8-aaf7-4c0ed42587ab",
+      "name": "PG - Aguardando Aprovacao",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [
+        7712,
+        4112
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "owASX235VSmdGPHh",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "button-reply",
+        "options": {}
+      },
+      "id": "1ae13da2-70e3-4522-b38e-5573f1d1639d",
+      "name": "Webhook - Receber Click do Botao",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        6080,
+        4416
+      ],
+      "webhookId": "button-reply"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "check-type",
+              "leftValue": "={{ $json.body.data.type }}",
+              "rightValue": "buttons_response",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "check-media-type",
+              "leftValue": "={{ $json.body.data.Info.MediaType }}",
+              "rightValue": "buttons_response",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        6288,
+        4416
+      ],
+      "id": "7e9c5611-1ec1-4aed-aeea-2d3b00fcab50",
+      "name": "If - So Respostas Minhas"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Evolution Go ButtonClick webhook\nconst input = $input.first().json;\nconst body = input.body || input;\nlet buttonId = '';\nlet buttonText = '';\n\nif (body && body.data) {\n  if (body.data.buttonId) {\n    buttonId = body.data.buttonId;\n  } else if (body.data.Message && body.data.Message.buttonsResponseMessage && body.data.Message.buttonsResponseMessage.selectedButtonID) {\n    buttonId = body.data.Message.buttonsResponseMessage.selectedButtonID;\n  }\n\n  if (body.data.buttonText) {\n    buttonText = body.data.buttonText;\n  } else if (body.data.Message && body.data.Message.buttonsResponseMessage && body.data.Message.buttonsResponseMessage.Response) {\n    buttonText = body.data.Message.buttonsResponseMessage.Response.SelectedDisplayText || '';\n  }\n}\n\nlet action = '';\nlet postId = '';\n\nif (buttonId.includes('approve_')) {\n  action = 'approve';\n  const rawId = buttonId.split('approve_')[1] || '';\n  const match = rawId.match(/[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}/);\n  if (match) postId = match[0];\n} else if (buttonId.includes('reject_')) {\n  action = 'reject';\n  const rawId = buttonId.split('reject_')[1] || '';\n  const match = rawId.match(/[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}/);\n  if (match) postId = match[0];\n} else if (buttonId.includes('reschedule_')) {\n  action = 'reschedule';\n  const rawId = buttonId.split('reschedule_')[1] || '';\n  const match = rawId.match(/[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}/);\n  if (match) postId = match[0];\n} else {\n  if (buttonId.includes('approve') || buttonText.includes('Aprovar')) {\n    action = 'approve';\n  } else if (buttonId.includes('reject') || buttonText.includes('Rejeitar')) {\n    action = 'reject';\n  } else if (buttonText.includes('Alterar') || buttonText.includes('Horario')) {\n    action = 'reschedule';\n  }\n}\nreturn [{\n  json: {\n    button_id: buttonId,\n    button_text: buttonText,\n    action: action,\n    post_id: postId,\n    parsed: !!action\n  }\n}];"
+      },
+      "id": "8dc0ac9d-9356-4c33-993a-bfbd0374faeb",
+      "name": "Code - Parsear Click do Botao",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        6688,
+        4400
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT id, topic, status FROM public.content_pipeline WHERE (id::text = '{{ $('Code - Parsear Click do Botao').item.json.post_id }}' OR '{{ $('Code - Parsear Click do Botao').item.json.post_id }}' = '') AND status IN ('awaiting_approval', 'scheduled') ORDER BY updated_at DESC LIMIT 1;",
+        "options": {}
+      },
+      "id": "3be6d814-4fa4-4168-b2af-9cd77dc71c29",
+      "name": "PG - Buscar Post Pendente",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [
+        7200,
+        4352
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "owASX235VSmdGPHh",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "parsed-check",
+              "leftValue": "={{ $json.parsed }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "33c411f3-6a72-4f32-8754-1d84801883c8",
+      "name": "IF - Button Parseado?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        7008,
+        4384
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const parseData = $('Code - Parsear Click do Botao').first().json;\nconst action = parseData.action;\nconst postId = $json.id || parseData.post_id;\nconst currentStatus = $json.status || '';\n\nif (!$json.id) {\n  return [{ json: { action: 'none', post_id: '', status: 'none', error: 'Nenhum post pendente' } }];\n}\n\n// Anti-duplicacao: bloqueia approve/reject duplicado, permite reschedule\nif (action !== 'reschedule' && currentStatus !== 'awaiting_approval') {\n  return [{ json: { action: 'none', post_id: postId, status: currentStatus, error: 'Post ja processado' } }];\n}\n\nif (action === 'approve') {\n  return [{ json: { action: 'approve', post_id: postId, status: 'scheduled' } }];\n} else if (action === 'reject') {\n  return [{ json: { action: 'reject', post_id: postId, status: 'deleted' } }];\n} else if (action === 'reschedule') {\n  return [{ json: { action: 'reschedule', post_id: postId, status: 'rescheduling' } }];\n} else {\n  return [{ json: { action: 'none', post_id: postId, status: 'none' } }];\n}"
+      },
+      "id": "059c6fe2-862f-4218-a1ba-f03891d54b3d",
+      "name": "Code - Decidir Acao",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        7392,
+        4448
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "action-approve-check",
+              "leftValue": "={{ $json.action }}",
+              "rightValue": "approve",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "29922b80-6599-4581-94e5-bcdad3ee6305",
+      "name": "IF - Aprovado?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        7600,
+        4560
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "action-reject-check",
+              "leftValue": "={{ $json.action }}",
+              "rightValue": "reject",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "ef7d5c70-63d7-4961-a611-371d8d1f8aff",
+      "name": "IF - Rejeitado?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        7600,
+        4720
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE public.content_pipeline SET status = 'scheduled', scheduled_at = GREATEST(scheduled_at, NOW()), updated_at = NOW() WHERE id = '{{ $json.post_id }}' AND status = 'awaiting_approval' RETURNING id, scheduled_at;",
+        "options": {}
+      },
+      "id": "71b59a33-6c9d-4e8b-ae31-ea072513fc87",
+      "name": "PG - Aprovar e Agendar",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [
+        7760,
+        4432
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "owASX235VSmdGPHh",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "DELETE FROM public.content_pipeline WHERE id = '{{ $json.post_id }}' AND status = 'awaiting_approval' RETURNING id;",
+        "options": {}
+      },
+      "id": "a1553204-a3bc-4c58-b072-a6ca74f5ddb4",
+      "name": "PG - Rejeitar e Remover",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [
+        7760,
+        4720
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "owASX235VSmdGPHh",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "sendMessage",
+        "operation": "sendButton",
+        "instanceApiKey": "26cbfa77-76c5-489c-9c98-bd2ce4ed6e8d",
+        "sendButtonNumber": "5531995398002",
+        "sendButtonTitle": "🎉 Conteudo Aprovado!",
+        "sendButtonDescription": "=📅 *Publicacao:* {{ new Date($json.scheduled_at).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' }) }}",
+        "sendButtonFooter": "Arx Content Factory",
+        "sendButtonButtons": {
+          "values": [
+            {
+              "displayText": "🟢Aprovar data",
+              "id": "={{ 'ok_' + $json.id }}",
+              "key": "ok",
+              "name": "Ok"
+            },
+            {
+              "displayText": "🔴 Alterar Horario",
+              "id": "={{ 'reschedule_' + $json.id }}",
+              "key": "reschedule",
+              "name": "Alterar Horario"
+            }
+          ]
+        },
+        "sendButtonAdditionalFields": {},
+        "requestOptions": {}
+      },
+      "id": "b6325d43-48bd-4057-9b4e-e0ede7dc1ff7",
+      "name": "Enviar Confirmacao Aprovacao",
+      "type": "n8n-nodes-evolution-go.evoGo",
+      "typeVersion": 1,
+      "position": [
+        8400,
+        4448
+      ],
+      "credentials": {
+        "evoGoApi": {
+          "id": "pJuORISTpF0VjreA",
+          "name": "EvoGo account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "resource": "sendMessage",
+        "instanceApiKey": "26cbfa77-76c5-489c-9c98-bd2ce4ed6e8d",
+        "sendTextNumber": "5531995398002",
+        "sendTextContent": "=❌ *Conteudo Rejeitado!*\n\nPost foi removido do pipeline de publicacao.",
+        "sendTextDelay": 1000,
+        "sendTextAdditionalFields": {},
+        "requestOptions": {}
+      },
+      "id": "02104183-dd2d-4695-95d0-88e83260d30b",
+      "name": "Enviar Confirmacao Rejeicao",
+      "type": "n8n-nodes-evolution-go.evoGo",
+      "typeVersion": 1,
+      "position": [
+        8416,
+        4704
+      ],
+      "credentials": {
+        "evoGoApi": {
+          "id": "pJuORISTpF0VjreA",
+          "name": "EvoGo account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "has-id",
+              "leftValue": "={{ $json.id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "5a979343-4225-4107-95dd-90f8dfce26e3",
+      "name": "IF - Aprovado com Sucesso?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        8080,
+        4432
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "has-id-reject",
+              "leftValue": "={{ $json.id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "a49a4d5f-c2e1-4dcf-b826-95107fa587b1",
+      "name": "IF - Rejeitado com Sucesso?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        8080,
+        4720
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "action-reschedule-check",
+              "leftValue": "={{ $json.action }}",
+              "rightValue": "reschedule",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "9a71abfa-278d-4ac6-8ef7-29e72d4a4fb6",
+      "name": "IF - Reagendar?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        7600,
+        4848
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "sendMessage",
+        "instanceApiKey": "26cbfa77-76c5-489c-9c98-bd2ce4ed6e8d",
+        "sendTextNumber": "5531995398002",
+        "sendTextContent": "=📅 *Alterar Horario*\n\nDigite nova data e horario no formato:\n*DD/MM HH:mm*\n\nExemplo: 31/07 15:30",
+        "sendTextDelay": 1000,
+        "sendTextAdditionalFields": {},
+        "requestOptions": {}
+      },
+      "id": "071a6dec-f2e4-4e3b-b777-3ba4359de764",
+      "name": "Enviar Pergunta Horario",
+      "type": "n8n-nodes-evolution-go.evoGo",
+      "typeVersion": 1,
+      "position": [
+        7856,
+        4864
+      ],
+      "credentials": {
+        "evoGoApi": {
+          "id": "pJuORISTpF0VjreA",
+          "name": "EvoGo account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE public.content_pipeline SET status = 'rescheduling', updated_at = NOW() WHERE id = '{{ $json.post_id }}' AND status IN ('awaiting_approval', 'scheduled') RETURNING id;",
+        "options": {}
+      },
+      "id": "601a1ad4-412c-4b3d-b7cc-0efba48d4f8d",
+      "name": "PG - Marcar como Rescheduling",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [
+        8096,
+        5008
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "owASX235VSmdGPHh",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {"caseSensitive": true, "leftValue": "", "typeValidation": "strict", "version": 3},
+          "conditions": [{"id": "reschedule-ok-check", "leftValue": "={{ $json.id }}", "rightValue": "", "operator": {"type": "string", "operation": "notEmpty", "singleValue": true}}],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-reschedule-ok-001",
+      "name": "IF - Rescheduling OK?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [8128, 5184]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extrai texto de mensagem comum (nao botao)\nconst input = $input.first().json;\nconst body = input.body || input;\nlet text = '';\nlet fromNumber = '';\n\nif (body && body.data) {\n  if (body.data.text) {\n    text = body.data.text;\n  } else if (body.data.Message && typeof body.data.Message.conversation === 'string') {\n    text = body.data.Message.conversation || '';\n  } else if (body.data.Message && body.data.Message.conversationMessage) {\n    text = body.data.Message.conversationMessage.text || '';\n  } else if (body.data.message && body.data.message.conversation) {\n    text = body.data.message.conversation || '';\n  } else if (body.data.Message && body.data.Message.extendedTextMessage) {\n    text = body.data.Message.extendedTextMessage.text || '';\n  }\n  if (body.data.key && body.data.key.remoteJid) {\n    fromNumber = body.data.key.remoteJid.split('@')[0];\n  }\n}\n\nreturn [{ json: { text: text, from_number: fromNumber, has_text: !!text } }];"
+      },
+      "id": "7ca48931-dbd9-49d0-86b0-e4a24c7fb040",
+      "name": "Code - Extrair Texto",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        6496,
+        4688
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT id, scheduled_at, topic FROM public.content_pipeline WHERE status = 'rescheduling' ORDER BY updated_at DESC LIMIT 1;",
+        "options": {}
+      },
+      "id": "a12c2cb8-d9a4-49c3-ab88-8fda922adfbb",
+      "name": "PG - Buscar Post em Rescheduling",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [
+        6656,
+        4688
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "owASX235VSmdGPHh",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "has-pending-reschedule",
+              "leftValue": "={{ $json.id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "89465741-6681-4d60-a473-93fda52c6091",
+      "name": "IF - Tem Reagendamento?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        6816,
+        4688
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const text = $('Code - Extrair Texto').first().json.text.trim();\n\n// Tenta extrair DD/MM HH:mm do texto\nconst match = text.match(/(\\d{1,2})\\/(\\d{1,2})\\s+(\\d{1,2}):(\\d{2})/);\nif (!match) {\n  return [{ json: { parsed: false, error: 'Formato invalido. Use DD/MM HH:mm' } }];\n}\n\nconst day = parseInt(match[1]);\nconst month = parseInt(match[2]);\nconst hour = parseInt(match[3]);\nconst min = parseInt(match[4]);\nconst now = new Date();\nlet year = now.getFullYear();\n\n// Se mes for menor que mes atual, provavelmente e ano que vem\nif (month < now.getMonth() + 1 || (month === now.getMonth() + 1 && day < now.getDate())) {\n  year++;\n}\n\n// CORRECAO: Input do admin eh BRT (UTC-3), server roda UTC\n// Construir ISO explicitamente como BRT -03:00, depois converter pra UTC\nconst pad = n => String(n).padStart(2, '0');\nconst brtIso = `${year}-${pad(month)}-${pad(day)}T${pad(hour)}:${pad(min)}:00-03:00`;\nconst scheduled = new Date(brtIso);\nconst isoStr = scheduled.toISOString();\n\n// Formatar pra exibir\nconst display = scheduled.toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' });\n\nreturn [{\n  json: {\n    parsed: true,\n    scheduled_at: isoStr,\n    display: display,\n    post_id: $('PG - Buscar Post em Rescheduling').first().json.id\n  }\n}];"
+      },
+      "id": "137ea1aa-dc4e-4b36-a199-eefdfe949413",
+      "name": "Code - Parsear Data/Hora",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        6976,
+        4688
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE public.content_pipeline SET scheduled_at = '{{ $json.scheduled_at }}', status = 'scheduled', updated_at = NOW() WHERE id = '{{ $json.post_id }}' AND status = 'rescheduling' RETURNING id, scheduled_at;",
+        "options": {}
+      },
+      "id": "f541e0ef-2b37-451d-bef4-206f05e1e09a",
+      "name": "PG - Atualizar Horario",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [
+        7136,
+        4688
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "owASX235VSmdGPHh",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "sendMessage",
+        "operation": "sendButton",
+        "instanceApiKey": "26cbfa77-76c5-489c-9c98-bd2ce4ed6e8d",
+        "sendButtonNumber": "5531995398002",
+        "sendButtonTitle": "✅ Horario Alterado!",
+        "sendButtonDescription": "=Nova data: {{ $json.display }}\n\nPublicacao sera feita neste horario.",
+        "sendButtonFooter": "Arx Content Factory",
+        "sendButtonButtons": {
+          "values": [
+            {
+              "displayText": "✅ OK",
+              "id": "={{ 'ok_' + $json.id }}",
+              "key": "ok",
+              "name": "Ok"
+            }
+          ]
+        },
+        "sendButtonAdditionalFields": {},
+        "requestOptions": {}
+      },
+      "id": "409ca8cc-55fd-4da4-85b7-cd725f4dd652",
+      "name": "Enviar Confirmacao Troca",
+      "type": "n8n-nodes-evolution-go.evoGo",
+      "typeVersion": 1,
+      "position": [
+        7296,
+        4688
+      ],
+      "credentials": {
+        "evoGoApi": {
+          "id": "pJuORISTpF0VjreA",
+          "name": "EvoGo account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    }
+  ],
+  "connections": {
+    "Webhook - Receber ID do Draft": {
+      "main": [
+        [
+          {
+            "node": "PG - Buscar Detalhes do Draft",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PG - Buscar Detalhes do Draft": {
+      "main": [
+        [
+          {
+            "node": "Code - Preparar Dados do Draft",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code - Preparar Dados do Draft": {
+      "main": [
+        [
+          {
+            "node": "IF - Draft Existe?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF - Draft Existe?": {
+      "main": [
+        [
+          {
+            "node": "Enviar PDF do Draft",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enviar PDF do Draft": {
+      "main": [
+        [
+          {
+            "node": "Enviar Botoes Aprovar/Rejeitar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enviar Botoes Aprovar/Rejeitar": {
+      "main": [
+        [
+          {
+            "node": "PG - Aguardando Aprovacao",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook - Receber Click do Botao": {
+      "main": [
+        [
+          {
+            "node": "If - So Respostas Minhas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If - So Respostas Minhas": {
+      "main": [
+        [
+          {
+            "node": "Code - Parsear Click do Botao",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Code - Extrair Texto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code - Parsear Click do Botao": {
+      "main": [
+        [
+          {
+            "node": "IF - Button Parseado?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PG - Buscar Post Pendente": {
+      "main": [
+        [
+          {
+            "node": "Code - Decidir Acao",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF - Button Parseado?": {
+      "main": [
+        [
+          {
+            "node": "PG - Buscar Post Pendente",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code - Decidir Acao": {
+      "main": [
+        [
+          {
+            "node": "IF - Aprovado?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF - Aprovado?": {
+      "main": [
+        [
+          {
+            "node": "PG - Aprovar e Agendar",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "IF - Rejeitado?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF - Rejeitado?": {
+      "main": [
+        [
+          {
+            "node": "PG - Rejeitar e Remover",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "IF - Reagendar?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PG - Aprovar e Agendar": {
+      "main": [
+        [
+          {
+            "node": "IF - Aprovado com Sucesso?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PG - Rejeitar e Remover": {
+      "main": [
+        [
+          {
+            "node": "IF - Rejeitado com Sucesso?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF - Aprovado com Sucesso?": {
+      "main": [
+        [
+          {
+            "node": "Enviar Confirmacao Aprovacao",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF - Rejeitado com Sucesso?": {
+      "main": [
+        [
+          {
+            "node": "Enviar Confirmacao Rejeicao",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF - Reagendar?": {
+      "main": [
+        [
+          {
+            "node": "PG - Marcar como Rescheduling",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PG - Marcar como Rescheduling": {
+      "main": [
+        [
+          {
+            "node": "IF - Rescheduling OK?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF - Rescheduling OK?": {
+      "main": [
+        [
+          {
+            "node": "Enviar Pergunta Horario",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code - Extrair Texto": {
+      "main": [
+        [
+          {
+            "node": "PG - Buscar Post em Rescheduling",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PG - Buscar Post em Rescheduling": {
+      "main": [
+        [
+          {
+            "node": "IF - Tem Reagendamento?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF - Tem Reagendamento?": {
+      "main": [
+        [
+          {
+            "node": "Code - Parsear Data/Hora",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code - Parsear Data/Hora": {
+      "main": [
+        [
+          {
+            "node": "PG - Atualizar Horario",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PG - Atualizar Horario": {
+      "main": [
+        [
+          {
+            "node": "Enviar Confirmacao Troca",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "d2b14291e08fc90a2553aa1545ab4ac59501cf87f57b361f133301661f8e4f80"
+  }
+}

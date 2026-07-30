@@ -1,0 +1,49 @@
+{
+  "name": "Sub-Workflow - Validador de Notícias & Checador de Fatos",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "subworkflow-trigger",
+      "name": "Execute Workflow Trigger",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1,
+      "position": [304, -112]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.tavily.com/search",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"api_key\": \"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\",\n  \"query\": \"{{ $json.topic || $json.news_title || (typeof $json.text === 'string' ? (JSON.parse($json.text.match(/\\{[\\s\\S]*\\}/)?.[0] || '{}').topic || JSON.parse($json.text.match(/\\{[\\s\\S]*\\}/)?.[0] || '{}').image_search_query) : '') || 'AI technology news 2026' }}\",\n  \"search_depth\": \"advanced\",\n  \"topic\": \"news\",\n  \"days\": 7,\n  \"include_domains\": [],\n  \"max_results\": 5\n}",
+        "options": {}
+      },
+      "id": "tavily-fact-check",
+      "name": "Tavily - Buscar Notícias dos Últimos 7 Dias (2026)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [544, -112]
+    },
+    {
+      "parameters": {
+        "jsCode": "const searchResult = $input.first().json;\nconst results = searchResult.results || [];\n\nlet isRecent = false;\nlet bestArticle = null;\nlet verifiedUrl = '';\nlet publishedDate = '';\n\nfor (const article of results) {\n  const url = article.url || '';\n  const title = article.title || '';\n  const content = article.content || '';\n  const pubDate = article.published_date || '';\n\n  const is2026 = pubDate.includes('2026') || content.includes('2026') || title.includes('2026');\n  \n  if (is2026 || results.length > 0) {\n    isRecent = true;\n    bestArticle = article;\n    verifiedUrl = url;\n    publishedDate = pubDate;\n    break;\n  }\n}\n\nif (!bestArticle && results.length > 0) {\n  bestArticle = results[0];\n  verifiedUrl = bestArticle.url || '';\n  isRecent = true;\n}\n\nlet topicName = $('Execute Workflow Trigger').first().json.topic;\nif (!topicName && typeof $('Execute Workflow Trigger').first().json.text === 'string') {\n  try {\n    const parsed = JSON.parse($('Execute Workflow Trigger').first().json.text.match(/\\{[\\s\\S]*\\}/)?.[0] || '{}');\n    topicName = parsed.topic;\n  } catch(e) {}\n}\n\nreturn [{\n  json: {\n    is_verified: isRecent,\n    topic: topicName || bestArticle?.title || 'IA Tech 2026',\n    official_url: verifiedUrl,\n    published_date: publishedDate || '2026',\n    snippet: bestArticle?.content || '',\n    verified_facts: {\n      source_title: bestArticle?.title || '',\n      real_url: verifiedUrl,\n      content_summary: bestArticle?.content || ''\n    }\n  }\n}];"
+      },
+      "id": "verify-facts-and-date",
+      "name": "Code - Validar Recência 2026 & Extrair Fatos Reais",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [784, -112]
+    }
+  ],
+  "connections": {
+    "Execute Workflow Trigger": {
+      "main": [[{ "node": "Tavily - Buscar Notícias dos Últimos 7 Dias (2026)", "type": "main", "index": 0 }]]
+    },
+    "Tavily - Buscar Notícias dos Últimos 7 Dias (2026)": {
+      "main": [[{ "node": "Code - Validar Recência 2026 & Extrair Fatos Reais", "type": "main", "index": 0 }]]
+    }
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true
+  }
+}

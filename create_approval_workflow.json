@@ -1,0 +1,97 @@
+{
+  "name": "Aprovador WhatsApp - Aprovacao Automatica",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            { "field": "minutes", "minutesInterval": 5 }
+          ]
+        }
+      },
+      "id": "cron-check-node",
+      "name": "Cron - Verificar a Cada 5 Min",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT id, topic, slides_data, linkedin_caption, scheduled_at FROM public.content_pipeline WHERE status = 'scheduled' AND scheduled_at <= NOW() + INTERVAL '5 minutes' AND scheduled_at > NOW() - INTERVAL '1 hour' ORDER BY scheduled_at ASC LIMIT 1;",
+        "options": {}
+      },
+      "id": "pg-check-node",
+      "name": "PG - Buscar Posts Pendentes",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [400, 300],
+      "credentials": {
+        "postgres": { "id": "owASX235VSmdGPHh", "name": "Postgres account" }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const post = $input.first().json;\nif (!post || !post.id) return [{json:{found:false}}];\n\nreturn [{json:{\n  found: true,\n  post_id: post.id,\n  topic: post.topic || 'Sem titulo',\n  slides_data: post.slides_data,\n  caption: post.linkedin_caption || ''\n}}];"
+      },
+      "id": "check-post-node",
+      "name": "Code - Verificar Post",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [560, 300]
+    },
+    {
+      "parameters": {
+        "dataType": "boolean",
+        "conditions": [
+          { "id": "found-true", "leftValue": "={{ $json.found }}", "type": "boolean", "rightValue": true }
+        ],
+        "combineOperation": "all",
+        "options": {}
+      },
+      "id": "if-node",
+      "name": "IF - Post Encontrado?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [720, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://evolution_api:8080/message/sendText/IcaroDev",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"number\": \"{{ $json.post_id }}\",\n  \"text\": \"📋 *NOVO CONTEUDO PARA REVISAO*\\n\\n*Tópico:* {{ $json.topic }}\\n\\nDeseja publicar este conteudo agora?\\n\\nResponda *SIM* para publicar\\nResponda *NAO* para cancelar\",\n  \"delay\": 1000\n}",
+        "options": {}
+      },
+      "id": "send-whatsapp-node",
+      "name": "HTTP - Enviar WhatsApp Preview",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [880, 260],
+      "onError": "continueRegularOutput"
+    }
+  ],
+  "connections": {
+    "Cron - Verificar a Cada 5 Min": {
+      "main": [[{ "node": "PG - Buscar Posts Pendentes", "type": "main", "index": 0 }]]
+    },
+    "PG - Buscar Posts Pendentes": {
+      "main": [[{ "node": "Code - Verificar Post", "type": "main", "index": 0 }]]
+    },
+    "Code - Verificar Post": {
+      "main": [[{ "node": "IF - Post Encontrado?", "type": "main", "index": 0 }]]
+    },
+    "IF - Post Encontrado?": {
+      "main": [
+        [{ "node": "HTTP - Enviar WhatsApp Preview", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "America/Sao_Paulo"
+  },
+  "tags": []
+}

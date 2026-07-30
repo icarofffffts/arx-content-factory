@@ -1,0 +1,72 @@
+{
+  "name": "Aprovador WhatsApp - Workflow 1 (Cron + Envio)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [{ "field": "minutes", "minutesInterval": 5 }]
+        }
+      },
+      "name": "Cron - A Cada 5 Min",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT p.id, p.topic, p.linkedin_caption, p.scheduled_at FROM public.content_pipeline p WHERE p.status = 'scheduled' AND p.scheduled_at <= NOW() + INTERVAL '10 minutes' AND p.scheduled_at > NOW() - INTERVAL '1 hour' ORDER BY p.scheduled_at ASC LIMIT 1;",
+        "options": {}
+      },
+      "name": "PG - Buscar Post Pendente",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [400, 300],
+      "credentials": {
+        "postgres": { "id": "owASX235VSmdGPHh", "name": "Postgres account" }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" }
+        },
+        "combinator": "and",
+        "conditions": [
+          { "id": "has-id", "leftValue": "={{ $json.id }}", "type": "string", "rightValue": "" }
+        ]
+      },
+      "name": "IF - Tem Post?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [560, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const settings = await $('PG - Buscar Post Pendente', 0).all();\n// NO SETTINGS QUERY - WILL FIX\nreturn [{json: {post_id: $json.id, topic: $json.topic, caption: $json.linkedin_caption || ''}}];"
+      },
+      "id": "code-extrair-node",
+      "name": "Code - Extrair Dados + Settings",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [720, 260]
+    }
+  ],
+  "connections": {
+    "Cron - A Cada 5 Min": {
+      "main": [[{ "node": "PG - Buscar Post Pendente", "type": "main", "index": 0 }]]
+    },
+    "PG - Buscar Post Pendente": {
+      "main": [[{ "node": "IF - Tem Post?", "type": "main", "index": 0 }]]
+    },
+    "IF - Tem Post?": {
+      "main": [[{ "node": "Code - Extrair Dados + Settings", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "America/Sao_Paulo"
+  },
+  "active": false,
+  "tags": []
+}

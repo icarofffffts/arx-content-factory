@@ -1,0 +1,76 @@
+{
+  "name": "Approval - Gatilho (Webhook do Fluxo 1)",
+  "nodes": [
+    {
+      "parameters": {
+        "path": "approval-trigger",
+        "options": {}
+      },
+      "name": "Webhook - Receber ID do Post",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 300],
+      "webhookId": "approval-trigger"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT p.id, p.topic, p.linkedin_caption, p.slides_data FROM public.content_pipeline p WHERE p.id = '{{ $json.query.post_id }}';",
+        "options": {}
+      },
+      "name": "PG - Buscar Detalhes do Post",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [400, 300],
+      "credentials": {
+        "postgres": { "id": "owASX235VSmdGPHh", "name": "Postgres account" }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://evolution_api:8080/message/sendText/IcaroDev",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"number\": \"553195398002\",\n  \"text\": \"📋 *NOVO CONTEUDO PRA POSTAR!*\\n\\n*Tópico:* {{ $json.topic }}\\n\\nPode publicar agora? Responda *SIM* ou *NAO*\",\n  \"delay\": 1000\n}",
+        "options": {}
+      },
+      "name": "HTTP - Enviar WhatsApp",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [560, 260],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE public.content_pipeline SET status = 'awaiting_approval' WHERE id = '{{ $json.id }}';",
+        "options": {}
+      },
+      "name": "PG - Aguardando Aprovacao",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [720, 260],
+      "credentials": {
+        "postgres": { "id": "owASX235VSmdGPHh", "name": "Postgres account" }
+      }
+    }
+  ],
+  "connections": {
+    "Webhook - Receber ID do Post": {
+      "main": [[{ "node": "PG - Buscar Detalhes do Post", "type": "main", "index": 0 }]]
+    },
+    "PG - Buscar Detalhes do Post": {
+      "main": [[{ "node": "HTTP - Enviar WhatsApp", "type": "main", "index": 0 }]]
+    },
+    "HTTP - Enviar WhatsApp": {
+      "main": [[{ "node": "PG - Aguardando Aprovacao", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "America/Sao_Paulo"
+  },
+  "active": false,
+  "tags": []
+}

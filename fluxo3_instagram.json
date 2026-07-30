@@ -1,0 +1,234 @@
+{
+  "name": "Fluxo 3 - Publicador Instagram (Carrossel Completo)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 12,20 * * 1-5"
+            }
+          ]
+        }
+      },
+      "id": "11438765-e616-42ee-b9ab-9e749cd8e88b",
+      "name": "Cron - Instagram (12h e 20h - Seg a Sex)",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [304, -192]
+    },
+    {
+      "parameters": {},
+      "id": "1ad367cd-2124-48f2-88b3-21bed7cb30e3",
+      "name": "Ao Clicar para Testar",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [304, -32]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT id, topic, media_paths, instagram_media_paths, linkedin_caption, instagram_caption\nFROM public.content_pipeline \nWHERE status = 'posted_linkedin'\n  AND (channel = 'instagram' OR channel = 'all')\nORDER BY created_at ASC \nLIMIT 1;",
+        "options": {}
+      },
+      "id": "e9dbe69d-914e-49cd-bd90-0d710af13917",
+      "name": "PostgreSQL - Buscar Post para Instagram",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [544, -112],
+      "credentials": {
+        "postgres": {
+          "id": "owASX235VSmdGPHh",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "c52757e8-12cd-421c-bbc0-40d34fd10d9f",
+      "name": "IF - Tem Post?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [784, -112]
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first().json;\nlet rawUrls = item.instagram_media_paths;\nif (!rawUrls || (Array.isArray(rawUrls) && rawUrls.length === 0)) {\n  rawUrls = item.media_paths;\n}\n\nlet mediaUrls = [];\nif (Array.isArray(rawUrls)) {\n  mediaUrls = rawUrls;\n} else if (typeof rawUrls === 'string') {\n  try { mediaUrls = JSON.parse(rawUrls); } catch(e) {}\n} else if (rawUrls && typeof rawUrls === 'object') {\n  mediaUrls = Object.values(rawUrls);\n}\n\nlet caption = (item.instagram_caption || item.linkedin_caption || item.topic || '').replace(/—\\s*/g, '').replace(/–\\s*/g, '');\n\nreturn mediaUrls.map((url, idx) => ({\n  json: {\n    post_id: item.id,\n    topic: item.topic,\n    caption: caption,\n    image_url: String(url),\n    index: idx\n  }\n}));\n"
+      },
+      "id": "prep-carousel-items",
+      "name": "Preparar Lista de Slides do Carrossel",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1024, -112]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v19.0/{{ $vars.INSTAGRAM_USER_ID || '17841409408339004' }}/media",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "image_url",
+              "value": "={{ $json.image_url }}"
+            },
+            {
+              "name": "is_carousel_item",
+              "value": "true"
+            },
+            {
+              "name": "access_token",
+              "value": "={{ $vars.INSTAGRAM_ACCESS_TOKEN }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "create-slide-container",
+      "name": "Instagram - Criar Container de Cada Slide",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1264, -112]
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst containerIds = items.map(i => i.json.id);\nconst firstInput = $('Preparar Lista de Slides do Carrossel').first().json;\n\nreturn [{\n  json: {\n    post_id: firstInput.post_id,\n    caption: firstInput.caption,\n    children_ids: containerIds\n  }\n}];\n"
+      },
+      "id": "group-container-ids",
+      "name": "Agrupar IDs dos Slides no Carrossel",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1504, -112]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v19.0/{{ $vars.INSTAGRAM_USER_ID || '17841409408339004' }}/media",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "media_type",
+              "value": "CAROUSEL"
+            },
+            {
+              "name": "caption",
+              "value": "={{ $json.caption }}"
+            },
+            {
+              "name": "children",
+              "value": "={{ $json.children_ids.join(',') }}"
+            },
+            {
+              "name": "access_token",
+              "value": "={{ $vars.INSTAGRAM_ACCESS_TOKEN }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "create-carousel-master",
+      "name": "Instagram - Criar Container Pai do Carrossel",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1744, -112]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v19.0/{{ $vars.INSTAGRAM_USER_ID || '17841409408339004' }}/media_publish",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "creation_id",
+              "value": "={{ $json.id }}"
+            },
+            {
+              "name": "access_token",
+              "value": "={{ $vars.INSTAGRAM_ACCESS_TOKEN }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "publish-carousel-master",
+      "name": "Instagram - Publicar Carrossel",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1984, -112]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE public.content_pipeline \nSET \n  status = 'posted_instagram', \n  instagram_post_id = '{{ $json.id }}',\n  updated_at = NOW() \nWHERE id = '{{ $('Agrupar IDs dos Slides no Carrossel').first().json.post_id }}';",
+        "options": {}
+      },
+      "id": "4cecd8b6-6a0c-4bd0-ab4f-9b2c4c30c60c",
+      "name": "PostgreSQL - Salvar ID do Post e Marcar Publicado",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [2224, -112],
+      "credentials": {
+        "postgres": {
+          "id": "owASX235VSmdGPHh",
+          "name": "Postgres account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Cron - Instagram (12h e 20h - Seg a Sex)": {
+      "main": [[{ "node": "PostgreSQL - Buscar Post para Instagram", "type": "main", "index": 0 }]]
+    },
+    "Ao Clicar para Testar": {
+      "main": [[{ "node": "PostgreSQL - Buscar Post para Instagram", "type": "main", "index": 0 }]]
+    },
+    "PostgreSQL - Buscar Post para Instagram": {
+      "main": [[{ "node": "IF - Tem Post?", "type": "main", "index": 0 }]]
+    },
+    "IF - Tem Post?": {
+      "main": [[{ "node": "Preparar Lista de Slides do Carrossel", "type": "main", "index": 0 }]]
+    },
+    "Preparar Lista de Slides do Carrossel": {
+      "main": [[{ "node": "Instagram - Criar Container de Cada Slide", "type": "main", "index": 0 }]]
+    },
+    "Instagram - Criar Container de Cada Slide": {
+      "main": [[{ "node": "Agrupar IDs dos Slides no Carrossel", "type": "main", "index": 0 }]]
+    },
+    "Agrupar IDs dos Slides no Carrossel": {
+      "main": [[{ "node": "Instagram - Criar Container Pai do Carrossel", "type": "main", "index": 0 }]]
+    },
+    "Instagram - Criar Container Pai do Carrossel": {
+      "main": [[{ "node": "Instagram - Publicar Carrossel", "type": "main", "index": 0 }]]
+    },
+    "Instagram - Publicar Carrossel": {
+      "main": [[{ "node": "PostgreSQL - Salvar ID do Post e Marcar Publicado", "type": "main", "index": 0 }]]
+    }
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true
+  }
+}
