@@ -17,7 +17,7 @@ export default function Login({ onLogin, onNavigate }: {
     try {
       const r = await api.login(email, password)
       if (r.success) {
-        onLogin(r.token, r.user, r.plan)
+        onLogin(r.token!, r.user!, r.plan)
       } else {
         setError(r.error || 'Erro ao fazer login')
       }

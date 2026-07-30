@@ -19,7 +19,7 @@ export default function Signup({ onLogin, onNavigate }: {
     try {
       const r = await api.register(email, password, name)
       if (r.success) {
-        onLogin(r.token, r.user, null)
+        onLogin(r.token!, r.user!, null)
       } else {
         setError(r.error || 'Erro ao criar conta')
       }

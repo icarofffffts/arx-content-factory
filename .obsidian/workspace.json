@@ -178,6 +178,7 @@
   },
   "active": "65f92510b952934c",
   "lastOpenFiles": [
+    "deploy_vps.sh",
     "stop_orphans_vps.sh",
     "cleanup_vps.sh",
     "temp_inspect.py",
@@ -188,7 +189,6 @@
     "frontend/src/components",
     "frontend/src/pages/Pricing.tsx",
     "frontend/src/pages/Signup.tsx",
-    "frontend/src/pages/Login.tsx",
     "dashboard/node_modules/pg-protocol/README.md",
     "Enhance_design/thumbnail.png"
   ]
