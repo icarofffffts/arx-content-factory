@@ -1,0 +1,1279 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Arx Content Factory - Painel Master TypeScript</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: #090D16;
+            color: #F8FAFC;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 1440px;
+            width: 100%;
+            margin: 0 auto;
+            padding: 40px 24px;
+        }
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 18px;
+            margin-bottom: 36px;
+        }
+        .metric-card {
+            background: rgba(30, 41, 59, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 20px;
+            padding: 22px;
+            backdrop-filter: blur(12px);
+            transition: transform 0.2s ease, border-color 0.2s ease;
+        }
+        .metric-card:hover {
+            transform: translateY(-3px);
+            border-color: rgba(37, 99, 235, 0.5);
+        }
+        .metric-title {
+            font-size: 13px;
+            color: #94A3B8;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+        }
+        .metric-value {
+            font-size: 36px;
+            font-weight: 900;
+            background: linear-gradient(135deg, #FFFFFF, #94A3B8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        /* Navegacao movida para sidebar */
+        .posts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 26px;
+        }
+        .post-card {
+            background: rgba(20, 30, 48, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 22px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .post-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 16px 36px rgba(0,0,0,0.4);
+            border-color: rgba(37, 99, 235, 0.5);
+        }
+        .post-thumb {
+            width: 100%;
+            height: 220px;
+            background: #0B0F19;
+            object-fit: cover;
+        }
+        .post-content {
+            padding: 22px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            flex: 1;
+        }
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 9999px;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            width: fit-content;
+        }
+        .badge-rendering { background: rgba(168, 85, 247, 0.2); color: #C084FC; border: 1px solid rgba(168, 85, 247, 0.4); }
+        .badge-scheduled { background: rgba(234, 179, 8, 0.2); color: #FACC15; border: 1px solid rgba(234, 179, 8, 0.4); }
+        .badge-paused { background: rgba(249, 115, 22, 0.2); color: #FB923C; border: 1px solid rgba(249, 115, 22, 0.4); }
+        .badge-posted_linkedin { background: rgba(59, 130, 246, 0.2); color: #60A5FA; border: 1px solid rgba(59, 130, 246, 0.4); }
+        .badge-posted_instagram { background: rgba(236, 72, 153, 0.2); color: #F472B6; border: 1px solid rgba(236, 72, 153, 0.4); }
+        .badge-published { background: rgba(34, 197, 94, 0.2); color: #4ADE80; border: 1px solid rgba(34, 197, 94, 0.4); }
+        .badge-gold { background: linear-gradient(135deg, rgba(234, 179, 8, 0.3), rgba(245, 158, 11, 0.3)); color: #FDE047; border: 1px solid rgba(234, 179, 8, 0.6); box-shadow: 0 0 12px rgba(234, 179, 8, 0.3); }
+
+        .progress-box {
+            background: rgba(15, 23, 42, 0.6);
+            border-radius: 14px;
+            padding: 12px 14px;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+        .progress-label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            font-weight: 600;
+            color: #94A3B8;
+            margin-bottom: 6px;
+        }
+        .progress-bar-bg {
+            width: 100%;
+            height: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 9999px;
+            overflow: hidden;
+        }
+        .progress-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #3B82F6, #8B5CF6, #10B981);
+            border-radius: 9999px;
+            transition: width 0.4s ease;
+        }
+
+        .post-title {
+            font-size: 16px;
+            font-weight: 700;
+            line-height: 1.4;
+            color: #F8FAFC;
+        }
+        .post-date {
+            font-size: 12px;
+            color: #64748B;
+        }
+        .post-actions {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-top: auto;
+            padding-top: 14px;
+        }
+        .btn {
+            padding: 8px 14px;
+            border-radius: 10px;
+            font-size: 13px;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            text-decoration: none;
+        }
+        .btn-primary { background: #2563EB; color: white; }
+        .btn-primary:hover { background: #1D4ED8; }
+        .btn-publish-now { background: linear-gradient(135deg, #10B981, #059669); color: white; box-shadow: 0 0 16px rgba(16, 185, 129, 0.3); }
+        .btn-publish-now:hover { transform: scale(1.02); box-shadow: 0 0 24px rgba(16, 185, 129, 0.5); }
+        .btn-reschedule { background: linear-gradient(135deg, #8B5CF6, #6D28D9); color: white; }
+        .btn-reschedule:hover { background: #5B21B6; }
+        .btn-reorganize { background: linear-gradient(135deg, #F59E0B, #7C3AED); color: white; padding: 14px 24px; font-size: 15px; font-weight: 700; box-shadow: 0 0 24px rgba(245, 158, 11, 0.4); margin-bottom: 28px; border-radius: 14px; border: none; cursor: pointer; transition: all 0.25s ease; width: 100%; display: flex; align-items: center; justify-content: center; gap: 10px; }
+        .btn-reorganize:hover { transform: translateY(-2px); box-shadow: 0 0 36px rgba(245, 158, 11, 0.6); }
+        .btn-pause { background: rgba(249, 115, 22, 0.2); color: #FB923C; border: 1px solid rgba(249, 115, 22, 0.4); }
+        .btn-pause:hover { background: rgba(249, 115, 22, 0.4); color: white; }
+        .btn-resume { background: rgba(34, 197, 94, 0.2); color: #4ADE80; border: 1px solid rgba(34, 197, 94, 0.4); }
+        .btn-resume:hover { background: rgba(34, 197, 94, 0.4); color: white; }
+        .btn-outline { background: rgba(255,255,255,0.05); color: #E2E8F0; border: 1px solid rgba(255,255,255,0.1); }
+        .btn-outline:hover { background: rgba(255,255,255,0.12); }
+        .btn-danger { background: rgba(239, 68, 68, 0.2); color: #FCA5A5; border: 1px solid rgba(239, 68, 68, 0.3); }
+        .btn-danger:hover { background: rgba(239, 68, 68, 0.4); color: white; }
+        .btn-social { background: rgba(59, 130, 246, 0.15); color: #93C5FD; border: 1px solid rgba(59, 130, 246, 0.3); }
+        .btn-social:hover { background: rgba(59, 130, 246, 0.3); color: white; }
+
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.85);
+            backdrop-filter: blur(10px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            padding: 20px;
+        }
+        .modal-body {
+            background: #0F172A;
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 24px;
+            max-width: 600px;
+            width: 100%;
+            padding: 32px;
+        }
+
+        .generator-box {
+            background: rgba(20, 30, 48, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 24px;
+            padding: 36px;
+            max-width: 860px;
+            margin: 0 auto;
+        }
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 22px;
+        }
+        .form-label {
+            font-size: 14px;
+            font-weight: 600;
+            color: #E2E8F0;
+        }
+        .form-input {
+            background: #090D16;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 14px 18px;
+            color: white;
+            font-size: 15px;
+            outline: none;
+        }
+        .form-input:focus { border-color: #2563EB; }
+        .links-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        .links-table th, .links-table td {
+            padding: 14px 16px;
+            text-align: left;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+            font-size: 14px;
+        }
+        .links-table th { color: #94A3B8; text-transform: uppercase; font-size: 12px; letter-spacing: 0.5px; }
+
+        /* === SIDEBAR LAYOUT === */
+        .app-layout {
+            display: flex;
+            min-height: 100vh;
+        }
+        .sidebar {
+            width: 260px;
+            background: rgba(15, 23, 42, 0.95);
+            backdrop-filter: blur(20px);
+            border-right: 1px solid rgba(255,255,255,0.06);
+            padding: 24px 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            position: fixed;
+            top: 0; left: 0;
+            height: 100vh;
+            z-index: 200;
+            overflow-y: auto;
+        }
+        .sidebar-logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 8px 12px 20px;
+            margin-bottom: 8px;
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+        }
+        .sidebar-logo-icon {
+            width: 40px; height: 40px;
+            background: linear-gradient(135deg, #2563EB, #7C3AED);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 900; font-size: 20px;
+            box-shadow: 0 0 20px rgba(37,99,235,0.4);
+        }
+        .sidebar-logo-text {
+            font-weight: 800; font-size: 16px; letter-spacing: -0.3px;
+        }
+        .sidebar-logo-sub {
+            font-size: 11px; color: #94A3B8; font-weight: 500;
+        }
+        .sidebar-group-label {
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #475569;
+            padding: 16px 12px 6px;
+        }
+        .sidebar-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 14px;
+            border-radius: 10px;
+            font-size: 13px;
+            font-weight: 600;
+            color: #94A3B8;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border: none;
+            background: transparent;
+            width: 100%;
+            text-align: left;
+        }
+        .sidebar-item:hover {
+            color: #F8FAFC;
+            background: rgba(255,255,255,0.06);
+        }
+        .sidebar-item.active {
+            color: #FFFFFF;
+            background: rgba(37, 99, 235, 0.2);
+            box-shadow: inset 3px 0 0 #2563EB;
+        }
+        .sidebar-item .icon { font-size: 16px; width: 24px; text-align: center; flex-shrink: 0; }
+        .sidebar-item .badge-dot {
+            width: 8px; height: 8px; border-radius: 50%;
+            margin-left: auto; flex-shrink: 0;
+        }
+        .sidebar-item .badge-dot.green { background: #4ADE80; box-shadow: 0 0 8px rgba(74,222,128,0.5); }
+        .sidebar-item .badge-dot.yellow { background: #FACC15; box-shadow: 0 0 8px rgba(250,204,21,0.5); }
+        .sidebar-item .badge-dot.purple { background: #C084FC; box-shadow: 0 0 8px rgba(192,132,252,0.5); }
+        .sidebar-item .badge-dot.blue { background: #60A5FA; box-shadow: 0 0 8px rgba(96,165,250,0.5); }
+        .sidebar-item .badge-dot.orange { background: #FB923C; box-shadow: 0 0 8px rgba(251,146,60,0.5); }
+        .sidebar-footer {
+            margin-top: auto;
+            padding: 12px;
+            border-top: 1px solid rgba(255,255,255,0.06);
+        }
+        .sidebar-footer .btn {
+            width: 100%;
+            padding: 10px;
+            font-size: 13px;
+        }
+        .main-content {
+            margin-left: 260px;
+            flex: 1;
+            padding: 0;
+            width: calc(100% - 260px);
+        }
+        /* Mobile toggle */
+        .sidebar-toggle {
+            display: none;
+            background: rgba(15,23,42,0.9);
+            border: 1px solid rgba(255,255,255,0.1);
+            color: #F8FAFC;
+            padding: 10px 16px;
+            border-radius: 12px;
+            font-size: 20px;
+            cursor: pointer;
+            position: fixed;
+            top: 16px; left: 16px;
+            z-index: 300;
+        }
+        .sidebar-overlay {
+            display: none;
+            position: fixed;
+            top:0; left:0; right:0; bottom:0;
+            background: rgba(0,0,0,0.6);
+            z-index: 199;
+        }
+        @media (max-width: 768px) {
+            .sidebar {
+                transform: translateX(-100%);
+                transition: transform 0.3s ease;
+            }
+            .sidebar.open { transform: translateX(0); }
+            .sidebar-toggle { display: block; }
+            .sidebar-overlay.open { display: block; }
+            .main-content { margin-left: 0; width: 100%; }
+            .sidebar-toggle { top: 12px; left: 12px; }
+        }
+    </style>
+</head>
+<body>
+    <button class="sidebar-toggle" id="sidebarToggle" onclick="toggleSidebar()">☰</button>
+    <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
+
+    <!-- Sidebar -->
+    <nav class="sidebar" id="sidebar">
+        <div class="sidebar-logo">
+            <div class="sidebar-logo-icon">A</div>
+            <div>
+                <div class="sidebar-logo-text">Arx Factory</div>
+                <div class="sidebar-logo-sub">Painel de Controle</div>
+            </div>
+        </div>
+
+        <div class="sidebar-group-label">📊 Conteúdo</div>
+        <button class="sidebar-item active" data-tab="all" onclick="switchTab('all', this)">
+            <span class="icon">📰</span> Todos os Posts
+            <span class="badge-dot blue" id="sb-all-dot"></span>
+        </button>
+        <button class="sidebar-item" data-tab="scheduled" onclick="switchTab('scheduled', this)">
+            <span class="icon">⏳</span> Agendados
+            <span class="badge-dot yellow" id="sb-scheduled-dot"></span>
+        </button>
+        <button class="sidebar-item" data-tab="paused" onclick="switchTab('paused', this)">
+            <span class="icon">⏸️</span> Pausados
+            <span class="badge-dot orange" id="sb-paused-dot"></span>
+        </button>
+        <button class="sidebar-item" data-tab="published" onclick="switchTab('published', this)">
+            <span class="icon">✅</span> Publicados
+            <span class="badge-dot green" id="sb-published-dot"></span>
+        </button>
+        <button class="sidebar-item" data-tab="drafts" onclick="switchTab('drafts', this)">
+            <span class="icon">📋</span> Revisão (Drafts)
+            <span class="badge-dot purple" id="sb-drafts-dot"></span>
+        </button>
+
+        <div class="sidebar-group-label">📈 Marketing</div>
+        <button class="sidebar-item" data-tab="leads" onclick="switchTab('leads', this)">
+            <span class="icon">🎯</span> Leads Capturados
+        </button>
+        <button class="sidebar-item" data-tab="promos" onclick="switchTab('promos', this)">
+            <span class="icon">🔥</span> PromoHunter Deals
+        </button>
+        <button class="sidebar-item" data-tab="shortlinks" onclick="switchTab('shortlinks', this)">
+            <span class="icon">🔗</span> Links Hasheados
+        </button>
+
+        <div class="sidebar-group-label">⚡ Ações</div>
+        <button class="sidebar-item" data-tab="generate" onclick="switchTab('generate', this)">
+            <span class="icon">🚀</span> Solicitar Conteúdo
+        </button>
+
+        <div class="sidebar-group-label">⚙️ Sistema</div>
+        <button class="sidebar-item" data-tab="config" onclick="switchTab('config', this)">
+            <span class="icon">⚙️</span> Configurações
+        </button>
+
+        <div class="sidebar-footer">
+            <button class="btn btn-danger" onclick="logout()" style="width:100%;padding:10px;font-size:13px;">🚪 Sair</button>
+        </div>
+    </nav>
+
+    <div class="main-content">
+        <div class="container" style="padding-top: 20px;">
+        <!-- Metric Cards -->
+        <div class="metrics-grid">
+            <div class="metric-card">
+                <div class="metric-title">Total no Pipeline</div>
+                <div class="metric-value" id="m-total">0</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-title">🧠 Gerando / Renderizando</div>
+                <div class="metric-value" id="m-rendering" style="color: #C084FC;">0</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-title">📋 Drafts (Revisão Pendente)</div>
+                <div class="metric-value" id="m-draft" style="color: #FBBF24;">0</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-title">⏳ Aguardando Envio</div>
+                <div class="metric-value" id="m-scheduled" style="color: #FACC15;">0</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-title">⏸️ Pausados em Fila</div>
+                <div class="metric-value" id="m-paused" style="color: #FB923C;">0</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-title">🎯 Leads Capturados (DM)</div>
+                <div class="metric-value" id="m-leads" style="color: #EC4899;">0</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-title">🔥 Ofertas Ativas (Deals Bot)</div>
+                <div class="metric-value" id="m-promos" style="color: #F97316;">0</div>
+            </div>
+        </div>
+
+        <!-- Sidebar substitui as tabs -- navegacao lateral -->
+
+        <button class="btn btn-reorganize" onclick="reorganizeSchedule()">
+            🏆 Reorganizar Fila para Dias de Ouro (Terça, Quarta e Quinta) & Horários de Pico (08:45, 12:15, 17:15, 19:45)
+        </button>
+
+        <!-- Posts Grid View -->
+        <div id="view-posts" class="posts-grid"></div>
+
+        <!-- Deals Bot View -->
+        <div id="view-promos" style="display: none;">
+            <div class="generator-box" style="max-width: 1100px;">
+                <h2 style="margin-bottom: 20px; font-size: 22px;">🔥 PromoHunter Bot - Ofertas Rastreáveis & Disparo Automático</h2>
+                
+                <form id="promo-form" onsubmit="handlePromoSubmit(event)" style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 32px; background: rgba(15,23,42,0.6); padding: 24px; border-radius: 18px;">
+                    <div class="form-group" style="grid-column: span 2;">
+                        <label class="form-label">Título da Oferta / Produto</label>
+                        <input type="text" id="promo-title" class="form-input" placeholder="Ex: Placa de Vídeo RTX 4070 Super 12GB ASUS" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Loja Parceira</label>
+                        <select id="promo-store" class="form-input">
+                            <option value="Amazon">Amazon</option>
+                            <option value="Mercado Livre">Mercado Livre</option>
+                            <option value="Kabum">Kabum</option>
+                            <option value="Shopee">Shopee</option>
+                            <option value="Magazine Luiza">Magazine Luiza</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Preço Promocional (R$)</label>
+                        <input type="number" step="0.01" id="promo-price" class="form-input" placeholder="Ex: 3899.00" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Preço Original / De (R$)</label>
+                        <input type="number" step="0.01" id="promo-orig-price" class="form-input" placeholder="Ex: 4599.00">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Link Original de Afiliado</label>
+                        <input type="url" id="promo-url" class="form-input" placeholder="https://amazon.com.br/dp/..." required>
+                    </div>
+                    <button type="submit" class="btn btn-primary" style="grid-column: span 2; padding: 14px; font-size: 16px;">🚀 Gerar Copy & Disparar Oferta</button>
+                </form>
+
+                <table class="links-table">
+                    <thead>
+                        <tr>
+                            <th>Produto / Loja</th>
+                            <th>Preço & Desconto</th>
+                            <th>Link Afiliado Hasheado</th>
+                            <th>Cliques</th>
+                            <th>Data</th>
+                        </tr>
+                    </thead>
+                    <tbody id="promos-body">
+                        <tr><td colspan="5" style="color: #94A3B8;">Carregando ofertas promocionais...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Leads View -->
+        <div id="view-leads" style="display: none;">
+            <div class="generator-box" style="max-width: 1100px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h2 style="font-size: 22px;">🎯 Leads Capturados via Direct / DM (TypeScript Lead Engine)</h2>
+                    <button class="btn btn-primary" onclick="exportLeadsCSV()">📥 Exportar Leads CSV</button>
+                </div>
+                
+                <table class="links-table">
+                    <thead>
+                        <tr>
+                            <th>Instagram User / Handle</th>
+                            <th>Status de Seguidor</th>
+                            <th>Post de Origem</th>
+                            <th>Link Entregue (Hasheado)</th>
+                            <th>Data da Captura</th>
+                        </tr>
+                    </thead>
+                    <tbody id="leads-body">
+                        <tr><td colspan="5" style="color: #94A3B8;">Carregando leads capturados...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Short Links View -->
+        <div id="view-shortlinks" style="display: none;">
+            <div class="generator-box" style="max-width: 1000px;">
+                <h2 style="margin-bottom: 20px; font-size: 22px;">🔗 Gerador & Rastreador de URLs Hasheadas para Auto-DM</h2>
+                <form id="short-form" onsubmit="handleShorten(event)" style="display: flex; gap: 12px; margin-bottom: 24px;">
+                    <input type="url" id="short-url-input" class="form-input" style="flex: 1;" placeholder="Cole a URL original (ex: https://openai.com/...)" required>
+                    <button type="submit" class="btn btn-primary" style="padding: 0 24px;">🔒 Gerar Link Seguro</button>
+                </form>
+
+                <table class="links-table">
+                    <thead>
+                        <tr>
+                            <th>Link Hasheado Seguro (Auto-DM)</th>
+                            <th>URL Original</th>
+                            <th>Cliques Rasteados</th>
+                            <th>Data de Criação</th>
+                        </tr>
+                    </thead>
+                    <tbody id="short-links-body">
+                        <tr><td colspan="4" style="color: #94A3B8;">Carregando links seguros...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Generator On-Demand View -->
+        <div id="view-generate" style="display: none;">
+            <div class="generator-box">
+                <h2 style="margin-bottom: 20px; font-size: 24px;">⚡ Solicitar ou Agendar Conteúdo</h2>
+                <form id="gen-form" onsubmit="handleGenerate(event)">
+                    <div class="form-group">
+                        <label class="form-label">Tema ou Título da Matéria</label>
+                        <input type="text" id="topic-input" class="form-input" placeholder="Ex: Lançamento do Claude Code 3.7 Sonnet CLI" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Canais de Publicação</label>
+                        <select id="channel-input" class="form-input">
+                            <option value="all">Todos os Canais (LinkedIn + Instagram + GitHub)</option>
+                            <option value="linkedin">Apenas LinkedIn</option>
+                            <option value="instagram">Apenas Instagram</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Modo de Publicação</label>
+                        <select id="mode-input" class="form-input" onchange="toggleScheduleDate(this.value)">
+                            <option value="now">⚡ Enviar Agora (Imediato)</option>
+                            <option value="schedule">📅 Agendar para Data/Hora Futura (Dias/Horas)</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group" id="schedule-date-group" style="display: none;">
+                        <label class="form-label">Data e Hora Futura de Publicação</label>
+                        <input type="datetime-local" id="schedule-date-input" class="form-input">
+                    </div>
+
+                    <button type="submit" id="gen-btn" class="btn btn-primary" style="width: 100%; padding: 16px; font-size: 16px;">🚀 Iniciar Geração / Agendamento</button>
+                </form>
+                <div id="gen-status" style="margin-top: 20px; font-weight: 600; text-align: center;"></div>
+            </div>
+        </div>
+    </div>
+
+        <!-- Draft Review View -->
+        <div id="view-drafts" style="display: none;">
+            <div class="generator-box" style="max-width: 1100px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h2 style="font-size: 22px;">📋 Revisão de Conteúdo (Drafts)</h2>
+                    <span id="drafts-count" style="color: #94A3B8; font-size: 14px;"></span>
+                </div>
+                <div id="drafts-list"></div>
+            </div>
+        </div>
+
+        <!-- Configurações View -->
+        <div id="view-config" style="display: none;">
+            <div class="generator-box" style="max-width: 600px;">
+                <h2 style="margin-bottom: 24px; font-size: 22px;">⚙️ Configurações do Sistema</h2>
+                <form id="config-form" onsubmit="saveSettings(event)">
+                    <div class="form-group">
+                        <label class="form-label">Limite Diário de Posts</label>
+                        <div style="display: flex; align-items: center; gap: 16px;">
+                            <input type="range" id="config-daily-limit" min="1" max="10" value="3" oninput="document.getElementById('limit-display').innerText=this.value" style="flex:1;accent-color:#2563EB">
+                            <span id="limit-display" style="font-size:24px;font-weight:900;color:#2563EB;min-width:40px">3</span>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">WhatsApp Ativado (Revisão via WhatsApp)</label>
+                        <label style="display:flex;align-items:center;gap:12px;cursor:pointer">
+                            <input type="checkbox" id="config-whatsapp-enabled" style="width:20px;height:20px;accent-color:#2563EB">
+                            <span style="color:#94A3B8">Enviar preview no WhatsApp para aprovação</span>
+                        </label>
+                    </div>
+                    <div class="form-group" id="whatsapp-number-group">
+                        <label class="form-label">Número do WhatsApp (com DDD, ex: 5511999999999)</label>
+                        <input type="text" id="config-whatsapp-number" class="form-input" placeholder="5511999999999">
+                    </div>
+                    <div class="form-group" id="whatsapp-token-group">
+                        <label class="form-label">Token da Instância Evolution Go</label>
+                        <input type="text" id="config-whatsapp-token" class="form-input" placeholder="26cbfa77-76c5-489c-9c98-bd2ce4ed6e8d">
+                    </div>
+                    <button type="submit" class="btn btn-primary" style="width:100%;padding:14px;font-size:16px">💾 Salvar Configurações</button>
+                </form>
+                <div id="config-status" style="margin-top:16px;font-weight:600;text-align:center"></div>
+            </div>
+        </div>
+
+        <!-- Modal Preview -->
+    <div id="modal-preview" class="modal-overlay" onclick="closeModal('modal-preview')">
+        <div class="modal-body" style="max-width: 960px;" onclick="event.stopPropagation()">
+            <h2 id="modal-title" style="margin-bottom: 20px;"></h2>
+            <div id="modal-slides" style="display: flex; gap: 16px; overflow-x: auto; padding-bottom: 16px;"></div>
+            <button class="btn btn-outline" onclick="closeModal('modal-preview')" style="margin-top: 20px; margin-left: auto;">Fechar</button>
+        </div>
+    </div>
+
+    <!-- Modal Reschedule -->
+    <div id="modal-reschedule" class="modal-overlay" onclick="closeModal('modal-reschedule')">
+        <div class="modal-body" onclick="event.stopPropagation()">
+            <h2 style="margin-bottom: 16px; font-size: 22px;">📅 Alterar Data/Hora de Publicação</h2>
+            <p id="reschedule-topic" style="color: #94A3B8; margin-bottom: 20px; font-size: 14px;"></p>
+            <form onsubmit="submitReschedule(event)">
+                <input type="hidden" id="reschedule-post-id">
+                <div class="form-group">
+                    <label class="form-label">Nova Data e Hora Futura</label>
+                    <input type="datetime-local" id="reschedule-date-input" class="form-input" required>
+                </div>
+                <div style="display: flex; gap: 12px; margin-top: 24px;">
+                    <button type="submit" class="btn btn-primary" style="flex: 1; padding: 12px;">✅ Confirmar Novo Agendamento</button>
+                    <button type="button" class="btn btn-outline" onclick="closeModal('modal-reschedule')">Cancelar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        let token = urlParams.get('token');
+        if (token) {
+            localStorage.setItem('arx_token', token);
+            document.cookie = `arx_token=${token}; path=/; max-age=864000; SameSite=Lax`;
+            window.history.replaceState({}, document.title, window.location.pathname);
+        } else {
+            token = localStorage.getItem('arx_token');
+        }
+
+        async function fetchWithAuth(url, options = {}) {
+            options.headers = options.headers || {};
+            options.headers['x-arx-token'] = token || localStorage.getItem('arx_token') || '';
+            const res = await fetch(url, options);
+            if (res.status === 401) {
+                localStorage.removeItem('arx_token');
+                window.location.href = '/dashboard/';
+            }
+            return res;
+        }
+
+        async function logout() {
+            await fetchWithAuth('/api/logout', { method: 'POST' });
+            localStorage.removeItem('arx_token');
+            document.cookie = "arx_token=; path=/; max-age=0";
+            window.location.href = '/dashboard/';
+        }
+
+        let currentTab = 'all';
+        let cachedLeads = [];
+
+        function toggleScheduleDate(mode) {
+            const group = document.getElementById('schedule-date-group');
+            group.style.display = mode === 'schedule' ? 'flex' : 'none';
+        }
+
+        async function fetchMetrics() {
+            try {
+                const res = await fetchWithAuth('/api/metrics');
+                const data = await res.json();
+                document.getElementById('m-total').innerText = data.total || 0;
+                document.getElementById('m-rendering').innerText = data.rendering || 0;
+                document.getElementById('m-draft').innerText = data.draft || 0;
+                document.getElementById('m-scheduled').innerText = data.scheduled || 0;
+                document.getElementById('m-paused').innerText = data.paused || 0;
+                document.getElementById('m-published').innerText = data.published || 0;
+
+                const resPromos = await fetchWithAuth('/api/v1/promos');
+                const promos = await resPromos.json();
+                document.getElementById('m-promos').innerText = promos.length || 0;
+
+                const resLeads = await fetchWithAuth('/api/v1/leads/stats');
+                const leadsStats = await resLeads.json();
+                document.getElementById('m-leads').innerText = leadsStats.total_leads || 0;
+            } catch(e){}
+        }
+
+        async function fetchPosts(status = 'all') {
+            const grid = document.getElementById('view-posts');
+            grid.innerHTML = '<div style="color: #94A3B8;">Carregando dados seguros do pipeline...</div>';
+            try {
+                const res = await fetchWithAuth(`/api/posts?status=${status}`);
+                const posts = await res.json();
+
+                if (!Array.isArray(posts) || posts.length === 0) {
+                    grid.innerHTML = '<div style="color: #94A3B8;">Nenhum post encontrado nesta categoria.</div>';
+                    return;
+                }
+
+                grid.innerHTML = posts.map(p => {
+                    let mediaList = p.instagram_media_paths || p.media_paths || [];
+                    if (typeof mediaList === 'string') { try { mediaList = JSON.parse(mediaList); } catch(e){} }
+                    const thumb = mediaList[0] || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=600&q=80';
+                    
+                    const d = p.scheduled_at ? new Date(p.scheduled_at) : new Date(p.created_at);
+                    const schedDateStr = d.toLocaleString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+                    
+                    const dayNum = d.getDay(); // 0=Sun, 1=Mon, 2=Tue, 3=Wed, 4=Thu, 5=Fri, 6=Sat
+                    const isGoldDay = dayNum === 2 || dayNum === 3 || dayNum === 4; // Tue, Wed, Thu
+                    const isWeekend = dayNum === 0 || dayNum === 6;
+
+                    let dayBadgeHtml = '';
+                    if (isGoldDay) {
+                        dayBadgeHtml = `<span class="badge badge-gold">🏆 DIA DE OURO (Ter-Qui)</span>`;
+                    } else if (isWeekend) {
+                        dayBadgeHtml = `<span class="badge" style="background: rgba(239,68,68,0.2); color: #FCA5A5; border: 1px solid rgba(239,68,68,0.4);">⚠️ Final de Semana</span>`;
+                    } else {
+                        dayBadgeHtml = `<span class="badge" style="background: rgba(255,255,255,0.06); color: #60A5FA; border: 1px solid rgba(255,255,255,0.1);">💼 Dia Útil</span>`;
+                    }
+
+                    const pct = p.progress_percentage || 25;
+                    const stageText = pct === 25 ? '🧠 Gerando & Fact-Checking' : p.status === 'paused' ? '⏸️ Pausado na Fila' : pct === 75 ? '📅 Agendado & Seguro' : '🚀 Publicado com Sucesso';
+
+                    return `
+                        <div class="post-card" id="card-${p.id}">
+                            <img src="${thumb}" class="post-thumb" alt="Thumbnail Slide" />
+                            <div class="post-content">
+                                <div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">
+                                    <span class="badge badge-${p.status}">${p.status === 'paused' ? '⏸️ PAUSADO' : p.status}</span>
+                                    ${dayBadgeHtml}
+                                </div>
+                                <div class="post-title">${p.topic}</div>
+                                
+                                <div class="progress-box">
+                                    <div class="progress-label">
+                                        <span>${stageText}</span>
+                                        <span>${pct}%</span>
+                                    </div>
+                                    <div class="progress-bar-bg">
+                                        <div class="progress-bar-fill" style="width: ${pct}%; ${p.status === 'paused' ? 'background: linear-gradient(90deg, #F97316, #EAB308);' : ''}"></div>
+                                    </div>
+                                </div>
+
+                                <div class="post-date">📅 Horário: <strong style="color: #F8FAFC;">${schedDateStr}</strong></div>
+                                <div class="post-actions">
+                                    ${p.status === 'scheduled' || p.status === 'paused' ? `
+                                        <button class="btn btn-publish-now" id="pub-btn-${p.id}" onclick="publishNow('${p.id}')">🚀 Publicar Agora</button>
+                                        <button class="btn btn-reschedule" onclick="openRescheduleModal('${p.id}', '${encodeURIComponent(p.topic)}')">📅 Reagendar</button>
+                                        ${p.status === 'scheduled' 
+                                            ? `<button class="btn btn-pause" onclick="togglePausePost('${p.id}')">⏸️ Pausar</button>`
+                                            : `<button class="btn btn-resume" onclick="togglePausePost('${p.id}')">▶️ Retomar</button>`}
+                                    ` : ''}
+                                    <button class="btn btn-outline" onclick="openPreview('${encodeURIComponent(JSON.stringify(mediaList))}', '${encodeURIComponent(p.topic)}')">🔍 Ver 5 Slides</button>
+                                    ${p.pdf_url ? `<a href="${p.pdf_url}" target="_blank" class="btn btn-primary">📄 PDF</a>` : ''}
+                                    ${p.status === 'posted_linkedin' || p.status === 'published' ? `<a href="https://www.linkedin.com/in/icarosilva-dev" target="_blank" class="btn btn-social">🔗 LinkedIn</a>` : ''}
+                                    ${p.instagram_post_id ? `<a href="https://www.instagram.com/__icarofernandes/" target="_blank" class="btn btn-social" style="color: #F472B6; border-color: rgba(236,72,153,0.3);">📸 Instagram</a>` : ''}
+                                    <button class="btn btn-danger" onclick="deletePost('${p.id}')">🗑️ Apagar</button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            } catch(e) {
+                grid.innerHTML = '<div style="color: #EF4444;">Erro ao carregar dados.</div>';
+            }
+        }
+
+        async function reorganizeSchedule() {
+            if (!confirm('Deseja reorganizar toda a fila agendada com base no Estudo de Benchmark (Dias de Ouro Ter-Qui + Horários de Pico 08:45, 12:15, 17:15, 19:45)?')) return;
+            
+            try {
+                const res = await fetchWithAuth('/api/posts/reorganize-schedule', { method: 'POST' });
+                const data = await res.json();
+                if (data.success) {
+                    alert('✅ ' + data.message);
+                    fetchPosts(currentTab);
+                    fetchMetrics();
+                } else {
+                    alert('Erro ao reorganizar: ' + (data.error || 'Tente novamente.'));
+                }
+            } catch(e) {
+                alert('Erro ao reorganizar agendamentos.');
+            }
+        }
+
+        async function togglePausePost(postId) {
+            try {
+                const res = await fetchWithAuth(`/api/posts/${postId}/toggle-pause`, { method: 'PATCH' });
+                const data = await res.json();
+                if (data.success) {
+                    fetchPosts(currentTab);
+                    fetchMetrics();
+                } else {
+                    alert('Erro ao alterar status: ' + (data.error || 'Tente novamente.'));
+                }
+            } catch(e) {
+                alert('Erro ao pausar/retomar post.');
+            }
+        }
+
+        function openRescheduleModal(id, topicEnc) {
+            const topic = decodeURIComponent(topicEnc);
+            document.getElementById('reschedule-post-id').value = id;
+            document.getElementById('reschedule-topic').innerText = `Matéria: ${topic}`;
+            document.getElementById('modal-reschedule').style.display = 'flex';
+        }
+
+        async function submitReschedule(e) {
+            e.preventDefault();
+            const id = document.getElementById('reschedule-post-id').value;
+            const scheduled_at = document.getElementById('reschedule-date-input').value;
+
+            try {
+                const res = await fetchWithAuth(`/api/posts/${id}/reschedule`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ scheduled_at })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    closeModal('modal-reschedule');
+                    fetchPosts(currentTab);
+                    fetchMetrics();
+                } else {
+                    alert('Erro ao reagendar: ' + (data.error || 'Tente novamente.'));
+                }
+            } catch(e) {
+                alert('Erro ao reagendar post.');
+            }
+        }
+
+        async function fetchPromos() {
+            const tbody = document.getElementById('promos-body');
+            tbody.innerHTML = '<tr><td colspan="5" style="color: #94A3B8;">Carregando ofertas promocionais...</td></tr>';
+            try {
+                const res = await fetchWithAuth('/api/v1/promos');
+                const promos = await res.json();
+
+                if (promos.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="5" style="color: #94A3B8;">Nenhuma oferta ativa cadastrada. Use o formulário acima para disparar a primeira promoção!</td></tr>';
+                    return;
+                }
+
+                tbody.innerHTML = promos.map(pr => `
+                    <tr>
+                        <td style="font-weight: 700; color: #F8FAFC;">
+                            ${pr.title}
+                            <br><span class="badge" style="background: rgba(249, 115, 22, 0.2); color: #FB923C; border: 1px solid rgba(249, 115, 22, 0.4); margin-top: 4px;">${pr.store_name}</span>
+                        </td>
+                        <td>
+                            <span style="font-size: 16px; font-weight: 900; color: #4ADE80;">R$ ${parseFloat(pr.promo_price).toFixed(2)}</span>
+                            ${pr.discount_percentage ? `<br><span style="color: #EF4444; font-weight: 700; font-size: 12px;">🔥 ${pr.discount_percentage}% OFF</span>` : ''}
+                        </td>
+                        <td><a href="${pr.short_url}" target="_blank" style="color: #60A5FA; font-weight: 600;">${pr.short_url}</a></td>
+                        <td style="font-weight: 700; color: #38BDF8;">📊 ${pr.clicks} cliques</td>
+                        <td style="color: #64748B; font-size: 13px;">${new Date(pr.created_at).toLocaleString('pt-BR')}</td>
+                    </tr>
+                `).join('');
+            } catch(e) {
+                tbody.innerHTML = '<tr><td colspan="5" style="color: #EF4444;">Erro ao carregar promoções.</td></tr>';
+            }
+        }
+
+        async function handlePromoSubmit(e) {
+            e.preventDefault();
+            const title = document.getElementById('promo-title').value;
+            const store_name = document.getElementById('promo-store').value;
+            const promo_price = document.getElementById('promo-price').value;
+            const original_price = document.getElementById('promo-orig-price').value;
+            const original_url = document.getElementById('promo-url').value;
+
+            try {
+                const res = await fetchWithAuth('/api/v1/promos/broadcast', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ title, store_name, promo_price, original_price, original_url })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    alert('🔥 Oferta cadastrada e encurtada com sucesso! Link seguro gerado.');
+                    fetchPromos();
+                    fetchMetrics();
+                }
+            } catch(e) {
+                alert('Erro ao cadastrar promoção.');
+            }
+        }
+
+        async function publishNow(postId) {
+            const btn = document.getElementById(`pub-btn-${postId}`);
+            if (btn) {
+                btn.innerText = '⏳ Disparando...';
+                btn.disabled = true;
+            }
+
+            try {
+                const res = await fetchWithAuth(`/api/posts/${postId}/publish-now`, { method: 'POST' });
+                const data = await res.json();
+                if (data.success) {
+                    if (btn) btn.innerText = '✅ Disparado!';
+                    setTimeout(() => {
+                        fetchMetrics();
+                        fetchPosts(currentTab);
+                    }, 1500);
+                } else {
+                    alert('Erro ao publicar: ' + (data.error || 'Tente novamente.'));
+                }
+            } catch(e) {
+                alert('Erro ao enviar o disparo de publicação.');
+            }
+        }
+
+        async function fetchLeads() {
+            const tbody = document.getElementById('leads-body');
+            tbody.innerHTML = '<tr><td colspan="5" style="color: #94A3B8;">Carregando leads do banco PostgreSQL...</td></tr>';
+            try {
+                const res = await fetchWithAuth('/api/v1/leads');
+                cachedLeads = await res.json();
+
+                if (cachedLeads.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="5" style="color: #94A3B8;">Nenhum lead capturado ainda. As pessoas que responderem DMs aparecerão aqui automaticamente!</td></tr>';
+                    return;
+                }
+
+                tbody.innerHTML = cachedLeads.map(l => `
+                    <tr>
+                        <td style="font-weight: 700; color: #F8FAFC;">
+                            ${l.instagram_handle || l.instagram_user_id}
+                            ${l.full_name ? `<br><span style="font-weight: 400; font-size: 12px; color: #94A3B8;">${l.full_name}</span>` : ''}
+                        </td>
+                        <td>
+                            ${l.is_following 
+                                ? `<span class="badge" style="background: rgba(34, 197, 94, 0.2); color: #4ADE80; border: 1px solid rgba(34, 197, 94, 0.4);">🟢 Seguidor Verificado</span>`
+                                : `<span class="badge" style="background: rgba(234, 179, 8, 0.2); color: #FACC15; border: 1px solid rgba(234, 179, 8, 0.4);">🟡 Aguardando Follower</span>`}
+                        </td>
+                        <td style="max-width: 250px; color: #94A3B8; font-size: 13px;">${l.source_post_topic || 'Direct Geral'}</td>
+                        <td>
+                            ${l.delivered_url ? `<a href="${l.delivered_url}" target="_blank" style="color: #60A5FA; font-weight: 600;">${l.delivered_url}</a>` : '<span style="color: #64748B;">Aguardando liberação</span>'}
+                        </td>
+                        <td style="color: #64748B; font-size: 13px;">${new Date(l.created_at).toLocaleString('pt-BR')}</td>
+                    </tr>
+                `).join('');
+            } catch(e) {
+                tbody.innerHTML = '<tr><td colspan="5" style="color: #EF4444;">Erro ao carregar os leads.</td></tr>';
+            }
+        }
+
+        function exportLeadsCSV() {
+            if (cachedLeads.length === 0) return alert('Nenhum lead para exportar!');
+            let csv = 'Instagram Handle,User ID,Nome Completo,Email,Seguidor Verificado,Data Captura\n';
+            cachedLeads.forEach(l => {
+                csv += `"${l.instagram_handle || ''}","${l.instagram_user_id}","${l.full_name || ''}","${l.email || ''}","${l.is_following ? 'SIM' : 'NAO'}","${l.created_at}"\n`;
+            });
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.setAttribute('href', url);
+            a.setAttribute('download', `leads_icarofernandes_${Date.now()}.csv`);
+            a.click();
+        }
+
+        async function fetchShortLinks() {
+            const tbody = document.getElementById('short-links-body');
+            tbody.innerHTML = '<tr><td colspan="4" style="color: #94A3B8;">Carregando links...</td></tr>';
+            try {
+                const res = await fetchWithAuth('/api/shortlinks');
+                const links = await res.json();
+
+                if (links.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="4" style="color: #94A3B8;">Nenhum link seguro gerado ainda.</td></tr>';
+                    return;
+                }
+
+                tbody.innerHTML = links.map(l => `
+                    <tr>
+                        <td><a href="https://conteudos.icarodev.cloud/r/${l.short_code}" target="_blank" style="color: #60A5FA; font-weight: 600;">https://conteudos.icarodev.cloud/r/${l.short_code}</a></td>
+                        <td style="max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #94A3B8;">${l.original_url}</td>
+                        <td style="font-weight: 700; color: #4ADE80;">📊 ${l.clicks} cliques</td>
+                        <td style="color: #64748B;">${new Date(l.created_at).toLocaleString('pt-BR')}</td>
+                    </tr>
+                `).join('');
+            } catch(e){}
+        }
+
+        async function handleShorten(e) {
+            e.preventDefault();
+            const original_url = document.getElementById('short-url-input').value;
+            const res = await fetchWithAuth('/api/shorten', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ original_url })
+            });
+            const data = await res.json();
+            if (data.success) {
+                document.getElementById('short-url-input').value = '';
+                fetchShortLinks();
+            }
+        }
+
+        async function deletePost(postId) {
+            if (!confirm('Tem certeza de que deseja apagar permanentemente este conteúdo do banco e do servidor?')) return;
+            const res = await fetchWithAuth(`/api/posts/${postId}`, { method: 'DELETE' });
+            const data = await res.json();
+            if (data.success) {
+                document.getElementById(`card-${postId}`)?.remove();
+                fetchMetrics();
+            }
+        }
+
+        function toggleSidebar() {
+            document.getElementById('sidebar').classList.toggle('open');
+            document.getElementById('sidebarOverlay').classList.toggle('open');
+        }
+
+        function switchTab(tab, el) {
+            currentTab = tab;
+            // Sidebar active state
+            document.querySelectorAll('.sidebar-item').forEach(b => b.classList.remove('active'));
+            if (el) el.classList.add('active');
+
+            // Close sidebar on mobile
+            if (window.innerWidth <= 768) {
+                document.getElementById('sidebar').classList.remove('open');
+                document.getElementById('sidebarOverlay').classList.remove('open');
+            }
+
+            document.getElementById('view-posts').style.display = 'none';
+            document.getElementById('view-leads').style.display = 'none';
+            document.getElementById('view-promos').style.display = 'none';
+            document.getElementById('view-shortlinks').style.display = 'none';
+            document.getElementById('view-generate').style.display = 'none';
+            document.getElementById('view-drafts').style.display = 'none';
+            document.getElementById('view-config').style.display = 'none';
+
+            if (tab === 'generate') {
+                document.getElementById('view-generate').style.display = 'block';
+            } else if (tab === 'leads') {
+                document.getElementById('view-leads').style.display = 'block';
+                fetchLeads();
+            } else if (tab === 'promos') {
+                document.getElementById('view-promos').style.display = 'block';
+                fetchPromos();
+            } else if (tab === 'shortlinks') {
+                document.getElementById('view-shortlinks').style.display = 'block';
+                fetchShortLinks();
+            } else if (tab === 'drafts') {
+                document.getElementById('view-drafts').style.display = 'block';
+                fetchDrafts();
+            } else if (tab === 'config') {
+                document.getElementById('view-config').style.display = 'block';
+                fetchSettings();
+            } else {
+                document.getElementById('view-posts').style.display = 'grid';
+                fetchPosts(tab);
+            }
+        }
+
+        function openPreview(mediaJsonStr, topicStr) {
+            const mediaList = JSON.parse(decodeURIComponent(mediaJsonStr));
+            const topic = decodeURIComponent(topicStr);
+
+            document.getElementById('modal-title').innerText = topic;
+            const container = document.getElementById('modal-slides');
+            container.innerHTML = mediaList.map(url => `
+                <img src="${url}" style="height: 380px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.1);" />
+            `).join('');
+
+            document.getElementById('modal-preview').style.display = 'flex';
+        }
+
+        function closeModal(id) {
+            document.getElementById(id).style.display = 'none';
+        }
+
+        async function handleGenerate(e) {
+            e.preventDefault();
+            const topic = document.getElementById('topic-input').value;
+            const channel = document.getElementById('channel-input').value;
+            const publish_mode = document.getElementById('mode-input').value;
+            const scheduled_at = document.getElementById('schedule-date-input').value;
+            const statusDiv = document.getElementById('gen-status');
+
+            statusDiv.innerHTML = '⏳ Enviando solicitação para a esteira do n8n...';
+            try {
+                const res = await fetchWithAuth('/api/generate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ topic, channel, publish_mode, scheduled_at })
+                });
+                const data = await res.json();
+                statusDiv.innerHTML = '✅ ' + data.message;
+                setTimeout(() => {
+                    fetchMetrics();
+                    switchTab('scheduled');
+                }, 2000);
+            } catch(err) {
+                statusDiv.innerHTML = '❌ Erro ao enviar solicitação.';
+            }
+        }
+
+        // === Drafts Functions ===
+        async function fetchDrafts() {
+            const container = document.getElementById('drafts-list');
+            container.innerHTML = '<div style="color:#94A3B8;text-align:center">Carregando drafts...</div>';
+            try {
+                const res = await fetchWithAuth('/api/drafts');
+                const drafts = await res.json();
+                document.getElementById('drafts-count').innerText = drafts.length + ' draft(s) aguardando revisão';
+
+                if (!Array.isArray(drafts) || drafts.length === 0) {
+                    container.innerHTML = '<div style="color:#94A3B8;text-align:center;padding:40px">Nenhum draft pendente de revisão.</div>';
+                    return;
+                }
+
+                container.innerHTML = drafts.map(d => {
+                    const slides = d.slides_data || [];
+                    const slideData = typeof slides === 'string' ? JSON.parse(slides) : slides;
+                    const slideText = Array.isArray(slideData) ? slideData.map(s => s.title || s.content || '').join(' → ') : (d.topic || '');
+
+                    return '<div class="post-card" style="margin-bottom:16px">' +
+                        '<div class="post-content">' +
+                        '<div class="post-title">' + (d.topic || 'Sem título') + '</div>' +
+                        '<div style="color:#94A3B8;font-size:13px;margin:8px 0">' + slideText.substring(0, 200) + '</div>' +
+                        '<div class="post-date">Criado em: ' + new Date(d.created_at).toLocaleString('pt-BR') + '</div>' +
+                        '<div class="post-actions">' +
+                        '<button class="btn btn-publish-now" onclick="approveDraft(\'' + d.id + '\')">✅ Aprovar & Publicar</button>' +
+                        '<button class="btn btn-outline" onclick="sendWhatsAppPreview(\'' + d.id + '\')">💬 Notificar WhatsApp</button>' +
+                        '<button class="btn btn-danger" onclick="rejectDraft(\'' + d.id + '\')">❌ Rejeitar & Remover</button>' +
+                        '</div></div></div>';
+                }).join('');
+            } catch (e) {
+                container.innerHTML = '<div style="color:#EF4444;text-align:center">Erro ao carregar drafts.</div>';
+            }
+        }
+
+        async function approveDraft(id) {
+            if (!confirm('Aprovar este draft? Ele será agendado para publicação.')) return;
+            try {
+                const res = await fetchWithAuth('/api/drafts/' + id + '/approve', { method: 'POST' });
+                const data = await res.json();
+                if (data.success) { fetchDrafts(); fetchMetrics(); }
+                else { alert('Erro: ' + (data.error || '')); }
+            } catch (e) { alert('Erro ao aprovar draft.'); }
+        }
+
+        async function rejectDraft(id) {
+            if (!confirm('Rejeitar este draft? Ele será removido permanentemente.')) return;
+            try {
+                const res = await fetchWithAuth('/api/drafts/' + id + '/reject', { method: 'POST' });
+                const data = await res.json();
+                if (data.success) { fetchDrafts(); fetchMetrics(); }
+                else { alert('Erro: ' + (data.error || '')); }
+            } catch (e) { alert('Erro ao rejeitar draft.'); }
+        }
+
+        async function sendWhatsAppPreview(id) {
+            try {
+                const res = await fetchWithAuth('/api/drafts/' + id + '/send-whatsapp', { method: 'POST' });
+                const data = await res.json();
+                if (data.success) { alert('✅ Preview enviado via WhatsApp!'); }
+                else { alert('Erro: ' + (data.error || 'Falha ao enviar WhatsApp')); }
+            } catch (e) { alert('Erro ao enviar preview WhatsApp.'); }
+        }
+
+        // === Settings Functions ===
+        async function fetchSettings() {
+            try {
+                const res = await fetchWithAuth('/api/settings');
+                const s = await res.json();
+                document.getElementById('config-daily-limit').value = s.daily_limit || 3;
+                document.getElementById('limit-display').innerText = s.daily_limit || 3;
+                document.getElementById('config-whatsapp-enabled').checked = s.whatsapp_enabled || false;
+                document.getElementById('config-whatsapp-number').value = s.whatsapp_number || '';
+                document.getElementById('config-whatsapp-token').value = s.whatsapp_instance_token || '';
+            } catch (e) {}
+        }
+
+        async function saveSettings(e) {
+            e.preventDefault();
+            const statusDiv = document.getElementById('config-status');
+            statusDiv.innerHTML = '⏳ Salvando...';
+            try {
+                const res = await fetchWithAuth('/api/settings', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        daily_limit: parseInt(document.getElementById('config-daily-limit').value),
+                        whatsapp_enabled: document.getElementById('config-whatsapp-enabled').checked,
+                        whatsapp_number: document.getElementById('config-whatsapp-number').value,
+                        whatsapp_instance_token: document.getElementById('config-whatsapp-token').value
+                    })
+                });
+                const data = await res.json();
+                statusDiv.innerHTML = data.success ? '✅ Configurações salvas!' : '❌ Erro: ' + (data.error || '');
+                setTimeout(() => statusDiv.innerHTML = '', 3000);
+            } catch (e) {
+                statusDiv.innerHTML = '❌ Erro ao salvar.';
+            }
+        }
+
+        // Init
+        fetchMetrics();
+        fetchPosts('all');
+    </script>
+</div> <!-- close main-content -->
+</body>
+</html>

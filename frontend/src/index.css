@@ -1,0 +1,37 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html { scroll-behavior: smooth; }
+  body { @apply min-h-screen; }
+  ::selection { background: #C41230; color: white; }
+}
+
+@layer components {
+  .btn-accent {
+    @apply bg-accent hover:bg-accent-light text-white font-semibold
+           px-6 py-3 rounded-xl transition-all duration-200
+           hover:shadow-lg hover:shadow-accent/25 active:scale-[0.98];
+  }
+  .btn-ghost {
+    @apply border border-glass-border hover:bg-glass-hover text-white
+           px-6 py-3 rounded-xl transition-all duration-200;
+  }
+  .card-glass {
+    @apply bg-glass border border-glass-border rounded-2xl
+           backdrop-blur-xl transition-all duration-200;
+  }
+  .card-hover {
+    @apply hover:border-accent/30 hover:shadow-lg hover:shadow-accent/5;
+  }
+  .gradient-text {
+    @apply bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent;
+  }
+  .glass-input {
+    @apply bg-glass border border-glass-border rounded-xl px-4 py-3
+           text-white placeholder-gray-500 focus:outline-none
+           focus:border-accent/50 focus:ring-1 focus:ring-accent/30
+           transition-all duration-200;
+  }
+}
