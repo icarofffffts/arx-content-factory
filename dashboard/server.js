@@ -814,8 +814,9 @@ app.post('/api/v2/auth/login', async (req, res) => {
     const { email, password } = req.body;
     if (!email || !password) return res.status(400).json({ error: 'Email e senha obrigatórios' });
 
-    // Fallback: hardcoded admin
-    if (email.toLowerCase().trim() === MASTER_USER && password === MASTER_PASS) {
+    // Fallback: hardcoded admin (email admin@arx.dev ou usuario 'admin')
+    const cleanEmail = email.toLowerCase().trim();
+    if ((cleanEmail === 'admin@arx.dev' || cleanEmail === MASTER_USER) && password === MASTER_PASS) {
       const token = genToken();
       const tokenExpires = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
       return res.json({
