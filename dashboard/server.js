@@ -29,7 +29,7 @@ const EVO_HOST = '185.111.156.178';
 const EVO_PORT = 9091;
 const EVO_GLOBAL_KEY = 'arx_evolution_2026';
 
-function evoRequest(method, urlPath, body) {
+function evoRequest(method, urlPath, body, apiKey = EVO_GLOBAL_KEY) {
   return new Promise((resolve, reject) => {
     const payload = body ? JSON.stringify(body) : null;
     const req = http.request({
@@ -38,7 +38,7 @@ function evoRequest(method, urlPath, body) {
       path: urlPath,
       method,
       headers: {
-        'apikey': EVO_GLOBAL_KEY,
+        'apikey': apiKey,
         'Content-Type': 'application/json',
         ...(payload ? { 'Content-Length': Buffer.byteLength(payload) } : {}),
       },
@@ -62,12 +62,14 @@ function evoRequest(method, urlPath, body) {
         user_id TEXT,
         client_name TEXT NOT NULL,
         instance_name TEXT NOT NULL UNIQUE,
+        evo_instance_id TEXT,
         instance_token TEXT,
         number TEXT,
         status TEXT NOT NULL DEFAULT 'pending',
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
         updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
       );
+      ALTER TABLE public.whatsapp_instances ADD COLUMN IF NOT EXISTS evo_instance_id TEXT;
       CREATE TABLE IF NOT EXISTS public.demo_requests (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         name TEXT NOT NULL,
@@ -1117,10 +1119,10 @@ app.post('/api/v2/plans/subscribe', async (req, res) => {
 });
 
 // ============================================================
-// WhatsApp Instances (Evolution API)
+// WhatsApp Instances (Evolution Go)
 // ============================================================
 
-// List instances (admin: all, user: own) — synced with Evolution fetchInstances
+// List instances (admin: all, user: own) — synced with Evolution Go /instance/all
 app.get('/api/whatsapp/instances', async (req, res) => {
   try {
     const user = await getUserAsync(req);
@@ -1129,33 +1131,45 @@ app.get('/api/whatsapp/instances', async (req, res) => {
     const params = [];
     const where = user.role === 'admin' ? '' : 'WHERE user_id = $1' + (params.push(user.id) ? '' : '');
     const db = await pool.query(
-      `SELECT id, user_id, client_name, instance_name, instance_token, number, status, created_at
+      `SELECT id, user_id, client_name, instance_name, evo_instance_id, instance_token, number, status, created_at
        FROM public.whatsapp_instances ${where} ORDER BY created_at DESC`, params);
 
-    // Sync connected state from Evolution
+    // Sync state from Evolution Go /instance/all (global key)
     let evoStates = {};
     try {
-      const evo = await evoRequest('GET', '/instance/fetchInstances');
+      const evo = await evoRequest('GET', '/instance/all');
       const parsed = JSON.parse(evo.data);
-      const list = Array.isArray(parsed.instances) ? parsed.instances : (Array.isArray(parsed.data) ? parsed.data : []);
+      const list = Array.isArray(parsed.data) ? parsed.data : (Array.isArray(parsed.instances) ? parsed.instances : []);
       list.forEach(i => {
-        const name = i.instanceName || i.name;
-        if (name) evoStates[name] = i.connectionState || (i.connected ? 'open' : 'close');
+        const name = i.name;
+        if (name) {
+          const jid = i.jid || '';
+          evoStates[name] = {
+            connected: !!i.connected,
+            loggedIn: !!i.connected,
+            jid,
+            number: jid ? jid.split(':')[0] : '',
+          };
+        }
       });
     } catch (e) { /* evolution offline — keep db status */ }
 
-    const instances = db.rows.map(row => ({
-      ...row,
-      connected: evoStates[row.instance_name] === 'open' || row.status === 'connected',
-      evolution_state: evoStates[row.instance_name] || null,
-    }));
+    const instances = db.rows.map(row => {
+      const st = evoStates[row.instance_name] || {};
+      return {
+        ...row,
+        number: st.number || row.number || '',
+        connected: st.connected || row.status === 'connected',
+        evolution_state: st.connected ? 'open' : 'close',
+      };
+    });
     res.json({ success: true, instances });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-// Create instance in Evolution (instance name = slug of client name)
+// Create instance in Evolution Go (instance name = slug of client name, token = generated UUID)
 app.post('/api/whatsapp/instances', async (req, res) => {
   try {
     const user = await getUserAsync(req);
@@ -1170,31 +1184,33 @@ app.post('/api/whatsapp/instances', async (req, res) => {
       return res.status(409).json({ error: 'Instância já existe para esse cliente' });
     }
 
-    const createRes = await evoRequest('POST', `/instance/create?instanceName=${encodeURIComponent(instanceName)}&integration=WHATSAPP-BAILEYS&qrcode=true`);
-    let instanceToken = '';
-    try {
-      const parsed = JSON.parse(createRes.data);
-      instanceToken = parsed.instance?.instance?.apikey || parsed.hash?.apikey || parsed.instance?.apikey || '';
-    } catch (e) { /* ignore */ }
+    const instanceToken = crypto.randomUUID();
+    const createRes = await evoRequest('POST', '/instance/create', { name: instanceName, token: instanceToken });
     if (createRes.status >= 400) {
       return res.status(502).json({ error: 'Falha ao criar instância na Evolution: ' + (createRes.data || createRes.status) });
     }
+    let evoId = '';
+    try {
+      const parsed = JSON.parse(createRes.data);
+      evoId = parsed.data?.id || parsed.id || '';
+    } catch (e) { /* ignore */ }
 
     await pool.query(`
-      INSERT INTO public.whatsapp_instances (user_id, client_name, instance_name, instance_token, status)
-      VALUES ($1, $2, $3, $4, 'pending')
+      INSERT INTO public.whatsapp_instances (user_id, client_name, instance_name, evo_instance_id, instance_token, status)
+      VALUES ($1, $2, $3, $4, $5, 'pending')
       ON CONFLICT (instance_name) DO UPDATE
         SET user_id = EXCLUDED.user_id, client_name = EXCLUDED.client_name,
-            instance_token = EXCLUDED.instance_token, status = 'pending', updated_at = NOW()
-    `, [user.id, clientName, instanceName, instanceToken]);
+            evo_instance_id = EXCLUDED.evo_instance_id, instance_token = EXCLUDED.instance_token,
+            status = 'pending', updated_at = NOW()
+    `, [user.id, clientName, instanceName, evoId, instanceToken]);
 
-    res.json({ success: true, instance: { instance_name: instanceName, client_name: clientName, status: 'pending' } });
+    res.json({ success: true, instance: { instance_name: instanceName, client_name: clientName, evo_instance_id: evoId, status: 'pending' } });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-// Get QR code to connect an instance
+// Get QR code to connect an instance (Evolution Go /instance/qr — data URI)
 app.get('/api/whatsapp/instances/:name/qr', async (req, res) => {
   try {
     const user = await getUserAsync(req);
@@ -1206,24 +1222,28 @@ app.get('/api/whatsapp/instances/:name/qr', async (req, res) => {
     if (user.role !== 'admin' && inst.rows[0].user_id !== user.id) {
       return res.status(403).json({ error: 'Acesso negado' });
     }
+    const row = inst.rows[0];
 
-    const qrRes = await evoRequest('GET', `/instance/connect/${encodeURIComponent(name)}`);
-    let base64 = '', code = '';
+    // /instance/qr needs the per-instance token as apikey
+    const qrRes = await evoRequest('GET', `/instance/qr?instanceId=${encodeURIComponent(row.evo_instance_id)}`, null, row.instance_token);
+    let qrcode = '';
     try {
       const parsed = JSON.parse(qrRes.data);
-      base64 = parsed.qrcode?.base64 || parsed.base64 || '';
-      code = parsed.qrcode?.code || parsed.code || '';
+      qrcode = parsed.data?.qrcode || parsed.qrcode || '';
     } catch (e) { /* ignore */ }
-    if (!base64) {
+
+    if (!qrcode) {
       return res.status(502).json({ error: 'QR não disponível. Tente novamente em instantes.', detail: qrRes.data });
     }
-    res.json({ success: true, base64, code, instance_name: name });
+    // qrcode is a full data URI — strip prefix for the frontend
+    const base64 = qrcode.replace(/^data:image\/png;base64,/, '');
+    res.json({ success: true, base64, code: '', instance_name: name });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-// Check connection status of an instance
+// Check connection status of an instance (Evolution Go /instance/status — LoggedIn)
 app.get('/api/whatsapp/instances/:name/status', async (req, res) => {
   try {
     const user = await getUserAsync(req);
@@ -1235,19 +1255,20 @@ app.get('/api/whatsapp/instances/:name/status', async (req, res) => {
     if (user.role !== 'admin' && inst.rows[0].user_id !== user.id) {
       return res.status(403).json({ error: 'Acesso negado' });
     }
+    const row = inst.rows[0];
 
-    let state = inst.rows[0].status;
-    let number = inst.rows[0].number || '';
+    let connected = row.status === 'connected';
+    let number = row.number || '';
     try {
-      const stRes = await evoRequest('GET', `/instance/connectionState/${encodeURIComponent(name)}`);
+      const stRes = await evoRequest('GET', `/instance/status?instanceId=${encodeURIComponent(row.evo_instance_id)}`, null, row.instance_token);
       const parsed = JSON.parse(stRes.data);
-      state = parsed.instance?.state || parsed.state || state;
-      number = parsed.instance?.number || number;
+      const data = parsed.data || parsed;
+      connected = data.LoggedIn === true || data.loggedIn === true;
+      if (data.jid) number = String(data.jid).split(':')[0];
     } catch (e) { /* keep db state */ }
 
-    const connected = state === 'open';
     await pool.query(`UPDATE public.whatsapp_instances SET status = $1, number = $2, updated_at = NOW() WHERE id = $3`,
-      [connected ? 'connected' : 'disconnected', number, inst.rows[0].id]);
+      [connected ? 'connected' : 'disconnected', number, row.id]);
 
     res.json({ success: true, instance_name: name, connected, status: connected ? 'connected' : 'disconnected', number });
   } catch (err) {
@@ -1268,7 +1289,7 @@ app.delete('/api/whatsapp/instances/:name', async (req, res) => {
       return res.status(403).json({ error: 'Acesso negado' });
     }
 
-    try { await evoRequest('DELETE', `/instance/delete/${encodeURIComponent(name)}`); } catch (e) { /* ignore */ }
+    try { await evoRequest('DELETE', `/instance/delete/${encodeURIComponent(inst.rows[0].evo_instance_id)}`); } catch (e) { /* ignore */ }
     await pool.query(`DELETE FROM public.whatsapp_instances WHERE id = $1`, [inst.rows[0].id]);
     res.json({ success: true, message: 'Instância removida' });
   } catch (err) {
