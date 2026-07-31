@@ -1145,6 +1145,8 @@ app.get('/api/whatsapp/instances', async (req, res) => {
         if (name) {
           const jid = i.jid || '';
           evoStates[name] = {
+            id: i.id || '',
+            token: i.token || '',
             connected: !!i.connected,
             loggedIn: !!i.connected,
             jid,
@@ -1153,6 +1155,27 @@ app.get('/api/whatsapp/instances', async (req, res) => {
         }
       });
     } catch (e) { /* evolution offline — keep db status */ }
+
+    // Import Evolution instances not yet in DB (admin-owned) so they appear in the dashboard
+    if (user.role === 'admin') {
+      for (const name of Object.keys(evoStates)) {
+        const st = evoStates[name];
+        const dbExists = db.rows.some(r => r.instance_name === name);
+        if (!dbExists) {
+          await pool.query(`
+            INSERT INTO public.whatsapp_instances (user_id, client_name, instance_name, evo_instance_id, instance_token, number, status)
+            VALUES ('admin', $1, $1, $2, $3, $4, $5)
+            ON CONFLICT (instance_name) DO UPDATE
+              SET evo_instance_id = EXCLUDED.evo_instance_id, instance_token = EXCLUDED.instance_token,
+                  number = EXCLUDED.number, status = EXCLUDED.status, updated_at = NOW()
+          `, [name, st.id, st.token, st.number, st.connected ? 'connected' : 'pending']);
+        }
+      }
+      const db2 = await pool.query(
+        `SELECT id, user_id, client_name, instance_name, evo_instance_id, instance_token, number, status, created_at
+         FROM public.whatsapp_instances ORDER BY created_at DESC`);
+      db.rows = db2.rows;
+    }
 
     const instances = db.rows.map(row => {
       const st = evoStates[row.instance_name] || {};
