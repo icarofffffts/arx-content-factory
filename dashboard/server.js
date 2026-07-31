@@ -206,7 +206,7 @@ app.post('/api/logout', (req, res) => {
 });
 
 // Auth Middleware — only protect /api/ and /dashboard/; React landing page is public
-app.use((req, res, next) => {
+app.use(async (req, res, next) => {
   const isProtected = req.path.startsWith('/api/') || req.path.startsWith('/dashboard/');
   if (!isProtected) return next();
 
@@ -222,8 +222,26 @@ app.use((req, res, next) => {
                 req.query.token || 
                 cookies.arx_token;
 
+  // Master token (legacy admin /dashboard/)
   if (token && token === MASTER_TOKEN) {
+    req.user = { id: 'admin', email: 'admin@arx.dev', full_name: 'Administrador', role: 'admin' };
     return next();
+  }
+
+  // V2 session token (React SPA users)
+  if (token) {
+    try {
+      const sess = await pool.query(`
+        SELECT u.id, u.email, u.full_name, u.role
+        FROM public.sessions s
+        JOIN public.users u ON s.user_id = u.id
+        WHERE s.token = $1 AND s.expires_at > NOW()
+      `, [token]);
+      if (sess.rows.length > 0) {
+        req.user = sess.rows[0];
+        return next();
+      }
+    } catch (e) { /* fallthrough to reject */ }
   }
 
   if (req.accepts('html')) {
