@@ -28,11 +28,12 @@ export default function Login({ onLogin, onNavigate }: {
   }
 
   return (
-    <div className="min-h-screen bg-surface-900 flex items-center justify-center px-6">
-      <div className="w-full max-w-sm">
+    <div className="min-h-screen bg-surface-900 flex items-center justify-center px-6 relative overflow-hidden">
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(196,18,48,0.1)_0%,transparent_60%)]" />
+      <div className="w-full max-w-sm relative">
         <div className="text-center mb-10">
-          <div className="w-12 h-12 bg-accent rounded-xl flex items-center justify-center font-bold text-xl mx-auto mb-4">A</div>
-          <h1 className="text-2xl font-bold">Entrar</h1>
+          <div className="w-16 h-16 bg-accent rounded-2xl flex items-center justify-center font-bold text-2xl mx-auto mb-6 shadow-lg shadow-accent/25">A</div>
+          <h1 className="text-3xl font-bold">Entrar</h1>
           <p className="text-gray-500 mt-2">Acesse seu painel de controle</p>
         </div>
 
