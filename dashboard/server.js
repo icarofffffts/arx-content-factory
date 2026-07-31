@@ -987,9 +987,19 @@ app.post('/api/v2/auth/login', async (req, res) => {
     if ((cleanEmail === 'admin@arx.dev' || cleanEmail === MASTER_USER) && password === MASTER_PASS) {
       const token = genToken();
       const tokenExpires = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+      // Ensure admin exists in users so the session resolves through the auth gate
+      let adminRow = await pool.query(`
+        INSERT INTO public.users (email, password_hash, full_name, role)
+        VALUES ('admin@arx.dev', '', 'Administrador', 'admin')
+        ON CONFLICT (email) DO UPDATE SET role = 'admin', full_name = 'Administrador'
+        RETURNING id, email, full_name, role
+      `);
+      await pool.query(`
+        INSERT INTO public.sessions (user_id, token, expires_at) VALUES ($1, $2, $3)
+      `, [adminRow.rows[0].id, token, tokenExpires]);
       return res.json({
         success: true,
-        user: { id: 'admin', email: 'admin@arx.dev', full_name: 'Administrador', role: 'admin' },
+        user: { id: adminRow.rows[0].id, email: 'admin@arx.dev', full_name: 'Administrador', role: 'admin' },
         plan: { name: 'Enterprise', slug: 'enterprise', max_posts_month: 999999, has_whatsapp_approval: true, has_instagram: true, has_linkedin: true, has_github: true, has_ai_suggestions: true, has_lead_capture: true, has_promo_hunter: true },
         token,
         expires_at: tokenExpires
