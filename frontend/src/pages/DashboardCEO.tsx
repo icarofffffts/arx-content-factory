@@ -1,9 +1,17 @@
 import { useState, useEffect } from 'react'
 import { api } from '../lib/api'
 import WhatsAppModal from '../components/WhatsAppModal'
+import ConnectWhatsAppModal from '../components/ConnectWhatsAppModal'
+import DemoRequestModal from '../components/DemoRequestModal'
 import PostCard from '../components/PostCard'
 
 type SubPage = 'dashboard' | 'content' | 'suggestions' | 'social' | 'settings'
+
+const DEMO_POST = {
+  id: 'demo',
+  topic: '5 Certificações Tech que Pagam +R$15k em 2026',
+  created_at: new Date().toISOString(),
+}
 
 const NAV: { id: SubPage; icon: string; label: string }[] = [
   { id: 'dashboard', icon: 'D', label: 'Dashboard' },
@@ -40,6 +48,29 @@ export default function DashboardCEO({ user, plan, onLogout, onNavigate }: {
   const [whatsappPost, setWhatsappPost] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [statusFilter, setStatusFilter] = useState<string>('all')
+  const [instances, setInstances] = useState<any[]>([])
+  const [instancesLoading, setInstancesLoading] = useState(false)
+  const [connectOpen, setConnectOpen] = useState(false)
+  const [demoOpen, setDemoOpen] = useState(false)
+  const [demoFormOpen, setDemoFormOpen] = useState(false)
+  const [demoReleased, setDemoReleased] = useState(() => localStorage.getItem('arx_demo_released') === '1')
+
+  async function loadInstances() {
+    setInstancesLoading(true)
+    try {
+      const r = await api.whatsappInstances()
+      if (r.success) setInstances(r.instances)
+    } catch (e) { /* ignore */ }
+    finally { setInstancesLoading(false) }
+  }
+
+  useEffect(() => {
+    if (subPage === 'social') loadInstances()
+  }, [subPage])
+
+  useEffect(() => {
+    if (demoReleased) localStorage.setItem('arx_demo_released', '1')
+  }, [demoReleased])
 
   useEffect(() => {
     Promise.all([
@@ -63,7 +94,22 @@ export default function DashboardCEO({ user, plan, onLogout, onNavigate }: {
     const date = prompt('Nova data (YYYY-MM-DD HH:MM):')
     if (date) { await api.reschedule(id, date); refreshPosts() }
   }
-  async function handleApproveDraft(id: string) { await api.approveDraft(id); setWhatsappPost(null); refreshPosts() }
+  async function handleApproveDraft(id: string) {
+    if (id === 'demo') { setWhatsappPost(null); return }
+    await api.approveDraft(id); setWhatsappPost(null); refreshPosts()
+  }
+  function openDemo() {
+    if (demoReleased) {
+      setWhatsappPost(DEMO_POST)
+    } else {
+      setDemoFormOpen(true)
+    }
+  }
+  function handleDemoSuccess() {
+    setDemoReleased(true)
+    setDemoFormOpen(false)
+    setWhatsappPost(DEMO_POST)
+  }
   async function handleReorganize() { await api.reorganize(); refreshPosts() }
 
   const filteredPosts = statusFilter === 'all' ? posts : posts.filter(p => p.status === statusFilter)
@@ -278,37 +324,100 @@ export default function DashboardCEO({ user, plan, onLogout, onNavigate }: {
           )}
 
           {subPage === 'social' && (
-            <div className="grid md:grid-cols-2 gap-6">
-              {[
-                { name: 'WhatsApp', icon: '💬', status: 'Conectado', color: 'green', desc: 'Número registrado para aprovação de conteúdo' },
-                { name: 'Instagram DM', icon: '📷', status: 'Parcial', color: 'yellow', desc: 'Resposta a comentários ativa. DM requer permissão Meta.' },
-                { name: 'Telegram', icon: '✈', status: 'Conectado', color: 'green', desc: 'Broadcast de promoções e ofertas' },
-                { name: 'GitHub', icon: '🐙', status: 'Ativo', color: 'green', desc: 'Arquivamento automático de conteúdo' },
-              ].map((svc, i) => {
-                const statusColors: Record<string, string> = {
-                  green: 'bg-green-400/10 text-green-400',
-                  yellow: 'bg-yellow-400/10 text-yellow-400',
-                }
-                const dotColors: Record<string, string> = {
-                  green: 'bg-green-400 shadow-lg shadow-green-400/30',
-                  yellow: 'bg-yellow-400 shadow-lg shadow-yellow-400/30',
-                }
-                return (
-                  <div key={i} className="card-glass p-6 card-hover">
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="flex items-center gap-3">
-                        <span className="w-10 h-10 bg-accent/10 rounded-xl flex items-center justify-center text-lg">{svc.icon}</span>
-                        <h2 className="font-bold">{svc.name}</h2>
-                      </div>
-                      <div className={`flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium ${statusColors[svc.color] || 'bg-gray-400/10 text-gray-400'}`}>
-                        <div className={`w-2 h-2 rounded-full ${dotColors[svc.color] || 'bg-gray-400'}`} />
-                        {svc.status}
-                      </div>
-                    </div>
-                    <p className="text-sm text-gray-500">{svc.desc}</p>
+            <div className="space-y-6">
+              <div className="card-glass p-6">
+                <div className="flex flex-wrap items-center gap-3 mb-4">
+                  <span className="w-10 h-10 bg-green-500/20 rounded-xl flex items-center justify-center text-lg">💬</span>
+                  <div className="flex-1">
+                    <h2 className="font-bold">WhatsApp</h2>
+                    <p className="text-xs text-gray-500">Números conectados para aprovação de conteúdo</p>
                   </div>
-                )
-              })}
+                  <button onClick={openDemo} className="btn-ghost text-sm px-4 py-2">
+                    🎬 Ver demonstração
+                  </button>
+                  <button onClick={() => setConnectOpen(true)} className="btn-accent text-sm px-4 py-2">
+                    + Conectar número
+                  </button>
+                </div>
+
+                {instancesLoading ? (
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div className="loading-pulse h-28" />
+                    <div className="loading-pulse h-28" />
+                  </div>
+                ) : instances.length === 0 ? (
+                  <div className="text-center py-10 text-gray-500">
+                    Nenhum número conectado ainda. Clique em <span className="text-accent">+ Conectar número</span> para criar a primeira instância.
+                  </div>
+                ) : (
+                  <div className="grid md:grid-cols-2 gap-4">
+                    {instances.map((inst, i) => {
+                      const ok = inst.connected || inst.status === 'connected'
+                      return (
+                        <div key={inst.id || i} className="bg-glass hover:bg-glass-hover transition-all rounded-xl p-4 group">
+                          <div className="flex items-center justify-between mb-3">
+                            <div className="flex items-center gap-3 min-w-0">
+                              <span className="w-10 h-10 bg-green-500/10 rounded-xl flex items-center justify-center text-lg">💬</span>
+                              <div className="min-w-0">
+                                <div className="font-semibold text-sm truncate">{inst.client_name}</div>
+                                <div className="text-[11px] text-gray-500 font-mono truncate">{inst.instance_name}</div>
+                              </div>
+                            </div>
+                            <div className={`flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap ${
+                              ok ? 'bg-green-400/10 text-green-400' : 'bg-yellow-400/10 text-yellow-400'
+                            }`}>
+                              <div className={`w-2 h-2 rounded-full ${ok ? 'bg-green-400 shadow-lg shadow-green-400/30' : 'bg-yellow-400 shadow-lg shadow-yellow-400/30'}`} />
+                              {ok ? 'Conectado' : 'Desconectado'}
+                            </div>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs text-gray-500">
+                              {inst.number || (ok ? 'Número ativo' : 'Aguardando conexão')}
+                            </span>
+                            <button
+                              onClick={async () => { if (confirm(`Remover instância de ${inst.client_name}?`)) { await api.deleteWhatsAppInstance(inst.instance_name); loadInstances() } }}
+                              className="text-red-400/60 hover:text-red-300 text-xs px-2 py-1 rounded-lg hover:bg-red-400/10 transition-all opacity-0 group-hover:opacity-100">
+                              Remover
+                            </button>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+
+              <div className="grid md:grid-cols-2 gap-6">
+                {[
+                  { name: 'Instagram DM', icon: '📷', status: 'Parcial', color: 'yellow', desc: 'Resposta a comentários ativa. DM requer permissão Meta.' },
+                  { name: 'Telegram', icon: '✈', status: 'Conectado', color: 'green', desc: 'Broadcast de promoções e ofertas' },
+                  { name: 'GitHub', icon: '🐙', status: 'Ativo', color: 'green', desc: 'Arquivamento automático de conteúdo' },
+                ].map((svc, i) => {
+                  const statusColors: Record<string, string> = {
+                    green: 'bg-green-400/10 text-green-400',
+                    yellow: 'bg-yellow-400/10 text-yellow-400',
+                  }
+                  const dotColors: Record<string, string> = {
+                    green: 'bg-green-400 shadow-lg shadow-green-400/30',
+                    yellow: 'bg-yellow-400 shadow-lg shadow-yellow-400/30',
+                  }
+                  return (
+                    <div key={i} className="card-glass p-6 card-hover">
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-3">
+                          <span className="w-10 h-10 bg-accent/10 rounded-xl flex items-center justify-center text-lg">{svc.icon}</span>
+                          <h2 className="font-bold">{svc.name}</h2>
+                        </div>
+                        <div className={`flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium ${statusColors[svc.color] || 'bg-gray-400/10 text-gray-400'}`}>
+                          <div className={`w-2 h-2 rounded-full ${dotColors[svc.color] || 'bg-gray-400'}`} />
+                          {svc.status}
+                        </div>
+                      </div>
+                      <p className="text-sm text-gray-500">{svc.desc}</p>
+                    </div>
+                  )
+                })}
+              </div>
             </div>
           )}
 
@@ -363,6 +472,12 @@ export default function DashboardCEO({ user, plan, onLogout, onNavigate }: {
 
       {whatsappPost && (
         <WhatsAppModal post={whatsappPost} onClose={() => setWhatsappPost(null)} onApprove={handleApproveDraft} />
+      )}
+      {connectOpen && (
+        <ConnectWhatsAppModal onClose={() => setConnectOpen(false)} onConnected={loadInstances} />
+      )}
+      {demoFormOpen && (
+        <DemoRequestModal onClose={() => setDemoFormOpen(false)} onSuccess={handleDemoSuccess} />
       )}
     </div>
   )

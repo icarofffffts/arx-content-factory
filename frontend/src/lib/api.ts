@@ -115,4 +115,28 @@ export const api = {
     request<{ success: boolean }>('/api/settings', {
       method: 'PUT', body: JSON.stringify(data)
     }),
+
+  // WhatsApp Instances (Evolution)
+  whatsappInstances: () =>
+    request<{ success: boolean; instances: any[] }>('/api/whatsapp/instances'),
+
+  createWhatsAppInstance: (client_name: string) =>
+    request<{ success: boolean; instance?: any; error?: string }>('/api/whatsapp/instances', {
+      method: 'POST', body: JSON.stringify({ client_name })
+    }),
+
+  whatsappInstanceQr: (name: string) =>
+    request<{ success: boolean; base64: string; code: string; instance_name: string; error?: string }>(`/api/whatsapp/instances/${encodeURIComponent(name)}/qr`),
+
+  whatsappInstanceStatus: (name: string) =>
+    request<{ success: boolean; connected: boolean; status: string; number?: string }>(`/api/whatsapp/instances/${encodeURIComponent(name)}/status`),
+
+  deleteWhatsAppInstance: (name: string) =>
+    request<{ success: boolean }>(`/api/whatsapp/instances/${encodeURIComponent(name)}`, { method: 'DELETE' }),
+
+  // Demo request (contact form + welcome email)
+  requestDemo: (data: { name: string; email: string; phone?: string; company?: string }) =>
+    request<{ success: boolean; message: string; email_sent?: boolean; error?: string }>('/api/demo/request', {
+      method: 'POST', body: JSON.stringify(data)
+    }),
 }

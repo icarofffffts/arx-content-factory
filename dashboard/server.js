@@ -22,6 +22,153 @@ const pool = new Pool({
   port: 5432,
 });
 
+// ============================================================
+// Evolution API helpers
+// ============================================================
+const EVO_HOST = '185.111.156.178';
+const EVO_PORT = 9091;
+const EVO_GLOBAL_KEY = 'arx_evolution_2026';
+
+function evoRequest(method, urlPath, body) {
+  return new Promise((resolve, reject) => {
+    const payload = body ? JSON.stringify(body) : null;
+    const req = http.request({
+      hostname: EVO_HOST,
+      port: EVO_PORT,
+      path: urlPath,
+      method,
+      headers: {
+        'apikey': EVO_GLOBAL_KEY,
+        'Content-Type': 'application/json',
+        ...(payload ? { 'Content-Length': Buffer.byteLength(payload) } : {}),
+      },
+    }, (res) => {
+      let data = '';
+      res.on('data', c => data += c);
+      res.on('end', () => resolve({ status: res.statusCode, data }));
+    });
+    req.on('error', reject);
+    if (payload) req.write(payload);
+    req.end();
+  });
+}
+
+// Ensure tables exist at boot
+(async () => {
+  try {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS public.whatsapp_instances (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id TEXT,
+        client_name TEXT NOT NULL,
+        instance_name TEXT NOT NULL UNIQUE,
+        instance_token TEXT,
+        number TEXT,
+        status TEXT NOT NULL DEFAULT 'pending',
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS public.demo_requests (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        name TEXT NOT NULL,
+        email TEXT NOT NULL,
+        phone TEXT,
+        company TEXT,
+        status TEXT NOT NULL DEFAULT 'pending',
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+    `);
+    console.log('[init] whatsapp_instances + demo_requests ready');
+  } catch (e) {
+    console.error('[init] table create error:', e.message);
+  }
+})();
+
+// Resolve current user from token (MASTER_TOKEN => admin, else sessions->users)
+async function getUserAsync(req) {
+  const token = req.headers['authorization']?.replace('Bearer ', '') ||
+                req.headers['x-arx-token'] ||
+                req.query.token ||
+                parseCookies(req).arx_token;
+  if (!token) return null;
+  if (token === MASTER_TOKEN) {
+    return { id: 'admin', email: 'admin@arx.dev', full_name: 'Administrador', role: 'admin' };
+  }
+  try {
+    const r = await pool.query(`
+      SELECT u.id, u.email, u.full_name, u.role
+      FROM public.sessions s
+      JOIN public.users u ON s.user_id = u.id
+      WHERE s.token = $1 AND s.expires_at > NOW()
+    `, [token]);
+    return r.rows[0] || null;
+  } catch (e) {
+    return null;
+  }
+}
+
+function slugInstanceName(name) {
+  const slug = (name || '')
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase().replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '').slice(0, 40);
+  return slug || 'inst_' + Date.now().toString(36);
+}
+
+// Resend email helper
+const RESEND_API_KEY = process.env.RESEND_API_KEY || '';
+const RESEND_FROM = process.env.RESEND_FROM || 'Arx Content Factory <onboarding@arxsolutions.cloud>';
+
+function sendWelcomeEmail(name, email) {
+  return new Promise((resolve, reject) => {
+    if (!RESEND_API_KEY) return reject(new Error('RESEND_API_KEY nao configurada'));
+    const safeName = (name || '').replace(/</g, '').replace(/>/g, '');
+    const html = `
+      <div style="font-family:Arial,Helvetica,sans-serif;background:#f5f5f5;padding:40px 16px;">
+        <div style="max-width:520px;margin:0 auto;background:#ffffff;border-radius:16px;overflow:hidden;border:1px solid #eee;">
+          <div style="background:#C41230;padding:24px 32px;">
+            <div style="color:#fff;font-size:20px;font-weight:700;">Arx Content Factory</div>
+          </div>
+          <div style="padding:32px;">
+            <h2 style="margin:0 0 12px;color:#111;">Seja bem-vindo(a), ${safeName}! 🚀</h2>
+            <p style="color:#555;line-height:1.6;margin:0 0 16px;">
+              Obrigado pelo interesse! Sua <strong>demonstração</strong> foi liberada automaticamente.
+              Aproveite para ver como o fluxo de aprovação de conteúdo pelo WhatsApp funciona na prática.
+            </p>
+            <p style="color:#555;line-height:1.6;margin:0;">
+              Qualquer dúvida, é só responder este e-mail. Estamos à disposição!
+            </p>
+            <p style="color:#999;font-size:13px;margin:24px 0 0;">— Time Arx Content Factory</p>
+          </div>
+        </div>
+      </div>`;
+    const payload = JSON.stringify({
+      from: RESEND_FROM,
+      to: [email],
+      subject: 'Seja bem-vindo(a) ao Arx Content Factory!',
+      html,
+    });
+    const req = https.request({
+      hostname: 'api.resend.com',
+      port: 443,
+      path: '/emails',
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${RESEND_API_KEY}`,
+        'Content-Type': 'application/json',
+        'Content-Length': Buffer.byteLength(payload),
+      },
+    }, (res) => {
+      let data = '';
+      res.on('data', c => data += c);
+      res.on('end', () => resolve({ status: res.statusCode, data }));
+    });
+    req.on('error', reject);
+    req.write(payload);
+    req.end();
+  });
+}
+
 // Helper: Parse Cookie Header
 function parseCookies(req) {
   const list = {};
@@ -62,7 +209,8 @@ app.use((req, res, next) => {
   if (!isProtected) return next();
 
   if (req.path === '/api/login' || req.path === '/api/v2/auth/login'
-      || req.path === '/api/v2/auth/register' || req.path === '/api/v2/plans') {
+      || req.path === '/api/v2/auth/register' || req.path === '/api/v2/plans'
+      || req.path === '/api/demo/request') {
     return next();
   }
 
@@ -963,6 +1111,193 @@ app.post('/api/v2/plans/subscribe', async (req, res) => {
     `, [session.rows[0].user_id, plan.rows[0].id, billing_cycle || 'monthly', expires]);
 
     res.json({ success: true, message: 'Plano ativado com sucesso!', expires_at: expires });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ============================================================
+// WhatsApp Instances (Evolution API)
+// ============================================================
+
+// List instances (admin: all, user: own) — synced with Evolution fetchInstances
+app.get('/api/whatsapp/instances', async (req, res) => {
+  try {
+    const user = await getUserAsync(req);
+    if (!user) return res.status(401).json({ error: 'Não autorizado' });
+
+    const params = [];
+    const where = user.role === 'admin' ? '' : 'WHERE user_id = $1' + (params.push(user.id) ? '' : '');
+    const db = await pool.query(
+      `SELECT id, user_id, client_name, instance_name, instance_token, number, status, created_at
+       FROM public.whatsapp_instances ${where} ORDER BY created_at DESC`, params);
+
+    // Sync connected state from Evolution
+    let evoStates = {};
+    try {
+      const evo = await evoRequest('GET', '/instance/fetchInstances');
+      const parsed = JSON.parse(evo.data);
+      const list = Array.isArray(parsed.instances) ? parsed.instances : (Array.isArray(parsed.data) ? parsed.data : []);
+      list.forEach(i => {
+        const name = i.instanceName || i.name;
+        if (name) evoStates[name] = i.connectionState || (i.connected ? 'open' : 'close');
+      });
+    } catch (e) { /* evolution offline — keep db status */ }
+
+    const instances = db.rows.map(row => ({
+      ...row,
+      connected: evoStates[row.instance_name] === 'open' || row.status === 'connected',
+      evolution_state: evoStates[row.instance_name] || null,
+    }));
+    res.json({ success: true, instances });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Create instance in Evolution (instance name = slug of client name)
+app.post('/api/whatsapp/instances', async (req, res) => {
+  try {
+    const user = await getUserAsync(req);
+    if (!user) return res.status(401).json({ error: 'Não autorizado' });
+
+    const clientName = (req.body.client_name || '').trim();
+    if (!clientName) return res.status(400).json({ error: 'Nome do cliente é obrigatório' });
+
+    const instanceName = slugInstanceName(clientName);
+    const exists = await pool.query(`SELECT id FROM public.whatsapp_instances WHERE instance_name = $1`, [instanceName]);
+    if (exists.rows.length > 0) {
+      return res.status(409).json({ error: 'Instância já existe para esse cliente' });
+    }
+
+    const createRes = await evoRequest('POST', `/instance/create?instanceName=${encodeURIComponent(instanceName)}&integration=WHATSAPP-BAILEYS&qrcode=true`);
+    let instanceToken = '';
+    try {
+      const parsed = JSON.parse(createRes.data);
+      instanceToken = parsed.instance?.instance?.apikey || parsed.hash?.apikey || parsed.instance?.apikey || '';
+    } catch (e) { /* ignore */ }
+    if (createRes.status >= 400) {
+      return res.status(502).json({ error: 'Falha ao criar instância na Evolution: ' + (createRes.data || createRes.status) });
+    }
+
+    await pool.query(`
+      INSERT INTO public.whatsapp_instances (user_id, client_name, instance_name, instance_token, status)
+      VALUES ($1, $2, $3, $4, 'pending')
+      ON CONFLICT (instance_name) DO UPDATE
+        SET user_id = EXCLUDED.user_id, client_name = EXCLUDED.client_name,
+            instance_token = EXCLUDED.instance_token, status = 'pending', updated_at = NOW()
+    `, [user.id, clientName, instanceName, instanceToken]);
+
+    res.json({ success: true, instance: { instance_name: instanceName, client_name: clientName, status: 'pending' } });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Get QR code to connect an instance
+app.get('/api/whatsapp/instances/:name/qr', async (req, res) => {
+  try {
+    const user = await getUserAsync(req);
+    if (!user) return res.status(401).json({ error: 'Não autorizado' });
+    const name = req.params.name;
+
+    const inst = await pool.query(`SELECT * FROM public.whatsapp_instances WHERE instance_name = $1`, [name]);
+    if (inst.rows.length === 0) return res.status(404).json({ error: 'Instância não encontrada' });
+    if (user.role !== 'admin' && inst.rows[0].user_id !== user.id) {
+      return res.status(403).json({ error: 'Acesso negado' });
+    }
+
+    const qrRes = await evoRequest('GET', `/instance/connect/${encodeURIComponent(name)}`);
+    let base64 = '', code = '';
+    try {
+      const parsed = JSON.parse(qrRes.data);
+      base64 = parsed.qrcode?.base64 || parsed.base64 || '';
+      code = parsed.qrcode?.code || parsed.code || '';
+    } catch (e) { /* ignore */ }
+    if (!base64) {
+      return res.status(502).json({ error: 'QR não disponível. Tente novamente em instantes.', detail: qrRes.data });
+    }
+    res.json({ success: true, base64, code, instance_name: name });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Check connection status of an instance
+app.get('/api/whatsapp/instances/:name/status', async (req, res) => {
+  try {
+    const user = await getUserAsync(req);
+    if (!user) return res.status(401).json({ error: 'Não autorizado' });
+    const name = req.params.name;
+
+    const inst = await pool.query(`SELECT * FROM public.whatsapp_instances WHERE instance_name = $1`, [name]);
+    if (inst.rows.length === 0) return res.status(404).json({ error: 'Instância não encontrada' });
+    if (user.role !== 'admin' && inst.rows[0].user_id !== user.id) {
+      return res.status(403).json({ error: 'Acesso negado' });
+    }
+
+    let state = inst.rows[0].status;
+    let number = inst.rows[0].number || '';
+    try {
+      const stRes = await evoRequest('GET', `/instance/connectionState/${encodeURIComponent(name)}`);
+      const parsed = JSON.parse(stRes.data);
+      state = parsed.instance?.state || parsed.state || state;
+      number = parsed.instance?.number || number;
+    } catch (e) { /* keep db state */ }
+
+    const connected = state === 'open';
+    await pool.query(`UPDATE public.whatsapp_instances SET status = $1, number = $2, updated_at = NOW() WHERE id = $3`,
+      [connected ? 'connected' : 'disconnected', number, inst.rows[0].id]);
+
+    res.json({ success: true, instance_name: name, connected, status: connected ? 'connected' : 'disconnected', number });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Delete an instance
+app.delete('/api/whatsapp/instances/:name', async (req, res) => {
+  try {
+    const user = await getUserAsync(req);
+    if (!user) return res.status(401).json({ error: 'Não autorizado' });
+    const name = req.params.name;
+
+    const inst = await pool.query(`SELECT * FROM public.whatsapp_instances WHERE instance_name = $1`, [name]);
+    if (inst.rows.length === 0) return res.status(404).json({ error: 'Instância não encontrada' });
+    if (user.role !== 'admin' && inst.rows[0].user_id !== user.id) {
+      return res.status(403).json({ error: 'Acesso negado' });
+    }
+
+    try { await evoRequest('DELETE', `/instance/delete/${encodeURIComponent(name)}`); } catch (e) { /* ignore */ }
+    await pool.query(`DELETE FROM public.whatsapp_instances WHERE id = $1`, [inst.rows[0].id]);
+    res.json({ success: true, message: 'Instância removida' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ============================================================
+// Demo Request — contact form + welcome email (Resend)
+// ============================================================
+app.post('/api/demo/request', async (req, res) => {
+  try {
+    const { name, email, phone, company } = req.body || {};
+    if (!name || !email) return res.status(400).json({ error: 'Nome e e-mail são obrigatórios' });
+
+    const inserted = await pool.query(`
+      INSERT INTO public.demo_requests (name, email, phone, company, status)
+      VALUES ($1, $2, $3, $4, 'liberado') RETURNING id
+    `, [String(name).trim(), String(email).trim().toLowerCase(), phone || '', company || '']);
+
+    let emailSent = false;
+    try {
+      const r = await sendWelcomeEmail(String(name).trim(), String(email).trim().toLowerCase());
+      emailSent = r.status >= 200 && r.status < 300;
+    } catch (e) {
+      console.error('[demo] email error:', e.message);
+    }
+
+    res.json({ success: true, message: 'Bem-vindo ao Arx Content Factory! Demonstração liberada automaticamente.', email_sent: emailSent });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
