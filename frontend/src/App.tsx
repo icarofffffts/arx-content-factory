@@ -9,15 +9,22 @@ import Signup from './pages/Signup'
 import DashboardCEO from './pages/DashboardCEO'
 import Pricing from './pages/Pricing'
 
+// URL is the source of truth. Returns '' when URL is the root (no page hint).
+function pageFromURL(): string {
+  const p = window.location.pathname
+  if (p.startsWith('/dashboard')) return 'dashboard'
+  if (p.startsWith('/login')) return 'login'
+  if (p.startsWith('/signup')) return 'signup'
+  if (p.startsWith('/pricing')) return 'pricing'
+  return ''
+}
+
 export default function App() {
-  // Read URL to decide initial page (supports /dashboard, /login, /signup, /pricing)
+  // Initial page: URL wins; root falls back to sessionStorage, then landing
   const [page, setPage] = useState<string>(() => {
-    const p = window.location.pathname
-    if (p.startsWith('/dashboard')) return 'dashboard'
-    if (p.startsWith('/login')) return 'login'
-    if (p.startsWith('/signup')) return 'signup'
-    if (p.startsWith('/pricing')) return 'pricing'
-    return 'landing'
+    const fromURL = pageFromURL()
+    if (fromURL) return fromURL
+    return sessionStorage.getItem('app_page') || 'landing'
   })
   const [user, setUser] = useState<User | null>(null)
   const [plan, setPlan] = useState<Plan | null>(null)
@@ -30,8 +37,14 @@ export default function App() {
         if (r.success) {
           setUser(r.user)
           setPlan(r.plan)
-          const savedPage = sessionStorage.getItem('app_page') || 'dashboard'
-          setPage(savedPage)
+          // URL wins over sessionStorage — never restore 'pricing' over /dashboard
+          const fromURL = pageFromURL()
+          if (fromURL) {
+            setPage(fromURL)
+          } else {
+            const saved = sessionStorage.getItem('app_page')
+            setPage(saved === 'dashboard' ? 'dashboard' : 'landing')
+          }
         } else {
           clearToken()
         }
