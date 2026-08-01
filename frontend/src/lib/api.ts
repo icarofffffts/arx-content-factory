@@ -78,6 +78,14 @@ export const api = {
       method: 'POST', body: JSON.stringify({ message, history, context })
     }),
 
+  getSettings: () =>
+    request<{ success: boolean; settings: Record<string, string>; is_admin: boolean }>('/api/settings'),
+
+  saveSettings: (settings: Record<string, string>) =>
+    request<{ success: boolean; message: string }>('/api/settings', {
+      method: 'PUT', body: JSON.stringify({ settings })
+    }),
+
   publishNow: (id: string) =>
     request<{ success: boolean }>(`/api/posts/${id}/publish-now`, { method: 'POST' }),
 

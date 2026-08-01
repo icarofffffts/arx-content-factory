@@ -68,6 +68,12 @@ export default function DashboardCEO({ user, plan, onLogout, onNavigate }: {
   const [generateMsg, setGenerateMsg] = useState<{ ok: boolean; text: string } | null>(null)
   const [customTopic, setCustomTopic] = useState('')
   const [selectedTemplate, setSelectedTemplate] = useState('clean')
+  const [settings, setSettings] = useState<Record<string, string>>({})
+  const [settingsForm, setSettingsForm] = useState<Record<string, string>>({})
+  const [settingsIsAdmin, setSettingsIsAdmin] = useState<boolean | null>(null)
+  const [settingsLoading, setSettingsLoading] = useState(false)
+  const [settingsSaving, setSettingsSaving] = useState(false)
+  const [settingsMsg, setSettingsMsg] = useState<{ ok: boolean; text: string } | null>(null)
   const [connectOpen, setConnectOpen] = useState(false)
   const [demoOpen, setDemoOpen] = useState(false)
   const [demoFormOpen, setDemoFormOpen] = useState(false)
@@ -216,6 +222,46 @@ export default function DashboardCEO({ user, plan, onLogout, onNavigate }: {
     await handleGenerate(topic)
     setCustomTopic('')
   }
+
+  async function loadSettings() {
+    setSettingsLoading(true)
+    try {
+      const r = await api.getSettings()
+      setSettings(r.settings || {})
+      setSettingsIsAdmin(r.is_admin)
+      // Pré-enche o form sem os segredos mascarados (deixa placeholder "mantém atual")
+      const form: Record<string, string> = {}
+      for (const [k, v] of Object.entries(r.settings || {})) {
+        if (v && !v.startsWith('••••')) form[k] = v
+      }
+      setSettingsForm(form)
+    } catch (e: any) {
+      setSettingsIsAdmin(false)
+    } finally {
+      setSettingsLoading(false)
+    }
+  }
+
+  async function handleSaveSettings() {
+    setSettingsSaving(true)
+    setSettingsMsg(null)
+    try {
+      const r = await api.saveSettings(settingsForm)
+      setSettingsMsg({ ok: true, text: r.message || 'Configurações salvas!' })
+      loadSettings()
+    } catch (e: any) {
+      setSettingsMsg({ ok: false, text: e.message || 'Erro ao salvar' })
+    } finally {
+      setSettingsSaving(false)
+    }
+  }
+
+  const stripeConfigured = !!(settings.stripe_secret_key)
+  const videoConfigured = !!(settings.video_api_key)
+
+  useEffect(() => {
+    if (subPage === 'settings') loadSettings()
+  }, [subPage])
 
   const filteredPosts = statusFilter === 'all' ? posts : posts.filter(p => p.status === statusFilter)
 
@@ -752,6 +798,146 @@ export default function DashboardCEO({ user, plan, onLogout, onNavigate }: {
                   </div>
                 </div>
               </div>
+
+              {/* Painel de Integrações (admin) */}
+              <div className="card-glass p-6">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="w-6 h-6 bg-accent/20 rounded-lg flex items-center justify-center text-xs">🔌</span>
+                  <h2 className="font-bold">Integrações</h2>
+                  {settingsIsAdmin === false && (
+                    <span className="text-[10px] text-yellow-400 bg-yellow-400/10 px-2 py-0.5 rounded-full ml-2">só admin</span>
+                  )}
+                </div>
+                <p className="text-gray-500 text-sm mb-4 ml-8">Configure chaves de API de pagamento e geração de vídeo direto pelo painel</p>
+
+                {settingsIsAdmin === false ? (
+                  <div className="ml-8 text-sm text-gray-500 bg-glass rounded-xl p-4">
+                    Apenas administradores podem alterar integrações.
+                  </div>
+                ) : (
+                  <>
+                    <div className="ml-8 space-y-4">
+                      {/* Stripe */}
+                      <div className="bg-glass rounded-xl p-4">
+                        <div className="flex items-center gap-2 mb-3">
+                          <span className="text-sm">💳</span>
+                          <div>
+                            <div className="font-semibold text-sm">Stripe (pagamentos)</div>
+                            <div className="text-[11px] text-gray-500">Checkout de assinaturas Pro/Enterprise</div>
+                          </div>
+                          <span className={`text-[10px] px-2 py-0.5 rounded-full ml-auto ${stripeConfigured ? 'bg-green-400/10 text-green-400' : 'bg-yellow-400/10 text-yellow-400'}`}>
+                            {stripeConfigured ? 'Configurado' : 'Não configurado'}
+                          </span>
+                        </div>
+                        <div className="space-y-2">
+                          <div>
+                            <label className="text-xs text-gray-500 block mb-1">Secret Key (sk_live_... ou sk_test_...)</label>
+                            <input
+                              type="password"
+                              value={settingsForm.stripe_secret_key || ''}
+                              onChange={e => setSettingsForm(f => ({ ...f, stripe_secret_key: e.target.value }))}
+                              placeholder={settings.stripe_secret_key ? '•••••••• (mantém atual)' : 'sk_live_...'}
+                              className="glass-input w-full !py-2 text-sm"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-xs text-gray-500 block mb-1">Webhook Secret (whsec_...)</label>
+                            <input
+                              type="password"
+                              value={settingsForm.stripe_webhook_secret || ''}
+                              onChange={e => setSettingsForm(f => ({ ...f, stripe_webhook_secret: e.target.value }))}
+                              placeholder={settings.stripe_webhook_secret ? '•••••••• (mantém atual)' : 'whsec_...'}
+                              className="glass-input w-full !py-2 text-sm"
+                            />
+                          </div>
+                          <div className="text-[11px] text-gray-600 bg-surface-900/60 rounded-lg px-3 py-2 font-mono">
+                            Webhook URL: <span className="text-blue-400">https://conteudos.icarodev.cloud/api/v2/plans/webhook</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Vídeo */}
+                      <div className="bg-glass rounded-xl p-4">
+                        <div className="flex items-center gap-2 mb-3">
+                          <span className="text-sm">🎬</span>
+                          <div>
+                            <div className="font-semibold text-sm">Geração de Vídeo</div>
+                            <div className="text-[11px] text-gray-500">API para criar Reels/Shorts dos slides</div>
+                          </div>
+                          <span className={`text-[10px] px-2 py-0.5 rounded-full ml-auto ${videoConfigured ? 'bg-green-400/10 text-green-400' : 'bg-yellow-400/10 text-yellow-400'}`}>
+                            {videoConfigured ? 'Configurado' : 'Não configurado'}
+                          </span>
+                        </div>
+                        <div className="space-y-2">
+                          <div>
+                            <label className="text-xs text-gray-500 block mb-1">Provedor (replicate / fal / runway)</label>
+                            <input
+                              value={settingsForm.video_api_provider || ''}
+                              onChange={e => setSettingsForm(f => ({ ...f, video_api_provider: e.target.value }))}
+                              placeholder="replicate"
+                              className="glass-input w-full !py-2 text-sm"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-xs text-gray-500 block mb-1">API Key do provedor</label>
+                            <input
+                              type="password"
+                              value={settingsForm.video_api_key || ''}
+                              onChange={e => setSettingsForm(f => ({ ...f, video_api_key: e.target.value }))}
+                              placeholder={settings.video_api_key ? '•••••••• (mantém atual)' : 'r8_... ou fal key'}
+                              className="glass-input w-full !py-2 text-sm"
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Extra */}
+                      <div className="bg-glass rounded-xl p-4">
+                        <div className="flex items-center gap-2 mb-3">
+                          <span className="text-sm">⚙️</span>
+                          <div className="font-semibold text-sm">Extras</div>
+                        </div>
+                        <div className="space-y-2">
+                          <div>
+                            <label className="text-xs text-gray-500 block mb-1">Base do n8n (ex: n8n.arxsolutions.cloud)</label>
+                            <input
+                              value={settingsForm.n8n_webhook_base || ''}
+                              onChange={e => setSettingsForm(f => ({ ...f, n8n_webhook_base: e.target.value }))}
+                              placeholder="n8n.arxsolutions.cloud"
+                              className="glass-input w-full !py-2 text-sm"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-xs text-gray-500 block mb-1">Template padrão (clean / dark / minimal)</label>
+                            <select
+                              value={settingsForm.default_template || 'clean'}
+                              onChange={e => setSettingsForm(f => ({ ...f, default_template: e.target.value }))}
+                              className="glass-input w-full !py-2 text-sm"
+                            >
+                              <option value="clean" className="bg-surface-900">Clean Light</option>
+                              <option value="dark" className="bg-surface-900">Dark Cyber</option>
+                              <option value="minimal" className="bg-surface-900">Minimal Tech</option>
+                            </select>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {settingsMsg && (
+                      <div className={`ml-8 mt-4 text-sm px-4 py-3 rounded-xl ${settingsMsg.ok ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'}`}>
+                        {settingsMsg.text}
+                      </div>
+                    )}
+                    <div className="ml-8 mt-4">
+                      <button onClick={handleSaveSettings} disabled={settingsSaving}
+                        className="btn-accent text-sm disabled:opacity-40">
+                        {settingsSaving ? 'Salvando...' : '💾 Salvar configurações'}
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+
               <div className="card-glass p-6 flex items-center justify-between">
                 <div>
                   <h2 className="font-bold">Quer mais?</h2>

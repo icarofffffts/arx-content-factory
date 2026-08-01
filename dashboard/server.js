@@ -506,9 +506,10 @@ app.post('/api/posts/:id/video', async (req, res) => {
     await pool.query(`UPDATE public.content_pipeline SET video_status = 'processing', updated_at = NOW() WHERE id = $1;`, [postId]);
 
     // Tenta disparar no n8n (fluxo de vídeo) — se existir; senão, responde que entrou na fila
+    const n8nBase = (await getSetting('n8n_webhook_base')) || 'n8n.arxsolutions.cloud';
     const body = JSON.stringify({ post_id: postId, topic: post.topic });
     const reqN8n = https.request({
-      hostname: 'n8n.arxsolutions.cloud', port: 443,
+      hostname: n8nBase, port: 443,
       path: '/webhook/content-factory-video', method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) }
     }, (resN8n) => {
@@ -1012,43 +1013,7 @@ app.post('/api/drafts/:id/reject', async (req, res) => {
   }
 });
 
-// 21. API: Get Dashboard Settings
-app.get('/api/settings', async (req, res) => {
-  try {
-    const result = await pool.query(`SELECT * FROM public.dashboard_settings ORDER BY id DESC LIMIT 1;`);
-    if (result.rows.length === 0) {
-      return res.json({ daily_limit: 3, whatsapp_enabled: false, whatsapp_number: '', whatsapp_instance: 'arx_bot', whatsapp_instance_token: '' });
-    }
-    res.json(result.rows[0]);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// 22. API: Update Dashboard Settings
-app.put('/api/settings', async (req, res) => {
-  try {
-    const { daily_limit, whatsapp_enabled, whatsapp_number, whatsapp_instance, whatsapp_instance_token } = req.body;
-    try {
-      await pool.query(`
-        UPDATE public.dashboard_settings
-        SET daily_limit = $1, whatsapp_enabled = $2, whatsapp_number = $3,
-            whatsapp_instance = $4, whatsapp_instance_token = $5, updated_at = NOW()
-        WHERE id = (SELECT max(id) FROM public.dashboard_settings);
-      `, [daily_limit ?? 3, whatsapp_enabled ?? false, whatsapp_number || '', whatsapp_instance || 'arx_bot', whatsapp_instance_token || '']);
-    } catch (dbErr) {
-      await pool.query(`
-        UPDATE public.dashboard_settings
-        SET daily_limit = $1, whatsapp_enabled = $2, whatsapp_number = $3,
-            whatsapp_instance = $4, updated_at = NOW()
-        WHERE id = (SELECT max(id) FROM public.dashboard_settings);
-      `, [daily_limit ?? 3, whatsapp_enabled ?? false, whatsapp_number || '', whatsapp_instance || 'arx_bot']);
-    }
-    res.json({ success: true, message: 'Configuracoes salvas!' });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
+// 21-22. (removido — /api/settings agora é gerido pelo painel de Integrações em System Settings)
 
 // 23. API: Send Draft Preview to WhatsApp via Evolution Go
 app.post('/api/drafts/:id/send-whatsapp', async (req, res) => {
@@ -1357,8 +1322,9 @@ app.post('/api/v2/plans/subscribe', async (req, res) => {
     }
 
     // Se Stripe estiver configurado, gera checkout em vez de ativar direto
-    if (plan_slug !== 'gratuito' && process.env.STRIPE_SECRET_KEY) {
-      const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+    const stripeKey = await getSetting('stripe_secret_key');
+    if (plan_slug !== 'gratuito' && stripeKey) {
+      const stripe = require('stripe')(stripeKey);
       const prices = { pro: { monthly: 9700, yearly: 97000 }, enterprise: { monthly: 29700, yearly: 297000 } };
       const price = prices[plan_slug]?.[billing_cycle || 'monthly'];
       if (!price) return res.status(400).json({ error: 'Preço não definido para este plano.' });
@@ -1387,10 +1353,11 @@ app.post('/api/v2/plans/subscribe', async (req, res) => {
 // Webhook de assinatura (Stripe) — confirma pagamento e ativa o plano
 app.post('/api/v2/plans/webhook', async (req, res) => {
   try {
-    if (!process.env.STRIPE_SECRET_KEY) return res.status(400).json({ error: 'Stripe não configurado' });
-    const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+    const stripeKey = await getSetting('stripe_secret_key');
+    if (!stripeKey) return res.status(400).json({ error: 'Stripe não configurado' });
+    const stripe = require('stripe')(stripeKey);
     const sig = req.headers['stripe-signature'];
-    const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET || '';
+    const endpointSecret = (await getSetting('stripe_webhook_secret')) || '';
     let event;
     try {
       event = stripe.webhooks.constructEvent(req.rawBody || JSON.stringify(req.body), sig, endpointSecret);
@@ -1415,6 +1382,66 @@ app.post('/api/v2/plans/webhook', async (req, res) => {
       }
     }
     res.json({ received: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ============================================================
+// System Settings (integrações configuráveis pelo painel)
+// ============================================================
+
+// Helper: lê settings do banco (com fallback para env vars)
+async function getSetting(key) {
+  try {
+    const r = await pool.query(`SELECT value FROM public.system_settings WHERE key = $1`, [key]);
+    if (r.rows.length > 0 && r.rows[0].value) return r.rows[0].value;
+  } catch (e) { /* fallback abaixo */ }
+  const envMap = { stripe_secret_key: 'STRIPE_SECRET_KEY', stripe_webhook_secret: 'STRIPE_WEBHOOK_SECRET', video_api_key: 'VIDEO_API_KEY' };
+  return process.env[envMap[key]] || '';
+}
+
+// GET /api/settings — lista configurações (máscara segredos para não-admins)
+app.get('/api/settings', async (req, res) => {
+  try {
+    const user = await getUserAsync(req);
+    if (!user) return res.status(401).json({ error: 'Não autorizado' });
+    const isAdmin = user.role === 'admin';
+    const r = await pool.query(`SELECT key, value, updated_at FROM public.system_settings ORDER BY key`);
+    const known = ['stripe_secret_key', 'stripe_webhook_secret', 'video_api_key', 'video_api_provider', 'n8n_webhook_base', 'instagram_business_id', 'default_template'];
+    const merged = {};
+    for (const k of known) merged[k] = '';
+    for (const row of r.rows) merged[row.key] = row.value || '';
+    if (!isAdmin) {
+      for (const k of ['stripe_secret_key', 'stripe_webhook_secret', 'video_api_key']) {
+        if (merged[k]) merged[k] = '••••••••' + String(merged[k]).slice(-4);
+      }
+    }
+    res.json({ success: true, settings: merged, is_admin: isAdmin });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// PUT /api/settings — salva configurações (só admin)
+app.put('/api/settings', async (req, res) => {
+  try {
+    const user = await getUserAsync(req);
+    if (!user || user.role !== 'admin') return res.status(403).json({ error: 'Apenas administradores podem alterar configurações' });
+    const { settings } = req.body;
+    if (!settings || typeof settings !== 'object') return res.status(400).json({ error: 'Settings inválido' });
+    const allowed = ['stripe_secret_key', 'stripe_webhook_secret', 'video_api_key', 'video_api_provider', 'n8n_webhook_base', 'instagram_business_id', 'default_template'];
+    for (const [key, value] of Object.entries(settings)) {
+      if (!allowed.includes(key)) continue;
+      // Não sobrescreve com máscara
+      if (typeof value === 'string' && value.startsWith('••••')) continue;
+      await pool.query(`
+        INSERT INTO public.system_settings (key, value, updated_at)
+        VALUES ($1, $2, NOW())
+        ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = NOW()
+      `, [key, value === '' ? null : String(value)]);
+    }
+    res.json({ success: true, message: 'Configurações salvas!' });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
