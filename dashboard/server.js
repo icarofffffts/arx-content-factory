@@ -853,13 +853,14 @@ app.post('/api/generate', async (req, res) => {
   try {
     const user = await getUserAsync(req);
     if (!user) return res.status(401).json({ error: 'Não autorizado' });
-    const { topic, channel, publish_mode, scheduled_at } = req.body;
+    const { topic, channel, publish_mode, scheduled_at, template } = req.body;
     if (!topic) return res.status(400).json({ error: 'O tema é obrigatório!' });
 
     const params = new URLSearchParams({
       topic,
       channel: channel || 'all',
-      publish_mode: publish_mode || 'now'
+      publish_mode: publish_mode || 'now',
+      template: template || 'clean'
     });
     params.append('user_id', user.id);
     if (scheduled_at) params.append('scheduled_at', `${scheduled_at}:00-03:00`);

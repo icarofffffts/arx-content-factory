@@ -8,6 +8,12 @@ import PostCard from '../components/PostCard'
 
 type SubPage = 'dashboard' | 'content' | 'suggestions' | 'social' | 'settings'
 
+const TEMPLATES = [
+  { id: 'clean', name: 'Clean Light', desc: 'Fundo claro, tipografia limpa e minimalista', accent: 'from-white/10 to-blue-500/10', border: 'border-blue-400/30', dot: 'bg-blue-400', badge: 'Clássico' },
+  { id: 'dark', name: 'Dark Cyber', desc: 'Fundo escuro com neon e grid futurista', accent: 'from-violet-500/20 to-cyan-500/10', border: 'border-violet-400/40', dot: 'bg-violet-400', badge: 'Tech' },
+  { id: 'minimal', name: 'Minimal Tech', desc: 'Preto e branco, foco total no texto', accent: 'from-gray-400/10 to-gray-600/10', border: 'border-gray-400/30', dot: 'bg-gray-300', badge: 'Sóbrio' },
+]
+
 const DEMO_POST = {
   id: 'demo',
   topic: '5 Certificações Tech que Pagam +R$15k em 2026',
@@ -59,6 +65,8 @@ export default function DashboardCEO({ user, plan, onLogout, onNavigate }: {
   const [suggestionsError, setSuggestionsError] = useState('')
   const [generatingTopic, setGeneratingTopic] = useState<string | null>(null)
   const [generateMsg, setGenerateMsg] = useState<{ ok: boolean; text: string } | null>(null)
+  const [customTopic, setCustomTopic] = useState('')
+  const [selectedTemplate, setSelectedTemplate] = useState('clean')
   const [connectOpen, setConnectOpen] = useState(false)
   const [demoOpen, setDemoOpen] = useState(false)
   const [demoFormOpen, setDemoFormOpen] = useState(false)
@@ -181,7 +189,7 @@ export default function DashboardCEO({ user, plan, onLogout, onNavigate }: {
     setGeneratingTopic(topic)
     setGenerateMsg(null)
     try {
-      const r = await api.generate(topic)
+      const r = await api.generate(topic, 'all', 'now', selectedTemplate)
       setGenerateMsg({ ok: true, text: r.message || 'Geração iniciada!' })
       // Refresh drafts so the new post appears
       setTimeout(() => { api.drafts().then(setDrafts).catch(() => {}) }, 8000)
@@ -190,6 +198,13 @@ export default function DashboardCEO({ user, plan, onLogout, onNavigate }: {
     } finally {
       setGeneratingTopic(null)
     }
+  }
+
+  async function handleGenerateCustom() {
+    const topic = customTopic.trim()
+    if (!topic) { setGenerateMsg({ ok: false, text: 'Digite um tema para gerar!' }); return }
+    await handleGenerate(topic)
+    setCustomTopic('')
   }
 
   const filteredPosts = statusFilter === 'all' ? posts : posts.filter(p => p.status === statusFilter)
@@ -368,6 +383,71 @@ export default function DashboardCEO({ user, plan, onLogout, onNavigate }: {
 
           {subPage === 'content' && (
             <div>
+              {/* Gerador customizado */}
+              <div className="card-glass p-6 mb-6 relative overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-br from-accent/5 to-transparent pointer-events-none" />
+                <div className="relative">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="w-6 h-6 bg-accent/20 rounded-lg flex items-center justify-center text-xs">✨</span>
+                    <h2 className="font-bold">Gerar novo conteúdo</h2>
+                  </div>
+                  <p className="text-gray-500 text-sm mb-4 ml-8">Escolha um tema e o visual dos slides</p>
+
+                  <div className="flex gap-2 mb-4 ml-8">
+                    <input
+                      value={customTopic}
+                      onChange={e => setCustomTopic(e.target.value)}
+                      onKeyDown={e => { if (e.key === 'Enter') handleGenerateCustom() }}
+                      placeholder="Digite um tema, ex: Inteligência Artificial no marketing em 2026"
+                      className="flex-1 bg-glass border border-glass-border rounded-xl px-4 py-2.5 text-sm outline-none focus:border-accent/50 transition-all"
+                    />
+                    <button
+                      onClick={handleGenerateCustom}
+                      disabled={generatingTopic !== null}
+                      className="btn-accent text-sm px-6 py-2.5 whitespace-nowrap disabled:opacity-40"
+                    >
+                      {generatingTopic !== null ? 'Gerando...' : '🚀 Gerar conteúdo'}
+                    </button>
+                  </div>
+
+                  {/* Seletor de templates */}
+                  <div className="ml-8">
+                    <div className="text-xs text-gray-500 mb-2">Template dos slides</div>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 max-w-3xl">
+                      {TEMPLATES.map(t => (
+                        <button
+                          key={t.id}
+                          onClick={() => setSelectedTemplate(t.id)}
+                          className={`text-left p-3 rounded-xl border bg-glass transition-all ${
+                            selectedTemplate === t.id
+                              ? `${t.border} ring-2 ring-white/10 scale-[1.02]`
+                              : 'border-glass-border hover:border-gray-600'
+                          }`}
+                        >
+                          <div className={`h-14 rounded-lg bg-gradient-to-br ${t.accent} border border-white/5 mb-2 relative overflow-hidden`}>
+                            <div className="absolute top-2 left-2 w-10 h-1.5 rounded-full bg-white/20" />
+                            <div className="absolute top-5 left-2 w-14 h-1 rounded-full bg-white/10" />
+                            <div className="absolute top-7 left-2 w-8 h-1 rounded-full bg-white/10" />
+                            <div className={`absolute bottom-2 right-2 w-2 h-2 rounded-full ${t.dot}`} />
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm font-medium">{t.name}</span>
+                            <span className={`text-[10px] px-2 py-0.5 rounded-full ${t.dot} text-black font-bold`}>{t.badge}</span>
+                          </div>
+                          <div className="text-[11px] text-gray-500 mt-0.5">{t.desc}</div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {generateMsg && (
+                    <div className={`ml-8 mt-4 text-sm px-4 py-3 rounded-xl max-w-3xl ${generateMsg.ok ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'}`}>
+                      {generateMsg.text}
+                    </div>
+                  )}
+                </div>
+              </div>
+
               <div className="flex flex-wrap items-center gap-2 mb-6">
                 {FILTERS.map(f => (
                   <button key={f.key} onClick={() => setStatusFilter(f.key)}
