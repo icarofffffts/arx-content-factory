@@ -10,7 +10,15 @@ import DashboardCEO from './pages/DashboardCEO'
 import Pricing from './pages/Pricing'
 
 export default function App() {
-  const [page, setPage] = useState<string>('landing')
+  // Read URL to decide initial page (supports /dashboard, /login, /signup, /pricing)
+  const [page, setPage] = useState<string>(() => {
+    const p = window.location.pathname
+    if (p.startsWith('/dashboard')) return 'dashboard'
+    if (p.startsWith('/login')) return 'login'
+    if (p.startsWith('/signup')) return 'signup'
+    if (p.startsWith('/pricing')) return 'pricing'
+    return 'landing'
+  })
   const [user, setUser] = useState<User | null>(null)
   const [plan, setPlan] = useState<Plan | null>(null)
   const [loading, setLoading] = useState(true)
@@ -43,6 +51,7 @@ export default function App() {
     setPlan(plan)
     setPage('dashboard')
     sessionStorage.setItem('app_page', 'dashboard')
+    window.history.pushState({}, '', '/dashboard')
   }
 
   function handleLogout() {
@@ -52,11 +61,14 @@ export default function App() {
     setPlan(null)
     setPage('landing')
     sessionStorage.removeItem('app_page')
+    window.history.pushState({}, '', '/')
   }
 
   function navigateTo(p: string) {
     setPage(p)
     sessionStorage.setItem('app_page', p)
+    const path = p === 'landing' ? '/' : `/${p}`
+    window.history.pushState({}, '', path)
   }
 
   if (loading) {
@@ -73,6 +85,10 @@ export default function App() {
   if (page === 'pricing') return <Pricing onNavigate={navigateTo} user={user} plan={plan} />
   if (page === 'dashboard' && user) {
     return <DashboardCEO user={user} plan={plan} onLogout={handleLogout} onNavigate={navigateTo} />
+  }
+  if (page === 'dashboard' && !user) {
+    // Not logged in: show login instead of falling through to landing
+    return <Login onLogin={handleLogin} onNavigate={navigateTo} />
   }
 
   return <Landing onNavigate={navigateTo} user={user} />

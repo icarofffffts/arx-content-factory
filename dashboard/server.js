@@ -77,14 +77,18 @@ app.use((req, res, next) => {
   }
 
   if (req.accepts('html')) {
+    // Serve React SPA (reads /dashboard, /login from URL and shows Login page)
+    const spa = path.join(__dirname, '..', 'frontend', 'dist', 'index.html');
+    if (fs.existsSync(spa)) {
+      return res.sendFile(spa);
+    }
     return res.sendFile(path.join(__dirname, 'public', 'login.html'));
   }
 
   return res.status(401).json({ error: 'Não autorizado. Realize o login em /dashboard/ primeiro.' });
 });
 
-// Serve Static Dashboard Files AFTER Auth Middleware
-app.use('/dashboard', express.static(path.join(__dirname, 'public')));
+// Serve Static Dashboard Files AFTER Auth Middleware (React SPA handles /dashboard)
 
 // 2. API: Get Pipeline Metrics
 app.get('/api/metrics', async (req, res) => {
