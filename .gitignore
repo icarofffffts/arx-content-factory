@@ -7,3 +7,6 @@ __pycache__/
 tmp/
 temp_*
 Enhance_design/
+
+# Obsidian local
+.obsidian/

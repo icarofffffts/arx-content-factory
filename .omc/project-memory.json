@@ -1,0 +1,149 @@
+{
+  "version": "1.0.0",
+  "lastScanned": 1785602746068,
+  "projectRoot": "C:\\Users\\Administrator\\Desktop\\Automacoes de Posts",
+  "techStack": {
+    "languages": [],
+    "frameworks": [],
+    "packageManager": null,
+    "runtime": null
+  },
+  "build": {
+    "buildCommand": null,
+    "testCommand": null,
+    "lintCommand": null,
+    "devCommand": null,
+    "scripts": {}
+  },
+  "conventions": {
+    "namingStyle": null,
+    "importStyle": null,
+    "testPattern": null,
+    "fileOrganization": null
+  },
+  "structure": {
+    "isMonorepo": false,
+    "workspaces": [],
+    "mainDirectories": [],
+    "gitBranches": {
+      "defaultBranch": "master",
+      "branchingStrategy": null
+    }
+  },
+  "customNotes": [],
+  "directoryMap": {
+    "dashboard": {
+      "path": "dashboard",
+      "purpose": null,
+      "fileCount": 4,
+      "lastAccessed": 1785602746022,
+      "keyFiles": [
+        "package-lock.json",
+        "package.json",
+        "query_pg_temp.js",
+        "server.js"
+      ]
+    },
+    "Enhance Social Media Approval": {
+      "path": "Enhance Social Media Approval",
+      "purpose": null,
+      "fileCount": 0,
+      "lastAccessed": 1785602746023,
+      "keyFiles": []
+    },
+    "Enhance_design": {
+      "path": "Enhance_design",
+      "purpose": null,
+      "fileCount": 15,
+      "lastAccessed": 1785602746024,
+      "keyFiles": [
+        "ai_chat.json",
+        "canvas.fig",
+        "chat_output.txt",
+        "design_code.txt",
+        "dump_toolcall17.py"
+      ]
+    },
+    "frontend": {
+      "path": "frontend",
+      "purpose": null,
+      "fileCount": 6,
+      "lastAccessed": 1785602746025,
+      "keyFiles": [
+        "index.html",
+        "package.json",
+        "postcss.config.js",
+        "tailwind.config.js",
+        "tsconfig.json"
+      ]
+    },
+    "lead_engine": {
+      "path": "lead_engine",
+      "purpose": null,
+      "fileCount": 2,
+      "lastAccessed": 1785602746026,
+      "keyFiles": [
+        "package.json",
+        "tsconfig.json"
+      ]
+    },
+    "promohunter_bot": {
+      "path": "promohunter_bot",
+      "purpose": null,
+      "fileCount": 2,
+      "lastAccessed": 1785602746026,
+      "keyFiles": [
+        "package.json",
+        "tsconfig.json"
+      ]
+    },
+    "dashboard\\node_modules": {
+      "path": "dashboard\\node_modules",
+      "purpose": "Dependencies",
+      "fileCount": 1,
+      "lastAccessed": 1785602746027,
+      "keyFiles": []
+    },
+    "dashboard\\public": {
+      "path": "dashboard\\public",
+      "purpose": "Public files",
+      "fileCount": 2,
+      "lastAccessed": 1785602746028,
+      "keyFiles": [
+        "index.html",
+        "login.html"
+      ]
+    },
+    "frontend\\src": {
+      "path": "frontend\\src",
+      "purpose": "Source code",
+      "fileCount": 3,
+      "lastAccessed": 1785602746032,
+      "keyFiles": [
+        "App.tsx",
+        "index.css",
+        "main.tsx"
+      ]
+    },
+    "lead_engine\\src": {
+      "path": "lead_engine\\src",
+      "purpose": "Source code",
+      "fileCount": 1,
+      "lastAccessed": 1785602746034,
+      "keyFiles": [
+        "server.ts"
+      ]
+    },
+    "promohunter_bot\\src": {
+      "path": "promohunter_bot\\src",
+      "purpose": "Source code",
+      "fileCount": 1,
+      "lastAccessed": 1785602746035,
+      "keyFiles": [
+        "server.ts"
+      ]
+    }
+  },
+  "hotPaths": [],
+  "userDirectives": []
+}
