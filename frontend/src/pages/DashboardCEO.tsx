@@ -57,6 +57,8 @@ export default function DashboardCEO({ user, plan, onLogout, onNavigate }: {
   const [suggestions, setSuggestions] = useState<{ topic: string; score: number; reason: string }[]>([])
   const [suggestionsLoading, setSuggestionsLoading] = useState(true)
   const [suggestionsError, setSuggestionsError] = useState('')
+  const [generatingTopic, setGeneratingTopic] = useState<string | null>(null)
+  const [generateMsg, setGenerateMsg] = useState<{ ok: boolean; text: string } | null>(null)
   const [connectOpen, setConnectOpen] = useState(false)
   const [demoOpen, setDemoOpen] = useState(false)
   const [demoFormOpen, setDemoFormOpen] = useState(false)
@@ -174,6 +176,21 @@ export default function DashboardCEO({ user, plan, onLogout, onNavigate }: {
     setWhatsappPost(DEMO_POST)
   }
   async function handleReorganize() { await api.reorganize(); refreshPosts() }
+
+  async function handleGenerate(topic: string) {
+    setGeneratingTopic(topic)
+    setGenerateMsg(null)
+    try {
+      const r = await api.generate(topic)
+      setGenerateMsg({ ok: true, text: r.message || 'Geração iniciada!' })
+      // Refresh drafts so the new post appears
+      setTimeout(() => { api.drafts().then(setDrafts).catch(() => {}) }, 8000)
+    } catch {
+      setGenerateMsg({ ok: false, text: 'Erro ao iniciar geração. Tente novamente.' })
+    } finally {
+      setGeneratingTopic(null)
+    }
+  }
 
   const filteredPosts = statusFilter === 'all' ? posts : posts.filter(p => p.status === statusFilter)
 
@@ -387,6 +404,11 @@ export default function DashboardCEO({ user, plan, onLogout, onNavigate }: {
                 <h2 className="font-bold">Sugestões de Conteúdo IA</h2>
               </div>
               <p className="text-gray-500 text-sm mb-6 ml-8">Tópicos gerados por IA baseados nas tendências atuais</p>
+              {generateMsg && (
+                <div className={`ml-8 mb-4 text-sm px-4 py-3 rounded-xl ${generateMsg.ok ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'}`}>
+                  {generateMsg.text}
+                </div>
+              )}
               {suggestionsLoading ? (
                 <div className="space-y-2">
                   <div className="loading-pulse h-16" />
@@ -408,8 +430,12 @@ export default function DashboardCEO({ user, plan, onLogout, onNavigate }: {
                       <div className="font-medium text-sm">{s.topic}</div>
                       <div className="text-xs text-gray-500 mt-1">{s.reason}</div>
                     </div>
-                    <button className="btn-accent text-xs px-4 py-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                      Gerar
+                    <button
+                      onClick={() => handleGenerate(s.topic)}
+                      disabled={generatingTopic !== null}
+                      className="btn-accent text-xs px-4 py-2 opacity-0 group-hover:opacity-100 transition-opacity disabled:opacity-40"
+                    >
+                      {generatingTopic === s.topic ? 'Gerando...' : 'Gerar'}
                     </button>
                   </div>
                 ))

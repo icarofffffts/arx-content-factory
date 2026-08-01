@@ -68,6 +68,11 @@ export const api = {
   drafts: () =>
     request<any[]>('/api/drafts'),
 
+  generate: (topic: string, channel?: string, publish_mode?: string) =>
+    request<{ success: boolean; message: string }>('/api/generate', {
+      method: 'POST', body: JSON.stringify({ topic, channel: channel || 'all', publish_mode: publish_mode || 'now' })
+    }),
+
   publishNow: (id: string) =>
     request<{ success: boolean }>(`/api/posts/${id}/publish-now`, { method: 'POST' }),
 
