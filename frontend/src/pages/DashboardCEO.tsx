@@ -164,6 +164,15 @@ export default function DashboardCEO({ user, plan, onLogout, onNavigate }: {
   async function handlePublish(id: string) { await api.publishNow(id); refreshPosts() }
   async function handlePause(id: string) { await api.togglePause(id); refreshPosts() }
   async function handleDelete(id: string) { if (confirm('Excluir post?')) { await api.deletePost(id); refreshPosts() } }
+  async function handleGenerateVideo(id: string) {
+    try {
+      const r = await api.generateVideo(id)
+      alert(r.message || 'Geração de vídeo iniciada!')
+      refreshPosts()
+    } catch (e: any) {
+      alert(e.message || 'Erro ao gerar vídeo')
+    }
+  }
   async function handleReschedule(id: string) {
     const date = prompt('Nova data (YYYY-MM-DD HH:MM):')
     if (date) { await api.reschedule(id, date); refreshPosts() }
@@ -469,7 +478,8 @@ export default function DashboardCEO({ user, plan, onLogout, onNavigate }: {
                 {filteredPosts.map(p => (
                   <PostCard key={p.id} post={p}
                     onPublish={handlePublish} onPause={handlePause}
-                    onDelete={handleDelete} onReschedule={handleReschedule} />
+                    onDelete={handleDelete} onReschedule={handleReschedule}
+                    onGenerateVideo={handleGenerateVideo} />
                 ))}
               </div>
               {filteredPosts.length === 0 && !loading && (

@@ -10,16 +10,19 @@ const STATUS_MAP: Record<string, { label: string; color: string }> = {
   rendering: { label: 'Renderizando', color: 'text-purple-400 bg-purple-400/10' },
 }
 
-export default function PostCard({ post, onPublish, onPause, onDelete, onReschedule }: {
+export default function PostCard({ post, onPublish, onPause, onDelete, onReschedule, onGenerateVideo }: {
   post: any
   onPublish: (id: string) => void
   onPause: (id: string) => void
   onDelete: (id: string) => void
   onReschedule: (id: string) => void
+  onGenerateVideo?: (id: string) => void
 }) {
   const st = STATUS_MAP[post.status] || { label: post.status, color: 'text-gray-400 bg-gray-400/10' }
   const isScheduled = post.status === 'scheduled' || post.status === 'paused'
   const scheduledDate = post.scheduled_at ? new Date(post.scheduled_at).toLocaleString('pt-BR') : '—'
+  const videoProcessing = post.video_status === 'processing'
+  const hasVideo = !!post.video_url
 
   return (
     <div className="card-glass p-5 card-hover group">
@@ -58,6 +61,20 @@ export default function PostCard({ post, onPublish, onPause, onDelete, onResched
               📅 Reagendar
             </button>
           </>
+        )}
+        {onGenerateVideo && (
+          <button
+            onClick={() => onGenerateVideo(post.id)}
+            disabled={videoProcessing}
+            title={hasVideo ? 'Vídeo gerado' : 'Gerar Reels/Shorts do conteúdo'}
+            className={`text-xs px-3 py-1.5 rounded-lg transition-all disabled:opacity-40 ${
+              hasVideo
+                ? 'bg-green-500/10 text-green-400 border border-green-500/20'
+                : 'bg-gradient-to-r from-pink-500/20 to-purple-500/20 text-pink-300 border border-pink-500/20 hover:border-pink-400/40'
+            }`}
+          >
+            {videoProcessing ? '⏳ Gerando...' : hasVideo ? '🎬 Ver vídeo' : '🎬 Gerar Vídeo'}
+          </button>
         )}
         <button onClick={() => onDelete(post.id)}
           className="text-xs text-red-400/60 hover:text-red-300 px-3 py-1.5 transition-colors ml-auto">

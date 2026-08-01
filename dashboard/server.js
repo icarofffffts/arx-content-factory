@@ -7,7 +7,10 @@ const fs = require('fs');
 const crypto = require('crypto');
 
 const app = express();
-app.use(express.json());
+// Preserva rawBody para verificação de assinatura (Stripe webhook)
+app.use(express.json({
+  verify: (req, res, buf) => { req.rawBody = buf.toString('utf8'); }
+}));
 
 const MASTER_USER = 'admin';
 const MASTER_PASS = 'arx_secret_2026!';
@@ -482,6 +485,43 @@ function parseFirstMedia(mediaPaths) {
 function cleanLinkedInCaption(caption) {
   return String(caption || '').split('\n').filter(l => !l.trim().startsWith('- ')).join('\n').trim();
 }
+
+// 4.5. API: Request Video Generation for a Post (Reels/Shorts)
+app.post('/api/posts/:id/video', async (req, res) => {
+  try {
+    const user = await getUserAsync(req);
+    if (!user) return res.status(401).json({ error: 'Não autorizado' });
+    const postId = req.params.id;
+
+    const postRes = await pool.query(`SELECT topic, status, user_id, media_paths, video_status FROM public.content_pipeline WHERE id = $1;`, [postId]);
+    if (postRes.rows.length === 0) return res.status(404).json({ error: 'Post nao encontrado.' });
+    const post = postRes.rows[0];
+    if (post.user_id && post.user_id !== user.id && user.role !== 'admin') {
+      return res.status(403).json({ error: 'Sem permissão para este post.' });
+    }
+    if (post.video_status === 'processing') return res.status(409).json({ error: 'Vídeo já está sendo gerado.' });
+
+    // Marca como processando
+    await pool.query(`UPDATE public.content_pipeline SET video_status = 'processing', updated_at = NOW() WHERE id = $1;`, [postId]);
+
+    // Tenta disparar no n8n (fluxo de vídeo) — se existir; senão, responde que entrou na fila
+    const body = JSON.stringify({ post_id: postId, topic: post.topic });
+    const reqN8n = https.request({
+      hostname: 'n8n.arxsolutions.cloud', port: 443,
+      path: '/webhook/content-factory-video', method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) }
+    }, (resN8n) => {
+      resN8n.on('data', () => {});
+      resN8n.on('end', () => res.json({ success: true, message: 'Geração de vídeo iniciada! O Reels estará pronto em instantes.' }));
+    });
+    reqN8n.on('error', () => res.json({ success: true, message: 'Solicitação de vídeo registrada (gerador offline).' }));
+    reqN8n.setTimeout(10000, () => { reqN8n.destroy(); res.json({ success: true, message: 'Solicitação de vídeo registrada.' }); });
+    reqN8n.write(body);
+    reqN8n.end();
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
 // 5. API: Reschedule Post to Future Date/Time
 app.patch('/api/posts/:id/reschedule', async (req, res) => {
@@ -1315,12 +1355,65 @@ app.post('/api/v2/plans/subscribe', async (req, res) => {
       expires.setMonth(expires.getMonth() + 1);
     }
 
+    // Se Stripe estiver configurado, gera checkout em vez de ativar direto
+    if (plan_slug !== 'gratuito' && process.env.STRIPE_SECRET_KEY) {
+      const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+      const prices = { pro: { monthly: 9700, yearly: 97000 }, enterprise: { monthly: 29700, yearly: 297000 } };
+      const price = prices[plan_slug]?.[billing_cycle || 'monthly'];
+      if (!price) return res.status(400).json({ error: 'Preço não definido para este plano.' });
+      const session = await stripe.checkout.sessions.create({
+        mode: 'subscription',
+        payment_method_types: ['card'],
+        line_items: [{ price_data: { currency: 'brl', unit_amount: price, recurring: { interval: billing_cycle === 'yearly' ? 'year' : 'month' }, product_data: { name: `Arx Content Factory — ${plan_slug}` } }, quantity: 1 }],
+        success_url: `https://conteudos.icarodev.cloud/dashboard?checkout=success`,
+        cancel_url: `https://conteudos.icarodev.cloud/pricing?checkout=cancelled`,
+        metadata: { user_id: session.rows[0].user_id, plan_slug, billing_cycle: billing_cycle || 'monthly' },
+      });
+      return res.json({ success: true, requires_payment: true, checkout_url: session.url });
+    }
+
     await pool.query(`
       INSERT INTO public.user_plans (user_id, plan_id, status, billing_cycle, expires_at)
       VALUES ($1, $2, 'active', $3, $4)
     `, [session.rows[0].user_id, plan.rows[0].id, billing_cycle || 'monthly', expires]);
 
     res.json({ success: true, message: 'Plano ativado com sucesso!', expires_at: expires });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Webhook de assinatura (Stripe) — confirma pagamento e ativa o plano
+app.post('/api/v2/plans/webhook', async (req, res) => {
+  try {
+    if (!process.env.STRIPE_SECRET_KEY) return res.status(400).json({ error: 'Stripe não configurado' });
+    const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+    const sig = req.headers['stripe-signature'];
+    const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET || '';
+    let event;
+    try {
+      event = stripe.webhooks.constructEvent(req.rawBody || JSON.stringify(req.body), sig, endpointSecret);
+    } catch (e) {
+      return res.status(400).json({ error: 'Assinatura inválida: ' + e.message });
+    }
+    if (event.type === 'checkout.session.completed') {
+      const md = event.data.object.metadata || {};
+      const { user_id, plan_slug, billing_cycle } = md;
+      if (user_id && plan_slug && plan_slug !== 'gratuito') {
+        const plan = await pool.query('SELECT id FROM public.plans WHERE slug = $1 AND active = TRUE', [plan_slug]);
+        if (plan.rows.length > 0) {
+          await pool.query(`UPDATE public.user_plans SET status = 'cancelled', cancelled_at = NOW() WHERE user_id = $1 AND status = 'active'`, [user_id]);
+          const expires = new Date();
+          if (billing_cycle === 'yearly') expires.setFullYear(expires.getFullYear() + 1);
+          else expires.setMonth(expires.getMonth() + 1);
+          await pool.query(`
+            INSERT INTO public.user_plans (user_id, plan_id, status, billing_cycle, expires_at)
+            VALUES ($1, $2, 'active', $3, $4)
+          `, [user_id, plan.rows[0].id, billing_cycle || 'monthly', expires]);
+        }
+      }
+    }
+    res.json({ received: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

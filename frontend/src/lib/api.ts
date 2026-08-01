@@ -81,6 +81,9 @@ export const api = {
   publishNow: (id: string) =>
     request<{ success: boolean }>(`/api/posts/${id}/publish-now`, { method: 'POST' }),
 
+  generateVideo: (id: string) =>
+    request<{ success: boolean; message: string }>(`/api/posts/${id}/video`, { method: 'POST' }),
+
   reschedule: (id: string, scheduled_at: string) =>
     request<{ success: boolean }>(`/api/posts/${id}/reschedule`, {
       method: 'PATCH', body: JSON.stringify({ scheduled_at })
