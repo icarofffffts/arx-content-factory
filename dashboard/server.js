@@ -231,6 +231,7 @@ app.use(async (req, res, next) => {
 
   if (req.path === '/api/login' || req.path === '/api/v2/auth/login'
       || req.path === '/api/v2/auth/register' || req.path === '/api/v2/plans'
+      || req.path === '/api/v2/plans/webhook'
       || req.path === '/api/demo/request' || req.path.startsWith('/api/social/callback/')) {
     return next();
   }
