@@ -211,13 +211,13 @@ export default function DashboardCEO({ user, plan, onLogout, onNavigate }: {
   const filteredPosts = statusFilter === 'all' ? posts : posts.filter(p => p.status === statusFilter)
 
   const STATS_CARDS = [
-    { label: 'Total no Pipeline', value: metrics.total, color: 'from-blue-500 to-blue-700', icon: '📊' },
-    { label: 'Agendados', value: metrics.scheduled, color: 'from-blue-400 to-blue-600', icon: '📅' },
+    { label: 'Total no Pipeline', value: metrics.total, color: 'from-violet-500 to-violet-700', icon: '📊' },
+    { label: 'Agendados', value: metrics.scheduled, color: 'from-blue-500 to-blue-700', icon: '📅' },
     { label: 'Rascunhos', value: metrics.draft, color: 'from-amber-400 to-amber-600', icon: '📝' },
     { label: 'Pausados', value: metrics.paused, color: 'from-orange-400 to-orange-600', icon: '⏸' },
     { label: 'LinkedIn', value: metrics.posted_linkedin, color: 'from-sky-300 to-sky-500', icon: '💼' },
     { label: 'Instagram', value: metrics.posted_instagram, color: 'from-pink-400 to-pink-600', icon: '📸' },
-    { label: 'Publicados', value: metrics.published, color: 'from-green-400 to-green-600', icon: '✅' },
+    { label: 'Publicados', value: metrics.published, color: 'from-emerald-400 to-emerald-600', icon: '✅' },
   ]
 
   const FILTERS = [
@@ -254,15 +254,15 @@ export default function DashboardCEO({ user, plan, onLogout, onNavigate }: {
   }
 
   return (
-    <div className="min-h-screen bg-surface-900 flex">
-      <div className="fixed inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(196,18,48,0.06)_0%,transparent_50%)] pointer-events-none" />
-
+    <div className="min-h-screen bg-surface-950 flex">
       {/* SIDEBAR */}
-      <aside className={`fixed left-0 top-0 h-full bg-surface-800/80 border-r border-glass-border backdrop-blur-xl z-40 transition-all duration-300 ${collapsed ? 'w-16' : 'w-56'}`}>
+      <aside className={`fixed left-0 top-0 h-full bg-surface-900/70 border-r border-glass-border backdrop-blur-xl z-40 transition-all duration-300 ${collapsed ? 'w-16' : 'w-56'}`}>
         <div className="p-4 flex items-center justify-between border-b border-glass-border h-16">
-          <div className="flex items-center gap-2">
-            <span className="w-7 h-7 bg-accent rounded-lg flex items-center justify-center font-bold text-xs">A</span>
-            {!collapsed && <span className="font-bold text-sm">Arx Factory</span>}
+          <div className="flex items-center gap-2.5">
+            <span className="w-8 h-8 bg-gradient-to-br from-accent-light to-accent-dark rounded-xl flex items-center justify-center font-black text-sm shadow-glow-sm">
+              A
+            </span>
+            {!collapsed && <span className="font-bold text-sm tracking-tight">Arx Factory</span>}
           </div>
           <button onClick={() => setCollapsed(!collapsed)}
             className="text-gray-500 hover:text-white text-xs p-1.5 rounded-lg hover:bg-glass-hover transition-all">
@@ -278,7 +278,7 @@ export default function DashboardCEO({ user, plan, onLogout, onNavigate }: {
                   : 'text-gray-400 hover:text-white hover:bg-glass-hover'
               }`}>
               <span className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold ${
-                subPage === n.id ? 'bg-accent text-white' : 'bg-surface-600/50 text-gray-400'
+                subPage === n.id ? 'bg-gradient-to-br from-accent-light to-accent-dark text-white shadow-glow-sm' : 'bg-surface-600/50 text-gray-400'
               }`}>
                 {n.icon}
               </span>
@@ -291,7 +291,7 @@ export default function DashboardCEO({ user, plan, onLogout, onNavigate }: {
             <div className="px-3 py-2 mb-1">
               <div className="text-xs text-gray-500 truncate">{user?.full_name || user?.email}</div>
               {plan && (
-                <div className="inline-block text-[10px] text-accent bg-accent/10 px-2 py-0.5 rounded-full mt-1">
+                <div className="inline-block text-[10px] text-accent-light bg-accent/10 px-2 py-0.5 rounded-full mt-1">
                   {plan.name}
                 </div>
               )}

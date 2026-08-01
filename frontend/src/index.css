@@ -4,33 +4,44 @@
 
 @layer base {
   html { scroll-behavior: smooth; }
-  body { @apply min-h-screen; }
-  ::selection { background: #C41230; color: white; }
+  body {
+    @apply min-h-screen bg-surface-950 text-zinc-100 antialiased;
+  }
+  ::selection { background: #8b5cf6; color: white; }
+  /* Scrollbar fina estilo 21st.dev */
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 8px; }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
 }
 
 @layer components {
   .btn-accent {
-    @apply bg-accent hover:bg-accent-light text-white font-semibold
+    @apply bg-gradient-to-r from-accent to-accent-dark text-white font-semibold
            px-6 py-3 rounded-xl transition-all duration-200
-           hover:shadow-lg hover:shadow-accent/25 active:scale-[0.98];
+           hover:shadow-glow hover:brightness-110 active:scale-[0.98]
+           bg-[length:200%_auto] hover:bg-right;
   }
   .btn-ghost {
-    @apply border border-glass-border hover:bg-glass-hover text-white
+    @apply border border-glass-border bg-white/[0.02] hover:bg-white/[0.06] text-zinc-200
            px-6 py-3 rounded-xl transition-all duration-200;
   }
   .card-glass {
-    @apply bg-glass border border-glass-border rounded-2xl
-           backdrop-blur-xl transition-all duration-200;
+    @apply bg-surface-900/60 border border-glass-border rounded-2xl
+           backdrop-blur-xl shadow-card transition-all duration-300;
   }
   .card-hover {
-    @apply hover:border-accent/30 hover:shadow-lg hover:shadow-accent/5;
+    @apply hover:border-accent/40 hover:shadow-glow hover:-translate-y-0.5;
   }
   .gradient-text {
-    @apply bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent;
+    @apply bg-gradient-to-r from-white via-white to-zinc-400 bg-clip-text text-transparent;
+  }
+  .gradient-text-accent {
+    @apply bg-gradient-to-r from-accent-light via-accent to-accent-dark bg-clip-text text-transparent;
   }
   .glass-input {
-    @apply bg-glass border border-glass-border rounded-xl px-4 py-3
-           text-white placeholder-gray-500 focus:outline-none
+    @apply bg-white/[0.03] border border-glass-border rounded-xl px-4 py-3
+           text-zinc-100 placeholder-zinc-500 focus:outline-none
            focus:border-accent/50 focus:ring-1 focus:ring-accent/30
            transition-all duration-200;
   }
@@ -38,9 +49,25 @@
     @apply text-xs font-medium px-2.5 py-1 rounded-full;
   }
   .badge-accent {
-    @apply badge bg-accent/10 text-accent;
+    @apply badge bg-accent/10 text-accent-light;
   }
   .loading-pulse {
-    @apply animate-pulse bg-surface-600 rounded-xl;
+    @apply animate-pulse bg-surface-800 rounded-xl;
   }
+  /* Glow decorativo de fundo (aurora 21st.dev) */
+  .bg-aurora {
+    @apply relative;
+  }
+  .bg-aurora::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    background:
+      radial-gradient(600px circle at 15% 10%, rgba(139,92,246,0.08), transparent 40%),
+      radial-gradient(500px circle at 85% 20%, rgba(56,189,248,0.06), transparent 40%),
+      radial-gradient(700px circle at 50% 90%, rgba(236,72,153,0.05), transparent 45%);
+    z-index: 0;
+  }
+  .relative-z { position: relative; z-index: 1; }
 }

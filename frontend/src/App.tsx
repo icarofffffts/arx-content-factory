@@ -86,7 +86,7 @@ export default function App() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-surface-900 flex items-center justify-center">
+      <div className="min-h-screen bg-surface-950 flex items-center justify-center">
         <div className="animate-pulse text-accent font-mono text-lg">carregando...</div>
       </div>
     )
@@ -97,7 +97,7 @@ export default function App() {
   if (page === 'signup') return <Signup onLogin={handleLogin} onNavigate={navigateTo} />
   if (page === 'pricing') return <Pricing onNavigate={navigateTo} user={user} plan={plan} />
   if (page === 'dashboard' && user) {
-    return <DashboardCEO user={user} plan={plan} onLogout={handleLogout} onNavigate={navigateTo} />
+    return <div className="bg-aurora min-h-screen"><div className="relative-z"><DashboardCEO user={user} plan={plan} onLogout={handleLogout} onNavigate={navigateTo} /></div></div>
   }
   if (page === 'dashboard' && !user) {
     // Not logged in: show login instead of falling through to landing
