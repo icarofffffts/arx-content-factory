@@ -34,8 +34,9 @@ export default function Pricing({ onNavigate, user, plan: currentPlan }: {
   }
 
   return (
-    <div className="max-w-6xl mx-auto">
-      <div className="text-center mb-6">
+    <div className="max-w-6xl mx-auto relative">
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(196,18,48,0.06)_0%,transparent_60%)] pointer-events-none" />
+      <div className="text-center mb-6 relative">
         <h2 className="text-3xl md:text-4xl font-bold mb-3">Planos</h2>
         <p className="text-gray-400">Escolha o plano ideal para seu negócio</p>
       </div>

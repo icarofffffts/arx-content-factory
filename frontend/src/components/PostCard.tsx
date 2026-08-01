@@ -22,7 +22,7 @@ export default function PostCard({ post, onPublish, onPause, onDelete, onResched
   const scheduledDate = post.scheduled_at ? new Date(post.scheduled_at).toLocaleString('pt-BR') : '—'
 
   return (
-    <div className="card-glass p-5 card-hover">
+    <div className="card-glass p-5 card-hover group">
       <div className="flex items-start justify-between mb-3">
         <div className="flex-1 min-w-0">
           <h3 className="font-semibold text-sm leading-snug line-clamp-2">{post.topic}</h3>
@@ -32,19 +32,18 @@ export default function PostCard({ post, onPublish, onPause, onDelete, onResched
         </span>
       </div>
 
-      {/* Progress bar */}
       <div className="w-full h-1.5 bg-surface-600 rounded-full overflow-hidden mb-3">
-        <div className="h-full bg-accent rounded-full transition-all" style={{ width: `${post.progress_percentage}%` }} />
+        <div className="h-full bg-accent rounded-full transition-all duration-500" style={{ width: `${post.progress_percentage}%` }} />
       </div>
 
       <div className="text-xs text-gray-500 mb-4">
         {isScheduled ? `📅 ${scheduledDate}` : `🕐 ${new Date(post.created_at).toLocaleString('pt-BR')}`}
       </div>
 
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap gap-2 opacity-80 group-hover:opacity-100 transition-opacity">
         {isScheduled && (
           <button onClick={() => onPublish(post.id)}
-            className="text-xs bg-accent hover:bg-accent-light text-white px-3 py-1.5 rounded-lg transition-colors">
+            className="text-xs bg-accent hover:bg-accent-light text-white px-3 py-1.5 rounded-lg transition-all hover:shadow-lg hover:shadow-accent/20">
             Publicar Agora
           </button>
         )}
@@ -61,7 +60,7 @@ export default function PostCard({ post, onPublish, onPause, onDelete, onResched
           </>
         )}
         <button onClick={() => onDelete(post.id)}
-          className="text-xs text-red-400 hover:text-red-300 px-3 py-1.5 transition-colors ml-auto">
+          className="text-xs text-red-400/60 hover:text-red-300 px-3 py-1.5 transition-colors ml-auto">
           🗑
         </button>
       </div>

@@ -34,4 +34,13 @@
            focus:border-accent/50 focus:ring-1 focus:ring-accent/30
            transition-all duration-200;
   }
+  .badge {
+    @apply text-xs font-medium px-2.5 py-1 rounded-full;
+  }
+  .badge-accent {
+    @apply badge bg-accent/10 text-accent;
+  }
+  .loading-pulse {
+    @apply animate-pulse bg-surface-600 rounded-xl;
+  }
 }

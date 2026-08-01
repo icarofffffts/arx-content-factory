@@ -22,6 +22,171 @@ const pool = new Pool({
   port: 5432,
 });
 
+// ============================================================
+// Evolution API helpers
+// ============================================================
+const EVO_HOST = '185.111.156.178';
+const EVO_PORT = 9091;
+const EVO_GLOBAL_KEY = 'arx_evolution_2026';
+
+function evoRequest(method, urlPath, body, apiKey = EVO_GLOBAL_KEY) {
+  return new Promise((resolve, reject) => {
+    const payload = body ? JSON.stringify(body) : null;
+    const req = http.request({
+      hostname: EVO_HOST,
+      port: EVO_PORT,
+      path: urlPath,
+      method,
+      headers: {
+        'apikey': apiKey,
+        'Content-Type': 'application/json',
+        ...(payload ? { 'Content-Length': Buffer.byteLength(payload) } : {}),
+      },
+    }, (res) => {
+      let data = '';
+      res.on('data', c => data += c);
+      res.on('end', () => resolve({ status: res.statusCode, data }));
+    });
+    req.on('error', reject);
+    if (payload) req.write(payload);
+    req.end();
+  });
+}
+
+// Ensure tables exist at boot
+(async () => {
+  try {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS public.whatsapp_instances (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id TEXT,
+        client_name TEXT NOT NULL,
+        instance_name TEXT NOT NULL UNIQUE,
+        evo_instance_id TEXT,
+        instance_token TEXT,
+        number TEXT,
+        status TEXT NOT NULL DEFAULT 'pending',
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+      ALTER TABLE public.whatsapp_instances ADD COLUMN IF NOT EXISTS evo_instance_id TEXT;
+      CREATE TABLE IF NOT EXISTS public.demo_requests (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        name TEXT NOT NULL,
+        email TEXT NOT NULL,
+        phone TEXT,
+        company TEXT,
+        status TEXT NOT NULL DEFAULT 'pending',
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS public.social_accounts (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id TEXT NOT NULL,
+        platform TEXT NOT NULL CHECK (platform IN ('instagram','linkedin','github')),
+        handle TEXT,
+        account_id TEXT,
+        access_token TEXT,
+        refresh_token TEXT,
+        token_expires_at TIMESTAMPTZ,
+        status TEXT NOT NULL DEFAULT 'active',
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        UNIQUE (user_id, platform)
+      );
+      ALTER TABLE public.content_pipeline ADD COLUMN IF NOT EXISTS user_id TEXT;
+      ALTER TABLE public.users ADD COLUMN IF NOT EXISTS niche TEXT;
+    `);
+    console.log('[init] whatsapp_instances + demo_requests + social_accounts ready');
+  } catch (e) {
+    console.error('[init] table create error:', e.message);
+  }
+})();
+
+// Resolve current user from token (MASTER_TOKEN => admin, else sessions->users)
+async function getUserAsync(req) {
+  const token = req.headers['authorization']?.replace('Bearer ', '') ||
+                req.headers['x-arx-token'] ||
+                req.query.token ||
+                parseCookies(req).arx_token;
+  if (!token) return null;
+  if (token === MASTER_TOKEN) {
+    return { id: 'admin', email: 'admin@arx.dev', full_name: 'Administrador', role: 'admin' };
+  }
+  try {
+    const r = await pool.query(`
+      SELECT u.id, u.email, u.full_name, u.role
+      FROM public.sessions s
+      JOIN public.users u ON s.user_id = u.id
+      WHERE s.token = $1 AND s.expires_at > NOW()
+    `, [token]);
+    return r.rows[0] || null;
+  } catch (e) {
+    return null;
+  }
+}
+
+function slugInstanceName(name) {
+  const slug = (name || '')
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase().replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '').slice(0, 40);
+  return slug || 'inst_' + Date.now().toString(36);
+}
+
+// Resend email helper
+const RESEND_API_KEY = process.env.RESEND_API_KEY || '';
+const RESEND_FROM = process.env.RESEND_FROM || 'Arx Content Factory <onboarding@arxsolutions.cloud>';
+
+function sendWelcomeEmail(name, email) {
+  return new Promise((resolve, reject) => {
+    if (!RESEND_API_KEY) return reject(new Error('RESEND_API_KEY nao configurada'));
+    const safeName = (name || '').replace(/</g, '').replace(/>/g, '');
+    const html = `
+      <div style="font-family:Arial,Helvetica,sans-serif;background:#f5f5f5;padding:40px 16px;">
+        <div style="max-width:520px;margin:0 auto;background:#ffffff;border-radius:16px;overflow:hidden;border:1px solid #eee;">
+          <div style="background:#C41230;padding:24px 32px;">
+            <div style="color:#fff;font-size:20px;font-weight:700;">Arx Content Factory</div>
+          </div>
+          <div style="padding:32px;">
+            <h2 style="margin:0 0 12px;color:#111;">Seja bem-vindo(a), ${safeName}! 🚀</h2>
+            <p style="color:#555;line-height:1.6;margin:0 0 16px;">
+              Obrigado pelo interesse! Sua <strong>demonstração</strong> foi liberada automaticamente.
+              Aproveite para ver como o fluxo de aprovação de conteúdo pelo WhatsApp funciona na prática.
+            </p>
+            <p style="color:#555;line-height:1.6;margin:0;">
+              Qualquer dúvida, é só responder este e-mail. Estamos à disposição!
+            </p>
+            <p style="color:#999;font-size:13px;margin:24px 0 0;">— Time Arx Content Factory</p>
+          </div>
+        </div>
+      </div>`;
+    const payload = JSON.stringify({
+      from: RESEND_FROM,
+      to: [email],
+      subject: 'Seja bem-vindo(a) ao Arx Content Factory!',
+      html,
+    });
+    const req = https.request({
+      hostname: 'api.resend.com',
+      port: 443,
+      path: '/emails',
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${RESEND_API_KEY}`,
+        'Content-Type': 'application/json',
+        'Content-Length': Buffer.byteLength(payload),
+      },
+    }, (res) => {
+      let data = '';
+      res.on('data', c => data += c);
+      res.on('end', () => resolve({ status: res.statusCode, data }));
+    });
+    req.on('error', reject);
+    req.write(payload);
+    req.end();
+  });
+}
+
 // Helper: Parse Cookie Header
 function parseCookies(req) {
   const list = {};
@@ -57,12 +222,13 @@ app.post('/api/logout', (req, res) => {
 });
 
 // Auth Middleware — only protect /api/ and /dashboard/; React landing page is public
-app.use((req, res, next) => {
+app.use(async (req, res, next) => {
   const isProtected = req.path.startsWith('/api/') || req.path.startsWith('/dashboard/');
   if (!isProtected) return next();
 
   if (req.path === '/api/login' || req.path === '/api/v2/auth/login'
-      || req.path === '/api/v2/auth/register' || req.path === '/api/v2/plans') {
+      || req.path === '/api/v2/auth/register' || req.path === '/api/v2/plans'
+      || req.path === '/api/demo/request' || req.path.startsWith('/api/social/callback/')) {
     return next();
   }
 
@@ -72,8 +238,26 @@ app.use((req, res, next) => {
                 req.query.token || 
                 cookies.arx_token;
 
+  // Master token (legacy admin /dashboard/)
   if (token && token === MASTER_TOKEN) {
+    req.user = { id: 'admin', email: 'admin@arx.dev', full_name: 'Administrador', role: 'admin' };
     return next();
+  }
+
+  // V2 session token (React SPA users)
+  if (token) {
+    try {
+      const sess = await pool.query(`
+        SELECT u.id, u.email, u.full_name, u.role
+        FROM public.sessions s
+        JOIN public.users u ON s.user_id = u.id
+        WHERE s.token = $1 AND s.expires_at > NOW()
+      `, [token]);
+      if (sess.rows.length > 0) {
+        req.user = sess.rows[0];
+        return next();
+      }
+    } catch (e) { /* fallthrough to reject */ }
   }
 
   if (req.accepts('html')) {
@@ -93,6 +277,11 @@ app.use((req, res, next) => {
 // 2. API: Get Pipeline Metrics
 app.get('/api/metrics', async (req, res) => {
   try {
+    const user = await getUserAsync(req);
+    if (!user) return res.status(401).json({ error: 'Não autorizado' });
+    const params = [];
+    let where = '';
+    if (user.role !== 'admin') { where = 'WHERE user_id = $1'; params.push(user.id); }
     const result = await pool.query(`
       SELECT 
         COUNT(*) AS total,
@@ -103,8 +292,8 @@ app.get('/api/metrics', async (req, res) => {
         COUNT(CASE WHEN status = 'posted_instagram' THEN 1 END) AS posted_instagram,
         COUNT(CASE WHEN status = 'draft' THEN 1 END) AS draft,
         COUNT(CASE WHEN status = 'published' THEN 1 END) AS published
-      FROM public.content_pipeline;
-    `);
+      FROM public.content_pipeline ${where};
+    `, params);
     res.json(result.rows[0]);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -114,6 +303,8 @@ app.get('/api/metrics', async (req, res) => {
 // 3. API: Get Posts List
 app.get('/api/posts', async (req, res) => {
   try {
+    const user = await getUserAsync(req);
+    if (!user) return res.status(401).json({ error: 'Não autorizado' });
     const statusFilter = req.query.status;
     let query = `
       SELECT 
@@ -128,11 +319,10 @@ app.get('/api/posts', async (req, res) => {
       FROM public.content_pipeline
     `;
     const params = [];
-
-    if (statusFilter && statusFilter !== 'all') {
-      query += ` WHERE status = $1`;
-      params.push(statusFilter);
-    }
+    const conds = [];
+    if (user.role !== 'admin') { conds.push(`user_id = $${params.length + 1}`); params.push(user.id); }
+    if (statusFilter && statusFilter !== 'all') { conds.push(`status = $${params.length + 1}`); params.push(statusFilter); }
+    if (conds.length > 0) query += ` WHERE ` + conds.join(' AND ');
 
     query += ` ORDER BY created_at DESC LIMIT 50;`;
     const result = await pool.query(query, params);
@@ -147,20 +337,110 @@ app.post('/api/posts/:id/publish-now', async (req, res) => {
   try {
     const postId = req.params.id;
 
-    const postRes = await pool.query(`SELECT topic, status FROM public.content_pipeline WHERE id = $1;`, [postId]);
+    const postRes = await pool.query(`SELECT topic, status, user_id, linkedin_caption, instagram_caption, media_paths FROM public.content_pipeline WHERE id = $1;`, [postId]);
     if (postRes.rows.length === 0) {
       return res.status(404).json({ error: 'Post nao encontrado.' });
     }
+    const post = postRes.rows[0];
 
     // Acelera o pipeline: status='scheduled' com scheduled_at=NOW()
-    // Assim o cron do LinkedIn/Instagram/GitHub pega na proxima execucao
     await pool.query(`
       UPDATE public.content_pipeline 
       SET scheduled_at = NOW(), status = 'scheduled', updated_at = NOW() 
       WHERE id = $1;
     `, [postId]);
 
-    // Trigger os 3 webhooks de publicacao em paralelo
+    const results = [];
+
+    // Se o post pertence a um cliente, publica direto nas contas sociais dele
+    if (post.user_id) {
+      const accts = await pool.query(`
+        SELECT * FROM public.social_accounts WHERE user_id = $1 AND status = 'active'
+      `, [post.user_id]);
+
+      const linkedin = accts.rows.find(a => a.platform === 'linkedin');
+      const instagram = accts.rows.find(a => a.platform === 'instagram');
+
+      if (linkedin && linkedin.access_token && process.env.LINKEDIN_CLIENT_ID) {
+        try {
+          const mediaPath = parseFirstMedia(post.media_paths);
+          let mediaUrn = null;
+          if (mediaPath) {
+            const reg = await httpsJson('POST', 'https://api.linkedin.com/v2/assets?action=registerUpload', {
+              'Authorization': 'Bearer ' + linkedin.access_token,
+              'X-Restli-Protocol-Version': '2.0.0',
+            }, {
+              registerUploadRequest: {
+                recipes: ['urn:li:digitalmediaRecipe:feedshare-image'],
+                owner: 'urn:li:person:' + (linkedin.account_id || ''),
+                serviceRelationships: [{ relationshipType: 'OWNER', identifier: 'urn:li:userGeneratedContent' }],
+              },
+            });
+            const upload = reg.body?.value?.uploadMechanism?.['com.linkedin.digitalmedia.uploading.MediaUploadHttpRequest'];
+            const asset = reg.body?.value?.asset;
+            if (upload?.uploadUrl && asset) {
+              await httpsJson('PUT', upload.uploadUrl, { 'Content-Type': 'image/png' }, undefined);
+              mediaUrn = asset;
+            }
+          }
+          const payload = {
+            author: 'urn:li:person:' + (linkedin.account_id || ''),
+            lifecycleState: 'PUBLISHED',
+            specificContent: {
+              'com.linkedin.ugc.ShareContent': {
+                shareCommentary: { text: cleanLinkedInCaption(post.linkedin_caption || post.topic) },
+                shareMediaCategory: mediaUrn ? 'IMAGE' : 'NONE',
+                ...(mediaUrn ? { media: [{ status: 'READY', media: mediaUrn }] } : {}),
+              },
+            },
+            visibility: { 'com.linkedin.ugc.MemberNetworkVisibility': 'PUBLIC' },
+          };
+          const pub = await httpsJson('POST', 'https://api.linkedin.com/v2/ugcPosts', {
+            'Authorization': 'Bearer ' + linkedin.access_token,
+            'X-Restli-Protocol-Version': '2.0.0',
+          }, payload);
+          results.push({ platform: 'linkedin', ok: pub.status >= 200 && pub.status < 300, status: pub.status });
+        } catch (e) {
+          results.push({ platform: 'linkedin', ok: false, error: e.message });
+        }
+      }
+
+      if (instagram && instagram.access_token) {
+        try {
+          const mediaUrl = parseFirstMedia(post.media_paths);
+          const caption = (post.instagram_caption || post.topic || '').substring(0, 2200);
+          const container = await httpsFormPost(`https://graph.instagram.com/${encodeURIComponent(instagram.account_id || 'me')}/media`, {
+            image_url: mediaUrl || '',
+            caption,
+            access_token: instagram.access_token,
+          });
+          if (container.body?.id) {
+            const pub = await httpsFormPost(`https://graph.instagram.com/${encodeURIComponent(instagram.account_id || 'me')}/media_publish`, {
+              creation_id: container.body.id,
+              access_token: instagram.access_token,
+            });
+            results.push({ platform: 'instagram', ok: pub.status >= 200 && pub.status < 300, status: pub.status });
+          } else {
+            results.push({ platform: 'instagram', ok: false, error: container.raw });
+          }
+        } catch (e) {
+          results.push({ platform: 'instagram', ok: false, error: e.message });
+        }
+      }
+
+      if (!linkedin && !instagram) {
+        return res.json({ success: false, message: 'Cliente não possui contas sociais conectadas. Conecte em Social Bot.', results });
+      }
+
+      // GitHub archive sempre via n8n
+      const gh = https.request({ hostname: 'n8n.arxsolutions.cloud', port: 443, path: '/webhook/github-publish', method: 'POST', headers: { 'Content-Type': 'application/json' } }, () => {});
+      gh.on('error', () => {});
+      gh.end(JSON.stringify({ post_id: postId }));
+
+      return res.json({ success: true, message: 'Publicação disparada nas contas do cliente.', results });
+    }
+
+    // Fallback legado (admin/global): os 3 webhooks n8n em paralelo
     const triggers = [
       { path: '/webhook/linkedin-publish' },
       { path: '/webhook/instagram-publish' },
@@ -184,6 +464,24 @@ app.post('/api/posts/:id/publish-now', async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
+function parseFirstMedia(mediaPaths) {
+  if (!mediaPaths) return null;
+  let arr = mediaPaths;
+  if (typeof mediaPaths === 'string') { try { arr = JSON.parse(mediaPaths); } catch (e) { arr = []; } }
+  if (!Array.isArray(arr) || arr.length === 0) return null;
+  const first = arr[0];
+  if (typeof first === 'string') return first.startsWith('http') ? first : null;
+  if (first && typeof first === 'object') {
+    const v = first.url || first.image_url || first.path || first.preview || first.src;
+    return (v && String(v).startsWith('http')) ? v : null;
+  }
+  return null;
+}
+
+function cleanLinkedInCaption(caption) {
+  return String(caption || '').split('\n').filter(l => !l.trim().startsWith('- ')).join('\n').trim();
+}
 
 // 5. API: Reschedule Post to Future Date/Time
 app.patch('/api/posts/:id/reschedule', async (req, res) => {
@@ -553,6 +851,8 @@ app.get('/r/:code', async (req, res) => {
 // 17. API: Trigger New Custom Content Generation with Schedule Options
 app.post('/api/generate', async (req, res) => {
   try {
+    const user = await getUserAsync(req);
+    if (!user) return res.status(401).json({ error: 'Não autorizado' });
     const { topic, channel, publish_mode, scheduled_at } = req.body;
     if (!topic) return res.status(400).json({ error: 'O tema é obrigatório!' });
 
@@ -561,6 +861,7 @@ app.post('/api/generate', async (req, res) => {
       channel: channel || 'all',
       publish_mode: publish_mode || 'now'
     });
+    params.append('user_id', user.id);
     if (scheduled_at) params.append('scheduled_at', `${scheduled_at}:00-03:00`);
 
     const reqN8n = https.get({
@@ -584,13 +885,18 @@ app.post('/api/generate', async (req, res) => {
 // 18. API: Get Drafts for Review
 app.get('/api/drafts', async (req, res) => {
   try {
+    const user = await getUserAsync(req);
+    if (!user) return res.status(401).json({ error: 'Não autorizado' });
+    const params = [];
+    let where = `WHERE status = 'draft'`;
+    if (user.role !== 'admin') { where += ` AND user_id = $${params.length + 1}`; params.push(user.id); }
     const result = await pool.query(`
       SELECT id, topic, slides_data, media_paths, instagram_media_paths,
              pdf_url, linkedin_caption, created_at
       FROM public.content_pipeline
-      WHERE status = 'draft'
+      ${where}
       ORDER BY created_at DESC LIMIT 20;
-    `);
+    `, params);
     res.json(result.rows);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -823,9 +1129,19 @@ app.post('/api/v2/auth/login', async (req, res) => {
     if ((cleanEmail === 'admin@arx.dev' || cleanEmail === MASTER_USER) && password === MASTER_PASS) {
       const token = genToken();
       const tokenExpires = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+      // Ensure admin exists in users so the session resolves through the auth gate
+      let adminRow = await pool.query(`
+        INSERT INTO public.users (email, password_hash, full_name, role)
+        VALUES ('admin@arx.dev', '', 'Administrador', 'admin')
+        ON CONFLICT (email) DO UPDATE SET role = 'admin', full_name = 'Administrador'
+        RETURNING id, email, full_name, role
+      `);
+      await pool.query(`
+        INSERT INTO public.sessions (user_id, token, expires_at) VALUES ($1, $2, $3)
+      `, [adminRow.rows[0].id, token, tokenExpires]);
       return res.json({
         success: true,
-        user: { id: 'admin', email: 'admin@arx.dev', full_name: 'Administrador', role: 'admin' },
+        user: { id: adminRow.rows[0].id, email: 'admin@arx.dev', full_name: 'Administrador', role: 'admin' },
         plan: { name: 'Enterprise', slug: 'enterprise', max_posts_month: 999999, has_whatsapp_approval: true, has_instagram: true, has_linkedin: true, has_github: true, has_ai_suggestions: true, has_lead_capture: true, has_promo_hunter: true },
         token,
         expires_at: tokenExpires
@@ -967,6 +1283,453 @@ app.post('/api/v2/plans/subscribe', async (req, res) => {
     `, [session.rows[0].user_id, plan.rows[0].id, billing_cycle || 'monthly', expires]);
 
     res.json({ success: true, message: 'Plano ativado com sucesso!', expires_at: expires });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ============================================================
+// WhatsApp Instances (Evolution Go)
+// ============================================================
+
+// List instances (admin: all, user: own) — synced with Evolution Go /instance/all
+app.get('/api/whatsapp/instances', async (req, res) => {
+  try {
+    const user = await getUserAsync(req);
+    if (!user) return res.status(401).json({ error: 'Não autorizado' });
+
+    const params = [];
+    const where = user.role === 'admin' ? '' : 'WHERE user_id = $1' + (params.push(user.id) ? '' : '');
+    const db = await pool.query(
+      `SELECT id, user_id, client_name, instance_name, evo_instance_id, instance_token, number, status, created_at
+       FROM public.whatsapp_instances ${where} ORDER BY created_at DESC`, params);
+
+    // Sync state from Evolution Go /instance/all (global key)
+    let evoStates = {};
+    try {
+      const evo = await evoRequest('GET', '/instance/all');
+      const parsed = JSON.parse(evo.data);
+      const list = Array.isArray(parsed.data) ? parsed.data : (Array.isArray(parsed.instances) ? parsed.instances : []);
+      list.forEach(i => {
+        const name = i.name;
+        if (name) {
+          const jid = i.jid || '';
+          evoStates[name] = {
+            id: i.id || '',
+            token: i.token || '',
+            connected: !!i.connected,
+            loggedIn: !!i.connected,
+            jid,
+            number: jid ? jid.split(':')[0] : '',
+          };
+        }
+      });
+    } catch (e) { /* evolution offline — keep db status */ }
+
+    // Import Evolution instances not yet in DB (admin-owned) so they appear in the dashboard
+    if (user.role === 'admin') {
+      for (const name of Object.keys(evoStates)) {
+        const st = evoStates[name];
+        const dbExists = db.rows.some(r => r.instance_name === name);
+        if (!dbExists) {
+          await pool.query(`
+            INSERT INTO public.whatsapp_instances (user_id, client_name, instance_name, evo_instance_id, instance_token, number, status)
+            VALUES ('admin', $1, $1, $2, $3, $4, $5)
+            ON CONFLICT (instance_name) DO UPDATE
+              SET evo_instance_id = EXCLUDED.evo_instance_id, instance_token = EXCLUDED.instance_token,
+                  number = EXCLUDED.number, status = EXCLUDED.status, updated_at = NOW()
+          `, [name, st.id, st.token, st.number, st.connected ? 'connected' : 'pending']);
+        }
+      }
+      const db2 = await pool.query(
+        `SELECT id, user_id, client_name, instance_name, evo_instance_id, instance_token, number, status, created_at
+         FROM public.whatsapp_instances ORDER BY created_at DESC`);
+      db.rows = db2.rows;
+    }
+
+    const instances = db.rows.map(row => {
+      const st = evoStates[row.instance_name] || {};
+      return {
+        ...row,
+        number: st.number || row.number || '',
+        connected: st.connected || row.status === 'connected',
+        evolution_state: st.connected ? 'open' : 'close',
+      };
+    });
+    res.json({ success: true, instances });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Create instance in Evolution Go (instance name = slug of client name, token = generated UUID)
+app.post('/api/whatsapp/instances', async (req, res) => {
+  try {
+    const user = await getUserAsync(req);
+    if (!user) return res.status(401).json({ error: 'Não autorizado' });
+
+    const clientName = (req.body.client_name || '').trim();
+    if (!clientName) return res.status(400).json({ error: 'Nome do cliente é obrigatório' });
+
+    const instanceName = slugInstanceName(clientName);
+    const exists = await pool.query(`SELECT id FROM public.whatsapp_instances WHERE instance_name = $1`, [instanceName]);
+    if (exists.rows.length > 0) {
+      return res.status(409).json({ error: 'Instância já existe para esse cliente' });
+    }
+
+    const instanceToken = crypto.randomUUID();
+    const createRes = await evoRequest('POST', '/instance/create', { name: instanceName, token: instanceToken });
+    if (createRes.status >= 400) {
+      return res.status(502).json({ error: 'Falha ao criar instância na Evolution: ' + (createRes.data || createRes.status) });
+    }
+    let evoId = '';
+    try {
+      const parsed = JSON.parse(createRes.data);
+      evoId = parsed.data?.id || parsed.id || '';
+    } catch (e) { /* ignore */ }
+
+    await pool.query(`
+      INSERT INTO public.whatsapp_instances (user_id, client_name, instance_name, evo_instance_id, instance_token, status)
+      VALUES ($1, $2, $3, $4, $5, 'pending')
+      ON CONFLICT (instance_name) DO UPDATE
+        SET user_id = EXCLUDED.user_id, client_name = EXCLUDED.client_name,
+            evo_instance_id = EXCLUDED.evo_instance_id, instance_token = EXCLUDED.instance_token,
+            status = 'pending', updated_at = NOW()
+    `, [user.id, clientName, instanceName, evoId, instanceToken]);
+
+    res.json({ success: true, instance: { instance_name: instanceName, client_name: clientName, evo_instance_id: evoId, status: 'pending' } });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Get QR code to connect an instance (Evolution Go /instance/qr — data URI)
+app.get('/api/whatsapp/instances/:name/qr', async (req, res) => {
+  try {
+    const user = await getUserAsync(req);
+    if (!user) return res.status(401).json({ error: 'Não autorizado' });
+    const name = req.params.name;
+
+    const inst = await pool.query(`SELECT * FROM public.whatsapp_instances WHERE instance_name = $1`, [name]);
+    if (inst.rows.length === 0) return res.status(404).json({ error: 'Instância não encontrada' });
+    if (user.role !== 'admin' && inst.rows[0].user_id !== user.id) {
+      return res.status(403).json({ error: 'Acesso negado' });
+    }
+    const row = inst.rows[0];
+
+    // /instance/qr needs the per-instance token as apikey
+    const qrRes = await evoRequest('GET', `/instance/qr?instanceId=${encodeURIComponent(row.evo_instance_id)}`, null, row.instance_token);
+    let qrcode = '';
+    try {
+      const parsed = JSON.parse(qrRes.data);
+      qrcode = parsed.data?.qrcode || parsed.qrcode || '';
+    } catch (e) { /* ignore */ }
+
+    if (!qrcode) {
+      return res.status(502).json({ error: 'QR não disponível. Tente novamente em instantes.', detail: qrRes.data });
+    }
+    // qrcode is a full data URI — strip prefix for the frontend
+    const base64 = qrcode.replace(/^data:image\/png;base64,/, '');
+    res.json({ success: true, base64, code: '', instance_name: name });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Check connection status of an instance (Evolution Go /instance/status — LoggedIn)
+app.get('/api/whatsapp/instances/:name/status', async (req, res) => {
+  try {
+    const user = await getUserAsync(req);
+    if (!user) return res.status(401).json({ error: 'Não autorizado' });
+    const name = req.params.name;
+
+    const inst = await pool.query(`SELECT * FROM public.whatsapp_instances WHERE instance_name = $1`, [name]);
+    if (inst.rows.length === 0) return res.status(404).json({ error: 'Instância não encontrada' });
+    if (user.role !== 'admin' && inst.rows[0].user_id !== user.id) {
+      return res.status(403).json({ error: 'Acesso negado' });
+    }
+    const row = inst.rows[0];
+
+    let connected = row.status === 'connected';
+    let number = row.number || '';
+    try {
+      const stRes = await evoRequest('GET', `/instance/status?instanceId=${encodeURIComponent(row.evo_instance_id)}`, null, row.instance_token);
+      const parsed = JSON.parse(stRes.data);
+      const data = parsed.data || parsed;
+      connected = data.LoggedIn === true || data.loggedIn === true;
+      if (data.jid) number = String(data.jid).split(':')[0];
+    } catch (e) { /* keep db state */ }
+
+    await pool.query(`UPDATE public.whatsapp_instances SET status = $1, number = $2, updated_at = NOW() WHERE id = $3`,
+      [connected ? 'connected' : 'disconnected', number, row.id]);
+
+    res.json({ success: true, instance_name: name, connected, status: connected ? 'connected' : 'disconnected', number });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Delete an instance
+app.delete('/api/whatsapp/instances/:name', async (req, res) => {
+  try {
+    const user = await getUserAsync(req);
+    if (!user) return res.status(401).json({ error: 'Não autorizado' });
+    const name = req.params.name;
+
+    const inst = await pool.query(`SELECT * FROM public.whatsapp_instances WHERE instance_name = $1`, [name]);
+    if (inst.rows.length === 0) return res.status(404).json({ error: 'Instância não encontrada' });
+    if (user.role !== 'admin' && inst.rows[0].user_id !== user.id) {
+      return res.status(403).json({ error: 'Acesso negado' });
+    }
+
+    try { await evoRequest('DELETE', `/instance/delete/${encodeURIComponent(inst.rows[0].evo_instance_id)}`); } catch (e) { /* ignore */ }
+    await pool.query(`DELETE FROM public.whatsapp_instances WHERE id = $1`, [inst.rows[0].id]);
+    res.json({ success: true, message: 'Instância removida' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ============================================================
+// Demo Request — contact form + welcome email (Resend)
+// ============================================================
+app.post('/api/demo/request', async (req, res) => {
+  try {
+    const { name, email, phone, company } = req.body || {};
+    if (!name || !email) return res.status(400).json({ error: 'Nome e e-mail são obrigatórios' });
+
+    const inserted = await pool.query(`
+      INSERT INTO public.demo_requests (name, email, phone, company, status)
+      VALUES ($1, $2, $3, $4, 'liberado') RETURNING id
+    `, [String(name).trim(), String(email).trim().toLowerCase(), phone || '', company || '']);
+
+    let emailSent = false;
+    try {
+      const r = await sendWelcomeEmail(String(name).trim(), String(email).trim().toLowerCase());
+      emailSent = r.status >= 200 && r.status < 300;
+    } catch (e) {
+      console.error('[demo] email error:', e.message);
+    }
+
+    res.json({ success: true, message: 'Bem-vindo ao Arx Content Factory! Demonstração liberada automaticamente.', email_sent: emailSent });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ============================================================
+// Social Accounts (per-client Instagram / LinkedIn OAuth)
+// ============================================================
+const PUBLIC_BASE_URL = process.env.PUBLIC_BASE_URL || 'https://conteudos.icarodev.cloud';
+const INSTAGRAM_CLIENT_ID = process.env.INSTAGRAM_CLIENT_ID || '';
+const INSTAGRAM_CLIENT_SECRET = process.env.INSTAGRAM_CLIENT_SECRET || '';
+const LINKEDIN_CLIENT_ID = process.env.LINKEDIN_CLIENT_ID || '';
+const LINKEDIN_CLIENT_SECRET = process.env.LINKEDIN_CLIENT_SECRET || '';
+
+function httpsJson(method, url, headers, body) {
+  return new Promise((resolve, reject) => {
+    const u = new URL(url);
+    const payload = body ? JSON.stringify(body) : null;
+    const req = https.request({
+      hostname: u.hostname, port: 443, path: u.pathname + u.search, method,
+      headers: { 'Content-Type': 'application/json', ...(payload ? { 'Content-Length': Buffer.byteLength(payload) } : {}), ...headers },
+    }, (res) => {
+      let data = '';
+      res.on('data', c => data += c);
+      res.on('end', () => {
+        let json = null; try { json = JSON.parse(data); } catch (e) {}
+        resolve({ status: res.statusCode, body: json, raw: data });
+      });
+    });
+    req.on('error', reject);
+    if (payload) req.write(payload);
+    req.end();
+  });
+}
+
+function httpsFormPost(url, fields) {
+  const body = Object.entries(fields).map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`).join('&');
+  return new Promise((resolve, reject) => {
+    const u = new URL(url);
+    const req = https.request({
+      hostname: u.hostname, port: 443, path: u.pathname + u.search, method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'Content-Length': Buffer.byteLength(body) },
+    }, (res) => {
+      let data = '';
+      res.on('data', c => data += c);
+      res.on('end', () => {
+        let json = null; try { json = JSON.parse(data); } catch (e) {}
+        resolve({ status: res.statusCode, body: json, raw: data });
+      });
+    });
+    req.on('error', reject);
+    req.write(body);
+    req.end();
+  });
+}
+
+const oauthStates = new Map(); // state -> { platform, user_id, expires_at }
+
+// GET /api/social/connect/:platform — generate OAuth URL (redirect_uri flow)
+app.get('/api/social/connect/:platform', async (req, res) => {
+  try {
+    const user = await getUserAsync(req);
+    if (!user) return res.status(401).json({ error: 'Não autorizado' });
+    const platform = req.params.platform;
+    if (!['instagram', 'linkedin'].includes(platform)) return res.status(400).json({ error: 'Plataforma inválida' });
+
+    if (platform === 'instagram' && user.role !== 'admin' && (!req.body?.plan?.has_instagram)) { /* plan check happens client-side; skip server gate */ }
+    if (platform === 'linkedin' && !process.env.LINKEDIN_CLIENT_ID) return res.status(400).json({ error: 'LinkedIn não configurado no servidor' });
+    if (platform === 'instagram' && !process.env.INSTAGRAM_CLIENT_ID) return res.status(400).json({ error: 'Instagram não configurado no servidor' });
+
+    const state = crypto.randomBytes(16).toString('hex');
+    oauthStates.set(state, { platform, user_id: user.id, expires_at: Date.now() + 10 * 60 * 1000 });
+
+    let url = '';
+    if (platform === 'instagram') {
+      url = `https://api.instagram.com/oauth/authorize?enable_fb_login=0&force_authentication=1&client_id=${INSTAGRAM_CLIENT_ID}&redirect_uri=${encodeURIComponent(PUBLIC_BASE_URL + '/api/social/callback/instagram')}&response_type=code&scope=${encodeURIComponent('instagram_business_basic,instagram_business_content_publish')}&state=${state}`;
+    } else {
+      url = `https://www.linkedin.com/oauth/v2/authorization?response_type=code&client_id=${LINKEDIN_CLIENT_ID}&redirect_uri=${encodeURIComponent(PUBLIC_BASE_URL + '/api/social/callback/linkedin')}&scope=${encodeURIComponent('openid,profile,email,w_member_social')}&state=${state}`;
+    }
+    res.json({ success: true, redirect_url: url, state });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/social/callback/:platform — OAuth callback (public)
+app.get('/api/social/callback/:platform', async (req, res) => {
+  const platform = req.params.platform;
+  const { code, state, error, error_description } = req.query;
+  if (error) return res.redirect(PUBLIC_BASE_URL + '/dashboard?social_error=' + encodeURIComponent(error_description || error));
+  if (!code) return res.status(400).send('Código de autorização ausente');
+
+  const st = oauthStates.get(state);
+  if (!st || st.platform !== platform || st.expires_at < Date.now()) {
+    return res.redirect(PUBLIC_BASE_URL + '/dashboard?social_error=' + encodeURIComponent('Estado inválido ou expirado. Tente novamente.'));
+  }
+  oauthStates.delete(state);
+
+  try {
+    let access_token = '', refresh_token = '', expires_at = null, account_id = '', handle = '';
+
+    if (platform === 'instagram') {
+      const tok = await httpsFormPost('https://api.instagram.com/oauth/access_token', {
+        client_id: INSTAGRAM_CLIENT_ID, client_secret: INSTAGRAM_CLIENT_SECRET,
+        grant_type: 'authorization_code', redirect_uri: PUBLIC_BASE_URL + '/api/social/callback/instagram', code,
+      });
+      if (tok.status >= 400 || !tok.body?.access_token) throw new Error('Falha no token Instagram: ' + (tok.raw || tok.status));
+      access_token = tok.body.access_token;
+      account_id = String(tok.body.user_id || '');
+      const lg = await httpsFormPost('https://graph.instagram.com/access_token', {
+        grant_type: 'ig_exchange_token', client_secret: INSTAGRAM_CLIENT_SECRET, access_token,
+      });
+      if (lg.body?.access_token) {
+        access_token = lg.body.access_token;
+        if (lg.body.expires_in) expires_at = new Date(Date.now() + Number(lg.body.expires_in) * 1000);
+      }
+      const me = await httpsJson('GET', `https://graph.instagram.com/me?fields=username&access_token=${access_token}`);
+      handle = me.body?.username || '';
+    } else {
+      const tok = await httpsFormPost('https://www.linkedin.com/oauth/v2/accessToken', {
+        grant_type: 'authorization_code', code, redirect_uri: PUBLIC_BASE_URL + '/api/social/callback/linkedin',
+        client_id: LINKEDIN_CLIENT_ID, client_secret: LINKEDIN_CLIENT_SECRET,
+      });
+      if (tok.status >= 400 || !tok.body?.access_token) throw new Error('Falha no token LinkedIn: ' + (tok.raw || tok.status));
+      access_token = tok.body.access_token;
+      if (tok.body.expires_in) expires_at = new Date(Date.now() + Number(tok.body.expires_in) * 1000);
+      const me = await httpsJson('GET', 'https://api.linkedin.com/v2/userinfo', { 'Authorization': 'Bearer ' + access_token });
+      account_id = me.body?.sub || '';
+      handle = me.body?.name || me.body?.preferred_username || '';
+    }
+
+    await pool.query(`
+      INSERT INTO public.social_accounts (user_id, platform, handle, account_id, access_token, refresh_token, token_expires_at, status, updated_at)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, 'active', NOW())
+      ON CONFLICT (user_id, platform) DO UPDATE SET
+        handle = EXCLUDED.handle, account_id = EXCLUDED.account_id,
+        access_token = EXCLUDED.access_token, refresh_token = EXCLUDED.refresh_token,
+        token_expires_at = EXCLUDED.token_expires_at, status = 'active', updated_at = NOW()
+    `, [st.user_id, platform, handle, account_id, access_token, refresh_token || '', expires_at]);
+
+    res.redirect(PUBLIC_BASE_URL + '/dashboard?social=connected&platform=' + platform);
+  } catch (err) {
+    res.redirect(PUBLIC_BASE_URL + '/dashboard?social_error=' + encodeURIComponent(err.message));
+  }
+});
+
+// GET /api/social/accounts — list own (admin: all)
+app.get('/api/social/accounts', async (req, res) => {
+  try {
+    const user = await getUserAsync(req);
+    if (!user) return res.status(401).json({ error: 'Não autorizado' });
+    const params = [];
+    let where = '';
+    if (user.role !== 'admin') { where = 'WHERE user_id = $1'; params.push(user.id); }
+    const r = await pool.query(`
+      SELECT id, user_id, platform, handle, account_id, token_expires_at, status,
+             CASE WHEN access_token IS NOT NULL AND access_token <> '' THEN '••••••••' ELSE '' END AS token_masked,
+             created_at
+      FROM public.social_accounts ${where} ORDER BY platform ASC`, params);
+    res.json({ success: true, accounts: r.rows });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// DELETE /api/social/accounts/:id — disconnect (owner/admin)
+app.delete('/api/social/accounts/:id', async (req, res) => {
+  try {
+    const user = await getUserAsync(req);
+    if (!user) return res.status(401).json({ error: 'Não autorizado' });
+    const r = await pool.query(`SELECT * FROM public.social_accounts WHERE id = $1`, [req.params.id]);
+    if (r.rows.length === 0) return res.status(404).json({ error: 'Conta não encontrada' });
+    if (user.role !== 'admin' && r.rows[0].user_id !== user.id) return res.status(403).json({ error: 'Acesso negado' });
+    await pool.query(`DELETE FROM public.social_accounts WHERE id = $1`, [req.params.id]);
+    res.json({ success: true, message: 'Conta desconectada' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/social/refresh/:id — re-run OAuth for a platform (re-connect)
+app.post('/api/social/refresh/:id', async (req, res) => {
+  try {
+    const user = await getUserAsync(req);
+    if (!user) return res.status(401).json({ error: 'Não autorizado' });
+    const r = await pool.query(`SELECT * FROM public.social_accounts WHERE id = $1`, [req.params.id]);
+    if (r.rows.length === 0) return res.status(404).json({ error: 'Conta não encontrada' });
+    if (user.role !== 'admin' && r.rows[0].user_id !== user.id) return res.status(403).json({ error: 'Acesso negado' });
+    const platform = r.rows[0].platform;
+    const state = crypto.randomBytes(16).toString('hex');
+    oauthStates.set(state, { platform, user_id: r.rows[0].user_id, expires_at: Date.now() + 10 * 60 * 1000 });
+    let url = '';
+    if (platform === 'instagram') {
+      url = `https://api.instagram.com/oauth/authorize?enable_fb_login=0&force_authentication=1&client_id=${INSTAGRAM_CLIENT_ID}&redirect_uri=${encodeURIComponent(PUBLIC_BASE_URL + '/api/social/callback/instagram')}&response_type=code&scope=${encodeURIComponent('instagram_business_basic,instagram_business_content_publish')}&state=${state}`;
+    } else if (platform === 'linkedin') {
+      url = `https://www.linkedin.com/oauth/v2/authorization?response_type=code&client_id=${LINKEDIN_CLIENT_ID}&redirect_uri=${encodeURIComponent(PUBLIC_BASE_URL + '/api/social/callback/linkedin')}&scope=${encodeURIComponent('openid,profile,email,w_member_social')}&state=${state}`;
+    } else {
+      return res.status(400).json({ error: 'Plataforma sem OAuth' });
+    }
+    res.json({ success: true, redirect_url: url, state });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/suggestions — AI topic suggestions per user niche (admin: defaults)
+app.get('/api/suggestions', async (req, res) => {
+  try {
+    const user = await getUserAsync(req);
+    if (!user) return res.status(401).json({ error: 'Não autorizado' });
+    const DEFAULT = [
+      { topic: '5 Certificações Tech que Pagam +R$15k em 2026', score: 95, reason: 'Alta demanda + salário alto' },
+      { topic: 'React 20 vs Next.js 18: Qual Escolher em 2026?', score: 88, reason: 'Comparativo popular' },
+      { topic: 'Stack Analysis: Crise no Brasil e Carreira Dev', score: 82, reason: 'Tema quente do momento' },
+      { topic: '10 Ferramentas DevOps que Todo Sênior Usa', score: 79, reason: 'Utilitário evergreen' },
+      { topic: 'Como Negociar Salário como Dev em 2026', score: 76, reason: 'Alto engajamento garantido' },
+    ];
+    res.json({ success: true, suggestions: DEFAULT });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
