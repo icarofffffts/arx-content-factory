@@ -93,6 +93,17 @@ export interface ShortLink {
   topic?: string
 }
 
+export interface SocialAccount {
+  id: string
+  platform: string
+  handle?: string | null
+  account_id?: string | null
+  status: string
+  token_expires_at?: string | null
+  created_at: string
+  token_masked?: string | null
+}
+
 export interface WhatsAppInstance {
   id: string
   user_id: string | null

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { api } from '../lib/api'
+import type { SocialAccount } from '../types'
 import WhatsAppModal from '../components/WhatsAppModal'
 import ConnectWhatsAppModal from '../components/ConnectWhatsAppModal'
 import DemoRequestModal from '../components/DemoRequestModal'
@@ -50,6 +51,12 @@ export default function DashboardCEO({ user, plan, onLogout, onNavigate }: {
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [instances, setInstances] = useState<any[]>([])
   const [instancesLoading, setInstancesLoading] = useState(false)
+  const [socialAccounts, setSocialAccounts] = useState<SocialAccount[]>([])
+  const [socialLoading, setSocialLoading] = useState(false)
+  const [socialError, setSocialError] = useState('')
+  const [suggestions, setSuggestions] = useState<{ topic: string; score: number; reason: string }[]>([])
+  const [suggestionsLoading, setSuggestionsLoading] = useState(true)
+  const [suggestionsError, setSuggestionsError] = useState('')
   const [connectOpen, setConnectOpen] = useState(false)
   const [demoOpen, setDemoOpen] = useState(false)
   const [demoFormOpen, setDemoFormOpen] = useState(false)
@@ -64,8 +71,54 @@ export default function DashboardCEO({ user, plan, onLogout, onNavigate }: {
     finally { setInstancesLoading(false) }
   }
 
+  async function loadSocialAccounts() {
+    setSocialLoading(true); setSocialError('')
+    try {
+      const r = await api.socialAccounts()
+      if (r.success) setSocialAccounts(r.accounts || [])
+      else setSocialError(r.error || 'Erro ao carregar contas')
+    } catch (e: any) {
+      setSocialError(e.message || 'Erro ao carregar contas')
+    }
+    finally { setSocialLoading(false) }
+  }
+
+  async function handleConnect(platform: string) {
+    try {
+      const r = await api.socialConnect(platform)
+      if (r.redirect_url) window.location.href = r.redirect_url
+      else alert(r.error || 'Erro ao conectar')
+    } catch (e: any) {
+      alert(e.message || 'Erro ao conectar')
+    }
+  }
+
+  async function handleRefreshToken(id: string) {
+    try {
+      const r = await api.refreshSocialAccount(id)
+      if (!r.success) alert(r.error || 'Erro ao atualizar token')
+      loadSocialAccounts()
+    } catch (e: any) {
+      alert(e.message || 'Erro ao atualizar token')
+    }
+  }
+
+  async function handleDisconnect(id: string) {
+    if (!confirm('Desconectar esta conta?')) return
+    try {
+      const r = await api.deleteSocialAccount(id)
+      if (!r.success) alert(r.error || 'Erro ao desconectar')
+      loadSocialAccounts()
+    } catch (e: any) {
+      alert(e.message || 'Erro ao desconectar')
+    }
+  }
+
   useEffect(() => {
-    if (subPage === 'social') loadInstances()
+    if (subPage === 'social') {
+      loadInstances()
+      loadSocialAccounts()
+    }
   }, [subPage])
 
   useEffect(() => {
@@ -78,6 +131,16 @@ export default function DashboardCEO({ user, plan, onLogout, onNavigate }: {
       api.posts().then(setPosts).catch(() => {}),
       api.drafts().then(setDrafts).catch(() => {}),
     ]).finally(() => setLoading(false))
+  }, [])
+
+  useEffect(() => {
+    api.suggestions()
+      .then(r => {
+        setSuggestions(Array.isArray(r) ? r : (r.suggestions || []))
+        setSuggestionsError('')
+      })
+      .catch((e: any) => setSuggestionsError(e.message || 'Erro ao carregar sugestões'))
+      .finally(() => setSuggestionsLoading(false))
   }, [])
 
   async function refreshPosts() {
@@ -131,6 +194,31 @@ export default function DashboardCEO({ user, plan, onLogout, onNavigate }: {
     { key: 'paused', label: 'Pausados' },
     { key: 'published', label: 'Publicados' },
   ]
+
+  const SOCIAL_PLATFORMS = [
+    { platform: 'instagram', name: 'Instagram', icon: '📷', flag: 'has_instagram' },
+    { platform: 'linkedin', name: 'LinkedIn', icon: '💼', flag: 'has_linkedin' },
+    { platform: 'github', name: 'GitHub', icon: '🐙', flag: 'has_github' },
+  ]
+  const enabledPlatforms = SOCIAL_PLATFORMS.filter(p => plan?.[p.flag])
+
+  function socialStatusLabel(status: string) {
+    switch (status) {
+      case 'expired': return 'Expirado'
+      case 'revoked': return 'Revogado'
+      default: return 'Ativo'
+    }
+  }
+  const socialStatusColors: Record<string, string> = {
+    active: 'bg-green-400/10 text-green-400',
+    expired: 'bg-yellow-400/10 text-yellow-400',
+    revoked: 'bg-red-400/10 text-red-400',
+  }
+  const socialDotColors: Record<string, string> = {
+    active: 'bg-green-400 shadow-lg shadow-green-400/30',
+    expired: 'bg-yellow-400 shadow-lg shadow-yellow-400/30',
+    revoked: 'bg-red-400 shadow-lg shadow-red-400/30',
+  }
 
   return (
     <div className="min-h-screen bg-surface-900 flex">
@@ -299,32 +387,123 @@ export default function DashboardCEO({ user, plan, onLogout, onNavigate }: {
                 <h2 className="font-bold">Sugestões de Conteúdo IA</h2>
               </div>
               <p className="text-gray-500 text-sm mb-6 ml-8">Tópicos gerados por IA baseados nas tendências atuais</p>
-              {[
-                { topic: '5 Certificações Tech que Pagam +R$15k em 2026', score: 95, reason: 'Alta demanda + salário alto' },
-                { topic: 'React 20 vs Next.js 18: Qual Escolher em 2026?', score: 88, reason: 'Comparativo popular' },
-                { topic: 'Stack Analysis: Crise no Brasil e Carreira Dev', score: 82, reason: 'Tema quente do momento' },
-                { topic: '10 Ferramentas DevOps que Todo Sênior Usa', score: 79, reason: 'Utilitário evergreen' },
-                { topic: 'Como Negociar Salário como Dev em 2026', score: 76, reason: 'Alto engajamento garantido' },
-              ].map((s, i) => (
-                <div key={i} className="flex items-start gap-4 p-4 rounded-xl bg-glass hover:bg-glass-hover transition-all mb-2 group">
-                  <div className="relative">
-                    <div className="text-2xl font-black text-accent">{s.score}%</div>
-                    <div className="text-[10px] text-gray-600 text-center">score</div>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="font-medium text-sm">{s.topic}</div>
-                    <div className="text-xs text-gray-500 mt-1">{s.reason}</div>
-                  </div>
-                  <button className="btn-accent text-xs px-4 py-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                    Gerar
-                  </button>
+              {suggestionsLoading ? (
+                <div className="space-y-2">
+                  <div className="loading-pulse h-16" />
+                  <div className="loading-pulse h-16" />
+                  <div className="loading-pulse h-16" />
                 </div>
-              ))}
+              ) : suggestionsError ? (
+                <div className="text-center py-10 text-sm text-red-400">{suggestionsError}</div>
+              ) : suggestions.length === 0 ? (
+                <div className="text-center py-10 text-gray-500">Nenhuma sugestão disponível ainda</div>
+              ) : (
+                suggestions.map((s, i) => (
+                  <div key={i} className="flex items-start gap-4 p-4 rounded-xl bg-glass hover:bg-glass-hover transition-all mb-2 group">
+                    <div className="relative">
+                      <div className="text-2xl font-black text-accent">{s.score}%</div>
+                      <div className="text-[10px] text-gray-600 text-center">score</div>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium text-sm">{s.topic}</div>
+                      <div className="text-xs text-gray-500 mt-1">{s.reason}</div>
+                    </div>
+                    <button className="btn-accent text-xs px-4 py-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                      Gerar
+                    </button>
+                  </div>
+                ))
+              )}
             </div>
           )}
 
           {subPage === 'social' && (
             <div className="space-y-6">
+              <div className="card-glass p-6">
+                <div className="flex flex-wrap items-center gap-3 mb-4">
+                  <span className="w-10 h-10 bg-accent/20 rounded-xl flex items-center justify-center text-lg">🔗</span>
+                  <div className="flex-1">
+                    <h2 className="font-bold">Contas conectadas</h2>
+                    <p className="text-xs text-gray-500">Instagram, LinkedIn e GitHub para publicação automática</p>
+                  </div>
+                </div>
+
+                {socialLoading ? (
+                  <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div className="loading-pulse h-32" />
+                    <div className="loading-pulse h-32" />
+                    <div className="loading-pulse h-32" />
+                  </div>
+                ) : socialError ? (
+                  <div className="text-center py-10 text-sm text-red-400">{socialError}</div>
+                ) : enabledPlatforms.length === 0 ? (
+                  <div className="text-center py-10 text-gray-500">
+                    Seu plano não inclui contas sociais conectadas.{' '}
+                    <button onClick={() => onNavigate('pricing')} className="text-accent">Fazer upgrade</button>
+                  </div>
+                ) : (
+                  <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {enabledPlatforms.map(p => {
+                      const account = socialAccounts.find(a => a.platform === p.platform)
+                      if (account) {
+                        return (
+                          <div key={p.platform} className="bg-glass hover:bg-glass-hover transition-all rounded-xl p-4 group">
+                            <div className="flex items-center justify-between mb-3">
+                              <div className="flex items-center gap-3 min-w-0">
+                                <span className="w-10 h-10 bg-accent/10 rounded-xl flex items-center justify-center text-lg">{p.icon}</span>
+                                <div className="min-w-0">
+                                  <div className="font-semibold text-sm">{p.name}</div>
+                                  <div className="text-[11px] text-gray-500 truncate">
+                                    {account.handle ? `@${account.handle}` : (account.token_masked || account.account_id || 'conta conectada')}
+                                  </div>
+                                </div>
+                              </div>
+                              <div className={`flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap ${socialStatusColors[account.status] || 'bg-gray-400/10 text-gray-400'}`}>
+                                <div className={`w-2 h-2 rounded-full ${socialDotColors[account.status] || 'bg-gray-400'}`} />
+                                {socialStatusLabel(account.status)}
+                              </div>
+                            </div>
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="text-xs text-gray-500 truncate">
+                                {account.token_expires_at
+                                  ? `Token expira ${new Date(account.token_expires_at).toLocaleDateString('pt-BR')}`
+                                  : 'Token ativo'}
+                              </span>
+                              <div className="flex items-center gap-1 whitespace-nowrap">
+                                <button
+                                  onClick={() => handleRefreshToken(account.id)}
+                                  className="text-xs text-blue-400/70 hover:text-blue-300 px-2 py-1 rounded-lg hover:bg-blue-400/10 transition-all opacity-0 group-hover:opacity-100">
+                                  Atualizar token
+                                </button>
+                                <button
+                                  onClick={() => handleDisconnect(account.id)}
+                                  className="text-xs text-red-400/60 hover:text-red-300 px-2 py-1 rounded-lg hover:bg-red-400/10 transition-all opacity-0 group-hover:opacity-100">
+                                  Desconectar
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        )
+                      }
+                      return (
+                        <div key={p.platform} className="card-glass p-4 card-hover flex flex-col">
+                          <div className="flex items-center gap-3 mb-4">
+                            <span className="w-10 h-10 bg-accent/10 rounded-xl flex items-center justify-center text-lg">{p.icon}</span>
+                            <div>
+                              <div className="font-semibold text-sm">{p.name}</div>
+                              <div className="text-[11px] text-gray-500">Não conectado</div>
+                            </div>
+                          </div>
+                          <button onClick={() => handleConnect(p.platform)} className="btn-accent text-xs px-4 py-2 mt-auto">
+                            Conectar {p.name}
+                          </button>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+
               <div className="card-glass p-6">
                 <div className="flex flex-wrap items-center gap-3 mb-4">
                   <span className="w-10 h-10 bg-green-500/20 rounded-xl flex items-center justify-center text-lg">💬</span>

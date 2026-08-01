@@ -1,3 +1,5 @@
+import type { SocialAccount } from '../types'
+
 const API = ''
 
 function getToken(): string | null {
@@ -139,4 +141,21 @@ export const api = {
     request<{ success: boolean; message: string; email_sent?: boolean; error?: string }>('/api/demo/request', {
       method: 'POST', body: JSON.stringify(data)
     }),
+
+  // Social accounts (Instagram / LinkedIn / GitHub)
+  socialAccounts: () =>
+    request<{ success: boolean; accounts: SocialAccount[]; error?: string }>('/api/social/accounts'),
+
+  socialConnect: (platform: string) =>
+    request<{ success?: boolean; redirect_url?: string; error?: string }>(`/api/social/connect/${encodeURIComponent(platform)}`),
+
+  deleteSocialAccount: (id: string) =>
+    request<{ success: boolean; error?: string }>(`/api/social/accounts/${encodeURIComponent(id)}`, { method: 'DELETE' }),
+
+  refreshSocialAccount: (id: string) =>
+    request<{ success: boolean; error?: string }>(`/api/social/refresh/${encodeURIComponent(id)}`, { method: 'POST' }),
+
+  // AI Suggestions
+  suggestions: () =>
+    request<{ success?: boolean; suggestions?: { topic: string; score: number; reason: string }[]; error?: string } | { topic: string; score: number; reason: string }[]>('/api/suggestions'),
 }
