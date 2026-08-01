@@ -5,6 +5,7 @@ import WhatsAppModal from '../components/WhatsAppModal'
 import ConnectWhatsAppModal from '../components/ConnectWhatsAppModal'
 import DemoRequestModal from '../components/DemoRequestModal'
 import PostCard from '../components/PostCard'
+import AIChatWidget from '../components/AIChatWidget'
 
 type SubPage = 'dashboard' | 'content' | 'suggestions' | 'social' | 'settings'
 
@@ -764,6 +765,7 @@ export default function DashboardCEO({ user, plan, onLogout, onNavigate }: {
       {demoFormOpen && (
         <DemoRequestModal onClose={() => setDemoFormOpen(false)} onSuccess={handleDemoSuccess} />
       )}
+      <AIChatWidget />
     </div>
   )
 }

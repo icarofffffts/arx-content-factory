@@ -73,6 +73,11 @@ export const api = {
       method: 'POST', body: JSON.stringify({ topic, channel: channel || 'all', publish_mode: publish_mode || 'now', template: template || 'clean' })
     }),
 
+  aiChat: (message: string, history: { role: string; content: string }[], context?: string) =>
+    request<{ success: boolean; reply: string }>('/api/ai/chat', {
+      method: 'POST', body: JSON.stringify({ message, history, context })
+    }),
+
   publishNow: (id: string) =>
     request<{ success: boolean }>(`/api/posts/${id}/publish-now`, { method: 'POST' }),
 

@@ -904,6 +904,43 @@ app.get('/api/drafts', async (req, res) => {
   }
 });
 
+// 18.5. API: AI Chat Assistant (proxy para webhook n8n content-factory-chat)
+app.post('/api/ai/chat', async (req, res) => {
+  try {
+    const user = await getUserAsync(req);
+    if (!user) return res.status(401).json({ error: 'Não autorizado' });
+    const { message, history, context } = req.body;
+    if (!message || !String(message).trim()) return res.status(400).json({ error: 'Mensagem obrigatória!' });
+
+    const body = JSON.stringify({ message: String(message), history: Array.isArray(history) ? history : [], context: context || `Plano: ${user.plan || 'Gratuito'}` });
+
+    const reqN8n = https.request({
+      hostname: 'n8n.arxsolutions.cloud',
+      port: 443,
+      path: '/webhook/content-factory-chat',
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) }
+    }, (resN8n) => {
+      let data = '';
+      resN8n.on('data', c => data += c);
+      resN8n.on('end', () => {
+        try {
+          const parsed = JSON.parse(data);
+          res.json({ success: true, reply: parsed.text || parsed.reply || parsed.output || data });
+        } catch {
+          res.json({ success: true, reply: data });
+        }
+      });
+    });
+    reqN8n.on('error', (e) => res.status(502).json({ error: 'Falha ao contatar assistente: ' + e.message }));
+    reqN8n.setTimeout(45000, () => { reqN8n.destroy(); res.status(504).json({ error: 'Assistente demorou demais. Tente novamente.' }); });
+    reqN8n.write(body);
+    reqN8n.end();
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // 19. API: Approve Draft (draft -> scheduled)
 app.post('/api/drafts/:id/approve', async (req, res) => {
   try {
