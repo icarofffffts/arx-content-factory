@@ -232,6 +232,8 @@ app.use(async (req, res, next) => {
   if (req.path === '/api/login' || req.path === '/api/v2/auth/login'
       || req.path === '/api/v2/auth/register' || req.path === '/api/v2/plans'
       || req.path === '/api/v2/plans/webhook'
+      || req.path === '/api/v1/me' || req.path === '/api/v1/posts'
+      || req.path === '/api/v1/generate' || req.path === '/api/v1/templates'
       || req.path === '/api/demo/request' || req.path.startsWith('/api/social/callback/')) {
     return next();
   }
@@ -1382,6 +1384,190 @@ app.post('/api/v2/plans/webhook', async (req, res) => {
       }
     }
     res.json({ received: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ============================================================
+// FASE 3 — Templates (marketplace), Whitelabel, Analytics, API pública
+// ============================================================
+
+// GET /api/templates — lista templates ativos
+app.get('/api/templates', async (req, res) => {
+  try {
+    const r = await pool.query(`SELECT id, name, slug, description, preview_url, accent_color, badge, sort_order FROM public.templates WHERE active = TRUE ORDER BY sort_order`);
+    res.json({ success: true, templates: r.rows });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/templates — cria template (só admin)
+app.post('/api/templates', async (req, res) => {
+  try {
+    const user = await getUserAsync(req);
+    if (!user || user.role !== 'admin') return res.status(403).json({ error: 'Apenas administradores' });
+    const { name, slug, description, preview_url, accent_color, badge } = req.body;
+    if (!name || !slug) return res.status(400).json({ error: 'name e slug obrigatórios' });
+    await pool.query(`
+      INSERT INTO public.templates (name, slug, description, preview_url, accent_color, badge)
+      VALUES ($1, $2, $3, $4, $5, $6)
+      ON CONFLICT (slug) DO UPDATE SET name = EXCLUDED.name, description = EXCLUDED.description,
+        preview_url = EXCLUDED.preview_url, accent_color = EXCLUDED.accent_color, badge = EXCLUDED.badge
+    `, [name, slug, description || '', preview_url || '', accent_color || '#8b5cf6', badge || 'Novo']);
+    res.json({ success: true, message: 'Template salvo!' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/admin/users — whitelabel: admin cria conta de cliente
+app.post('/api/admin/users', async (req, res) => {
+  try {
+    const user = await getUserAsync(req);
+    if (!user || user.role !== 'admin') return res.status(403).json({ error: 'Apenas administradores' });
+    const { email, password, full_name, plan_slug, niche } = req.body;
+    if (!email || !password) return res.status(400).json({ error: 'email e password obrigatórios' });
+    const existing = await pool.query('SELECT id FROM public.users WHERE email = $1', [email]);
+    if (existing.rows.length > 0) return res.status(409).json({ error: 'Email já cadastrado' });
+    const created = await pool.query(`
+      INSERT INTO public.users (email, password_hash, full_name, role, niche)
+      VALUES ($1, $2, $3, 'user', $4) RETURNING id, email, full_name
+    `, [email, password, full_name || email.split('@')[0], niche || '']);
+    const plan = await pool.query(`SELECT id FROM public.plans WHERE slug = $1 LIMIT 1`, [plan_slug || 'pro']);
+    if (plan.rows.length > 0) {
+      const expires = new Date();
+      expires.setMonth(expires.getMonth() + 1);
+      await pool.query(`
+        INSERT INTO public.user_plans (user_id, plan_id, status, billing_cycle, expires_at)
+        VALUES ($1, $2, 'active', 'monthly', $3)
+      `, [created.rows[0].id, plan.rows[0].id, expires]);
+    }
+    res.json({ success: true, user: created.rows[0], message: 'Cliente criado!' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/analytics — posts por dia + canal + status (para o gráfico)
+app.get('/api/analytics', async (req, res) => {
+  try {
+    const user = await getUserAsync(req);
+    if (!user) return res.status(401).json({ error: 'Não autorizado' });
+    const isAdmin = user.role === 'admin';
+    const params = [];
+    let where = '';
+    if (!isAdmin) { where = `WHERE user_id = $1`; params.push(user.id); }
+    const byDay = await pool.query(`
+      SELECT to_char(created_at AT TIME ZONE 'America/Sao_Paulo', 'YYYY-MM-DD') AS day, COUNT(*) AS total
+      FROM public.content_pipeline ${where}
+      GROUP BY day ORDER BY day DESC LIMIT 14
+    `, params);
+    const byStatus = await pool.query(`
+      SELECT status, COUNT(*) AS total FROM public.content_pipeline ${where} GROUP BY status ORDER BY total DESC
+    `, params);
+    const byChannel = await pool.query(`
+      SELECT COALESCE(NULLIF(channel,''),'all') AS channel, COUNT(*) AS total
+      FROM public.content_pipeline ${where} GROUP BY channel ORDER BY total DESC
+    `, params);
+    res.json({ success: true, by_day: byDay.rows, by_status: byStatus.rows, by_channel: byChannel.rows });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ============================================================
+// API PÚBLICA v1 (agências) — autenticação via X-API-Key
+// ============================================================
+async function apiKeyAuth(req) {
+  const key = req.headers['x-api-key'] || req.headers['authorization']?.replace('Bearer ', '');
+  if (!key) return null;
+  const r = await pool.query(`
+    SELECT ak.user_id, u.full_name, u.email
+    FROM public.api_keys ak JOIN public.users u ON ak.user_id = u.id
+    WHERE ak.key = $1
+  `, [key]);
+  if (r.rows.length === 0) return null;
+  await pool.query(`UPDATE public.api_keys SET last_used_at = NOW() WHERE key = $1`, [key]);
+  return r.rows[0];
+}
+
+// GET /api/v1/me — identifica a chave
+app.get('/api/v1/me', async (req, res) => {
+  const u = await apiKeyAuth(req);
+  if (!u) return res.status(401).json({ error: 'API key inválida' });
+  res.json({ success: true, user: { id: u.user_id, name: u.full_name, email: u.email } });
+});
+
+// GET /api/v1/posts — lista posts do dono da chave
+app.get('/api/v1/posts', async (req, res) => {
+  try {
+    const u = await apiKeyAuth(req);
+    if (!u) return res.status(401).json({ error: 'API key inválida' });
+    const r = await pool.query(`
+      SELECT id, topic, status, channel, video_status, created_at
+      FROM public.content_pipeline WHERE user_id = $1
+      ORDER BY created_at DESC LIMIT 50
+    `, [u.user_id]);
+    res.json({ success: true, posts: r.rows });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/v1/generate — agenda geração de conteúdo via API
+app.post('/api/v1/generate', async (req, res) => {
+  try {
+    const u = await apiKeyAuth(req);
+    if (!u) return res.status(401).json({ error: 'API key inválida' });
+    const { topic, channel, publish_mode, template } = req.body;
+    if (!topic) return res.status(400).json({ error: 'topic obrigatório' });
+    const params = new URLSearchParams({
+      topic: String(topic),
+      channel: channel || 'all',
+      publish_mode: publish_mode || 'now',
+      template: template || 'clean',
+      user_id: u.user_id
+    });
+    // Webhook do Fluxo 1 é GET-only
+    const reqN8n = https.get({
+      hostname: 'n8n.arxsolutions.cloud', port: 443,
+      path: `/webhook/content-factory?${params.toString()}`,
+      headers: { 'Accept': 'application/json' }
+    }, (resN8n) => {
+      resN8n.on('data', () => {});
+      resN8n.on('end', () => res.json({ success: true, message: 'Geração iniciada!', topic }));
+    });
+    reqN8n.on('error', () => res.status(502).json({ error: 'Falha ao contatar o gerador' }));
+    reqN8n.end();
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET/POST /api/v1/templates — templates públicos via API
+app.get('/api/v1/templates', async (req, res) => {
+  try {
+    const r = await pool.query(`SELECT name, slug, description, accent_color, badge FROM public.templates WHERE active = TRUE ORDER BY sort_order`);
+    res.json({ success: true, templates: r.rows });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/me/api-key — gera (ou lista) a API key do usuário logado
+app.post('/api/me/api-key', async (req, res) => {
+  try {
+    const user = await getUserAsync(req);
+    if (!user) return res.status(401).json({ error: 'Não autorizado' });
+    const existing = await pool.query(`SELECT key, name, created_at, last_used_at FROM public.api_keys WHERE user_id = $1 ORDER BY created_at DESC LIMIT 1`, [user.id]);
+    if (existing.rows.length > 0) {
+      return res.json({ success: true, api_key: existing.rows[0], reused: true });
+    }
+    const newKey = 'arx_' + crypto.randomBytes(24).toString('hex');
+    await pool.query(`INSERT INTO public.api_keys (user_id, name, key) VALUES ($1, 'Dashboard', $2)`, [user.id, newKey]);
+    res.json({ success: true, api_key: { key: newKey, name: 'Dashboard' }, reused: false });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

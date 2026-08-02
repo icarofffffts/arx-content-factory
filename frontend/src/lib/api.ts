@@ -86,6 +86,21 @@ export const api = {
       method: 'PUT', body: JSON.stringify({ settings })
     }),
 
+  templates: () =>
+    request<{ success: boolean; templates: any[] }>('/api/templates'),
+
+  saveTemplate: (t: any) =>
+    request<{ success: boolean; message: string }>('/api/templates', { method: 'POST', body: JSON.stringify(t) }),
+
+  analytics: () =>
+    request<{ success: boolean; by_day: any[]; by_status: any[]; by_channel: any[] }>('/api/analytics'),
+
+  myApiKey: () =>
+    request<{ success: boolean; api_key: any; reused?: boolean }>('/api/me/api-key', { method: 'POST' }),
+
+  adminCreateUser: (u: any) =>
+    request<{ success: boolean; message: string; user?: any }>('/api/admin/users', { method: 'POST', body: JSON.stringify(u) }),
+
   publishNow: (id: string) =>
     request<{ success: boolean }>(`/api/posts/${id}/publish-now`, { method: 'POST' }),
 

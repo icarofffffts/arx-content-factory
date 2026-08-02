@@ -74,6 +74,13 @@ export default function DashboardCEO({ user, plan, onLogout, onNavigate }: {
   const [settingsLoading, setSettingsLoading] = useState(false)
   const [settingsSaving, setSettingsSaving] = useState(false)
   const [settingsMsg, setSettingsMsg] = useState<{ ok: boolean; text: string } | null>(null)
+  const [analytics, setAnalytics] = useState<{ by_day: any[]; by_status: any[]; by_channel: any[] } | null>(null)
+  const [marketTemplates, setMarketTemplates] = useState<any[]>([])
+  const [apiKeyInfo, setApiKeyInfo] = useState<any>(null)
+  const [newClient, setNewClient] = useState({ email: '', password: '', full_name: '', plan_slug: 'pro', niche: '' })
+  const [clientMsg, setClientMsg] = useState<{ ok: boolean; text: string } | null>(null)
+  const [newTemplate, setNewTemplate] = useState({ name: '', slug: '', description: '', accent_color: '#8b5cf6', badge: 'Novo' })
+  const [templateMsg, setTemplateMsg] = useState<{ ok: boolean; text: string } | null>(null)
   const [connectOpen, setConnectOpen] = useState(false)
   const [demoOpen, setDemoOpen] = useState(false)
   const [demoFormOpen, setDemoFormOpen] = useState(false)
@@ -259,8 +266,55 @@ export default function DashboardCEO({ user, plan, onLogout, onNavigate }: {
   const stripeConfigured = !!(settings.stripe_secret_key)
   const videoConfigured = !!(settings.video_api_key)
 
+  async function loadAnalytics() {
+    try {
+      const r = await api.analytics()
+      setAnalytics({ by_day: r.by_day || [], by_status: r.by_status || [], by_channel: r.by_channel || [] })
+    } catch { /* ignore */ }
+  }
+
+  async function loadMarketTemplates() {
+    try {
+      const r = await api.templates()
+      setMarketTemplates(r.templates || [])
+    } catch { /* ignore */ }
+  }
+
+  async function loadApiKey() {
+    try {
+      const r = await api.myApiKey()
+      setApiKeyInfo(r.api_key || null)
+    } catch { /* ignore */ }
+  }
+
+  async function handleCreateClient() {
+    if (!newClient.email || !newClient.password) { setClientMsg({ ok: false, text: 'Email e senha obrigatórios' }); return }
+    setClientMsg(null)
+    try {
+      const r = await api.adminCreateUser(newClient)
+      setClientMsg({ ok: true, text: r.message || 'Cliente criado!' })
+      setNewClient({ email: '', password: '', full_name: '', plan_slug: 'pro', niche: '' })
+    } catch (e: any) {
+      setClientMsg({ ok: false, text: e.message || 'Erro ao criar cliente' })
+    }
+  }
+
+  async function handleSaveTemplate() {
+    if (!newTemplate.name || !newTemplate.slug) { setTemplateMsg({ ok: false, text: 'Nome e slug obrigatórios' }); return }
+    setTemplateMsg(null)
+    try {
+      const r = await api.saveTemplate(newTemplate)
+      setTemplateMsg({ ok: true, text: r.message || 'Template salvo!' })
+      setNewTemplate({ name: '', slug: '', description: '', accent_color: '#8b5cf6', badge: 'Novo' })
+      loadMarketTemplates()
+    } catch (e: any) {
+      setTemplateMsg({ ok: false, text: e.message || 'Erro ao salvar template' })
+    }
+  }
+
   useEffect(() => {
-    if (subPage === 'settings') loadSettings()
+    if (subPage === 'settings') { loadSettings(); loadMarketTemplates(); loadApiKey() }
+    if (subPage === 'dashboard') loadAnalytics()
   }, [subPage])
 
   const filteredPosts = statusFilter === 'all' ? posts : posts.filter(p => p.status === statusFilter)
@@ -392,6 +446,30 @@ export default function DashboardCEO({ user, plan, onLogout, onNavigate }: {
                   </div>
                 ))}
               </div>
+
+              {/* Analytics */}
+              {analytics && analytics.by_day.length > 0 && (
+                <div className="card-glass p-6 mb-8">
+                  <div className="flex items-center gap-2 mb-4">
+                    <span className="w-6 h-6 bg-accent/20 rounded-lg flex items-center justify-center text-xs">📊</span>
+                    <h2 className="font-bold">Produção (últimos 14 dias)</h2>
+                  </div>
+                  <div className="flex items-end gap-1.5 h-28">
+                    {[...analytics.by_day].reverse().map((d, i) => {
+                      const max = Math.max(...analytics.by_day.map(x => Number(x.total) || 1), 1)
+                      const h = Math.max(8, Math.round((Number(d.total) / max) * 100))
+                      return (
+                        <div key={i} className="flex-1 flex flex-col items-center gap-1 min-w-0">
+                          <div className="text-[10px] text-gray-500">{d.total}</div>
+                          <div className="w-full bg-gradient-to-t from-accent to-accent-light rounded-t-md transition-all duration-500 hover:from-accent-light hover:to-accent"
+                            style={{ height: `${h}px` }} title={d.day} />
+                          <div className="text-[9px] text-gray-600 truncate w-full text-center">{d.day.slice(5)}</div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
 
               {drafts.length > 0 && (
                 <div className="card-glass p-6 mb-8">
@@ -937,6 +1015,108 @@ export default function DashboardCEO({ user, plan, onLogout, onNavigate }: {
                   </>
                 )}
               </div>
+
+              {/* API Key (agências) */}
+              <div className="card-glass p-6">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="w-6 h-6 bg-accent/20 rounded-lg flex items-center justify-center text-xs">🔑</span>
+                  <h2 className="font-bold">API Key (agências)</h2>
+                </div>
+                <p className="text-gray-500 text-sm mb-4 ml-8">Use a API pública para gerar conteúdo programaticamente</p>
+                <div className="ml-8">
+                  {apiKeyInfo ? (
+                    <div className="bg-glass rounded-xl p-4">
+                      <div className="text-xs text-gray-500 mb-1">Sua chave (use no header <code className="text-accent">X-API-Key</code>):</div>
+                      <div className="font-mono text-sm text-accent break-all bg-surface-900/60 rounded-lg px-3 py-2 select-all">
+                        {apiKeyInfo.key}
+                      </div>
+                      <div className="text-[11px] text-gray-600 mt-3 space-y-1">
+                        <div><span className="text-gray-500">GET</span> <code className="text-blue-400">/api/v1/me</code> — identifica a chave</div>
+                        <div><span className="text-gray-500">GET</span> <code className="text-blue-400">/api/v1/posts</code> — lista seus posts</div>
+                        <div><span className="text-gray-500">POST</span> <code className="text-blue-400">/api/v1/generate</code> — gera conteúdo ({'{ topic, channel, template }'})</div>
+                      </div>
+                    </div>
+                  ) : (
+                    <button onClick={loadApiKey} className="btn-accent text-sm">🔑 Gerar minha API key</button>
+                  )}
+                </div>
+              </div>
+
+              {/* Whitelabel: criar cliente (admin) */}
+              {settingsIsAdmin === true && (
+                <div className="card-glass p-6">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="w-6 h-6 bg-accent/20 rounded-lg flex items-center justify-center text-xs">👥</span>
+                    <h2 className="font-bold">Whitelabel — Criar cliente</h2>
+                  </div>
+                  <p className="text-gray-500 text-sm mb-4 ml-8">Crie contas para clientes com plano incluso (eles gerem seu próprio conteúdo)</p>
+                  <div className="ml-8 grid sm:grid-cols-2 gap-3">
+                    <input value={newClient.email} onChange={e => setNewClient(f => ({ ...f, email: e.target.value }))}
+                      placeholder="email do cliente" className="glass-input !py-2 text-sm" />
+                    <input value={newClient.full_name} onChange={e => setNewClient(f => ({ ...f, full_name: e.target.value }))}
+                      placeholder="Nome completo" className="glass-input !py-2 text-sm" />
+                    <input value={newClient.password} onChange={e => setNewClient(f => ({ ...f, password: e.target.value }))}
+                      placeholder="Senha" type="password" className="glass-input !py-2 text-sm" />
+                    <input value={newClient.niche} onChange={e => setNewClient(f => ({ ...f, niche: e.target.value }))}
+                      placeholder="Nicho (ex: marketing tech)" className="glass-input !py-2 text-sm" />
+                    <select value={newClient.plan_slug} onChange={e => setNewClient(f => ({ ...f, plan_slug: e.target.value }))}
+                      className="glass-input !py-2 text-sm">
+                      <option value="pro" className="bg-surface-900">Pro (R$97)</option>
+                      <option value="enterprise" className="bg-surface-900">Enterprise (R$297)</option>
+                      <option value="gratuito" className="bg-surface-900">Gratuito</option>
+                    </select>
+                    <button onClick={handleCreateClient} className="btn-accent text-sm">👥 Criar cliente</button>
+                  </div>
+                  {clientMsg && (
+                    <div className={`ml-8 mt-3 text-sm px-4 py-3 rounded-xl ${clientMsg.ok ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'}`}>
+                      {clientMsg.text}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Marketplace de Templates (admin) */}
+              {settingsIsAdmin === true && (
+                <div className="card-glass p-6">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="w-6 h-6 bg-accent/20 rounded-lg flex items-center justify-center text-xs">🎨</span>
+                    <h2 className="font-bold">Marketplace de Templates</h2>
+                  </div>
+                  <p className="text-gray-500 text-sm mb-4 ml-8">Gerencie os estilos de slide disponíveis para todos os clientes</p>
+                  <div className="ml-8 grid sm:grid-cols-3 gap-3 mb-4">
+                    {marketTemplates.map(t => (
+                      <div key={t.slug} className="bg-glass rounded-xl p-3">
+                        <div className="h-10 rounded-lg mb-2 border border-white/5" style={{ background: `linear-gradient(135deg, ${t.accent_color}22, transparent)` }} />
+                        <div className="text-sm font-medium flex items-center justify-between">
+                          {t.name}
+                          <span className="text-[10px] px-2 py-0.5 rounded-full font-bold text-black" style={{ background: t.accent_color }}>{t.badge}</span>
+                        </div>
+                        <div className="text-[11px] text-gray-500 mt-0.5">{t.description}</div>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="ml-8 grid sm:grid-cols-2 gap-3">
+                    <input value={newTemplate.name} onChange={e => setNewTemplate(f => ({ ...f, name: e.target.value }))}
+                      placeholder="Nome (ex: Neon Nights)" className="glass-input !py-2 text-sm" />
+                    <input value={newTemplate.slug} onChange={e => setNewTemplate(f => ({ ...f, slug: e.target.value }))}
+                      placeholder="slug (ex: neon)" className="glass-input !py-2 text-sm" />
+                    <input value={newTemplate.description} onChange={e => setNewTemplate(f => ({ ...f, description: e.target.value }))}
+                      placeholder="Descrição" className="glass-input !py-2 text-sm" />
+                    <div className="flex gap-2">
+                      <input type="color" value={newTemplate.accent_color} onChange={e => setNewTemplate(f => ({ ...f, accent_color: e.target.value }))}
+                        className="w-12 h-10 rounded-lg bg-glass border border-glass-border cursor-pointer" />
+                      <input value={newTemplate.badge} onChange={e => setNewTemplate(f => ({ ...f, badge: e.target.value }))}
+                        placeholder="Badge (ex: Premium)" className="glass-input flex-1 !py-2 text-sm" />
+                    </div>
+                    <button onClick={handleSaveTemplate} className="btn-accent text-sm">🎨 Salvar template</button>
+                  </div>
+                  {templateMsg && (
+                    <div className={`ml-8 mt-3 text-sm px-4 py-3 rounded-xl ${templateMsg.ok ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'}`}>
+                      {templateMsg.text}
+                    </div>
+                  )}
+                </div>
+              )}
 
               <div className="card-glass p-6 flex items-center justify-between">
                 <div>
