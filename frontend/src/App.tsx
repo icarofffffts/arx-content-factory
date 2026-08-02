@@ -1,5 +1,9 @@
 import { useState, useEffect, type ReactNode } from 'react'
 import { api } from './lib/api'
+import Landing from './imports/Landing'
+import Login from './imports/Login'
+import Signup from './imports/Signup'
+import ArxLogo from './imports/ArxLogo'
 
 // ─── Icons ───────────────────────────────────────────────────────────────────
 
@@ -1806,6 +1810,7 @@ export default function App() {
   const [user, setUser] = useState<any>(null)
   const [refreshKey, setRefreshKey] = useState(0)
   const [authed, setAuthed] = useState<boolean | null>(null)
+  const [route, setRoute] = useState<'landing' | 'login' | 'signup' | 'dashboard'>('landing')
   const unreadNotifs = 3
 
   // Check auth on mount
@@ -1869,13 +1874,15 @@ export default function App() {
   const planName = user?.plan_name || user?.plan || 'Free'
   const initials = userName.split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase()
 
-  // Auth gate
+  // Auth gate: sem token → landing/login/signup (páginas novas do Figma)
   if (authed === false) {
-    return (
-      <LoginView
-        onLogin={handleLogin}
-      />
-    )
+    if (route === 'login') {
+      return <Login onLogin={handleLogin} onNavigate={(p: string) => setRoute(p as typeof route)} />
+    }
+    if (route === 'signup') {
+      return <Signup onLogin={handleLogin} onNavigate={(p: string) => setRoute(p as typeof route)} />
+    }
+    return <Landing onNavigate={(p: string) => setRoute(p as typeof route)} user={null} />
   }
   if (authed === null) {
     return (
@@ -1914,14 +1921,8 @@ export default function App() {
       {/* Sidebar */}
       <aside style={{ width: 220, flexShrink: 0, background: '#0f0f0f', borderRight: '1px solid rgba(255,255,255,0.06)', display: 'flex', flexDirection: 'column', padding: '0 12px' }}>
         {/* Logo */}
-        <div style={{ padding: '20px 8px 16px', display: 'flex', alignItems: 'center', gap: 10, borderBottom: '1px solid rgba(255,255,255,0.06)', marginBottom: 8 }}>
-          <div style={{ width: 30, height: 30, borderRadius: 8, background: '#8b5cf6', display: 'flex', alignItems: 'center', justifyContent: 'center' }} className="animate-pulse-glow">
-            <Icon d={icons.spark} size={15} className="" />
-          </div>
-          <div>
-            <div style={{ fontSize: '0.875rem', fontWeight: 700, color: '#fafafa', letterSpacing: '-0.01em' }}>Arx</div>
-            <div style={{ fontSize: '0.5625rem', color: '#52525b', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Content Factory</div>
-          </div>
+        <div style={{ padding: '16px 8px', borderBottom: '1px solid rgba(255,255,255,0.06)', marginBottom: 8 }}>
+          <ArxLogo size={34} glow />
         </div>
 
         {/* Nav */}
