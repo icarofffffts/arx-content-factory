@@ -1,6 +1,6 @@
 # UI2 — Integração Figma (Landing + Login + Signup + Logo)
 
-> Status: ✅ Integrado e no ar (commit `23b94fc`, 2026-08-02)
+> Status: ✅ Integrado e no ar (commits `23b94fc`, `00e5d25`, `dda704c`)
 > Origem: pasta `Social Media Automation UI2/` (Figma Make)
 
 ## O que veio do Figma
@@ -47,6 +47,23 @@ A pasta `Social Media Automation UI2/` gerada pelo Figma Make continha:
 - [x] Login admin → dashboard com logo ARX no sidebar
 - [x] Dashboard com dados reais (21 publicados, 11 drafts)
 - [x] Build passa (38 módulos)
+
+## Admin Dashboard (commit `dda704c`)
+
+- **Aba "Admin"** no sidebar — só aparece para `role === 'admin'` (cliente não vê)
+- **Rotas novas no backend** (server.js, antes da FASE 3):
+  - `GET /api/admin/stats` — usuários, admins, clientes, posts, planos, sessões ativas
+  - `GET /api/admin/users` — lista usuários com plano/status/expiração
+  - `GET /api/admin/clientes` — tabela clientes (nome, email, telefone)
+  - `GET /api/admin/plans` — planos com contagem de assinantes ativos
+- **Tabs do Admin**: Visão Geral (stats + criar cliente whitelabel), Usuários, Clientes, Planos
+- **Criar cliente**: usa `POST /api/admin/users` existente (whitelabel)
+
+## Logout visível
+
+- Botão **"Sair"** vermelho no sidebar (abaixo de Settings) — chama `handleLogout` (limpa token, volta pra landing)
+- Avatar/usuário no sidebar agora é clicável → abre o UserPanel
+- UserPanel mantém "Sign Out" interno também
 
 ## Notas
 
