@@ -1,0 +1,15 @@
+{
+  "timestamp": "2026-08-03",
+  "engine": "Hermes Browser (headless controlado)",
+  "base": "https://conteudos.icarodev.cloud",
+  "results": {
+    "landing_hero": "PASS",
+    "pricing_3_cards": "PASS (Gratuito R$0 / Pro R$97 / Enterprise R$297)",
+    "pricing_switch_anual": "PASS (R$0 / R$970 / R$2970)",
+    "login_dashboard": "PASS (21 publicados, 13 drafts, dados reais)",
+    "admin_tab_visible": "PASS (role=admin, stats reais: 1 user / 40 posts / 3 plans / 45 sessions)",
+    "password_strength_meter": "PASS (4 barras, label Fraca->Forte, 4 regras PT-BR)",
+    "logout_visible_and_works": "PASS (token limpo, volta landing)"
+  },
+  "overall": "PASS"
+}

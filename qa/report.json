@@ -1,0 +1,10 @@
+{
+  "timestamp": "2026-08-02T11:21:15.949128",
+  "base": "https://conteudos.icarodev.cloud",
+  "results": {
+    "backend": "PASS",
+    "build": "PASS",
+    "e2e": "SKIP-MANUAL"
+  },
+  "overall": "PASS"
+}
