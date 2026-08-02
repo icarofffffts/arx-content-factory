@@ -135,6 +135,7 @@ type RealPost = {
   created_at?: string
   thumbnail?: string
   engagement?: string
+  slides_data?: any[]
 }
 
 function mapPost(p: RealPost): Post {
@@ -146,6 +147,9 @@ function mapPost(p: RealPost): Post {
   const date = p.scheduled_at || p.created_at || ''
   const d = date ? new Date(date) : null
   const dateStr = d ? `${d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} ${d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : '—'
+  // Real thumbnail from slides_data[0].image_url when available
+  const slides: any[] = Array.isArray((p as any).slides_data) ? (p as any).slides_data : []
+  const realImg = slides[0]?.image_url || slides[0]?.image || ''
   return {
     id: p.id,
     title: raw,
@@ -154,7 +158,7 @@ function mapPost(p: RealPost): Post {
     channels,
     date: dateStr,
     engagement: p.engagement || '—',
-    thumbnail: p.thumbnail || `https://images.unsplash.com/photo-${Math.abs([...raw].reduce((a, c) => a + c.charCodeAt(0), 0)) % 20 + 1000}?w=200&h=200&fit=crop&auto=format`,
+    thumbnail: realImg || p.thumbnail || `https://images.unsplash.com/photo-${Math.abs([...raw].reduce((a, c) => a + c.charCodeAt(0), 0)) % 20 + 1000}?w=200&h=200&fit=crop&auto=format`,
   }
 }
 
@@ -1124,6 +1128,12 @@ function UserPanel({ open, onClose }: { open: boolean; onClose: () => void }) {
   const [emailNotifs, setEmailNotifs] = useState(true)
   const [pushNotifs, setPushNotifs] = useState(true)
   const [aiSuggestions, setAiSuggestions] = useState(true)
+  const [pwModal, setPwModal] = useState(false)
+  const [pwCur, setPwCur] = useState('')
+  const [pwNew, setPwNew] = useState('')
+  const [pwMsg, setPwMsg] = useState('')
+  const [pwErr, setPwErr] = useState('')
+  const [pwSaving, setPwSaving] = useState(false)
 
   useEffect(() => {
     if (!open) return
@@ -1182,7 +1192,17 @@ function UserPanel({ open, onClose }: { open: boolean; onClose: () => void }) {
               style={{ fontSize: '0.875rem', padding: '6px 10px' }}
               autoFocus
             />
-            <button className="btn-primary" style={{ padding: '6px 12px', fontSize: '0.75rem', flexShrink: 0 }} onClick={() => { setDisplayName(nameInput); setEditingName(false) }}>Save</button>
+            <button className="btn-primary" style={{ padding: '6px 12px', fontSize: '0.75rem', flexShrink: 0 }} onClick={async () => {
+              const n = nameInput.trim()
+              if (!n) return
+              const r: any = await api.updateProfile(n).catch(() => null)
+              if (r?.success) {
+                setDisplayName(n)
+                setEditingName(false)
+                localStorage.setItem('arx_user_name', n)
+                window.location.reload()
+              }
+            }}>Save</button>
           </div>
         ) : (
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
@@ -1216,12 +1236,12 @@ function UserPanel({ open, onClose }: { open: boolean; onClose: () => void }) {
           <span style={{ fontSize: '0.625rem', fontWeight: 700, color: '#52525b', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Account</span>
         </div>
         {[
-          { icon: icons.user, label: 'Edit Profile', sub: 'Name, photo, bio' },
-          { icon: icons.key, label: 'Change Password', sub: 'Last changed 30 days ago' },
-          { icon: icons.creditCard, label: 'Billing & Plan', sub: 'Pro · $49/mo · Renews Sep 2' },
-          { icon: icons.globe, label: 'Connected Accounts', sub: 'Instagram, LinkedIn, Twitter' },
+          { icon: icons.user, label: 'Edit Profile', sub: 'Name, photo, bio', action: () => setEditingName(true) },
+          { icon: icons.key, label: 'Change Password', sub: 'Update your login password', action: () => { setPwCur(''); setPwNew(''); setPwMsg(''); setPwErr(''); setPwModal(true) } },
+          { icon: icons.creditCard, label: 'Billing & Plan', sub: `${planName} · Active`, action: () => {} },
+          { icon: icons.globe, label: 'Connected Accounts', sub: 'Instagram, LinkedIn, Twitter', action: () => {} },
         ].map(item => (
-          <button key={item.label} className="btn-ghost" style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 12, padding: '11px 20px', borderRadius: 0, textAlign: 'left' }}>
+          <button key={item.label} className="btn-ghost" style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 12, padding: '11px 20px', borderRadius: 0, textAlign: 'left' }} onClick={item.action}>
             <div style={{ width: 32, height: 32, borderRadius: 8, background: 'rgba(255,255,255,0.04)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
               <Icon d={item.icon} size={14} />
             </div>
@@ -1259,6 +1279,54 @@ function UserPanel({ open, onClose }: { open: boolean; onClose: () => void }) {
           </button>
         </div>
       </div>
+
+      {/* Change Password Modal */}
+      {pwModal && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 300, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, background: 'rgba(0,0,0,0.72)', backdropFilter: 'blur(8px)' }} onClick={() => setPwModal(false)}>
+          <div className="glass-card animate-fade-in" style={{ width: '100%', maxWidth: 380, padding: 24 }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+              <h3 style={{ margin: 0, fontSize: '0.9375rem', fontWeight: 600, color: '#fafafa' }}>Change Password</h3>
+              <button className="btn-ghost" style={{ padding: '5px 6px' }} onClick={() => setPwModal(false)}><Icon d={icons.close} size={15} /></button>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#a1a1aa', marginBottom: 6 }}>Current Password</label>
+                <input className="input-field" type="password" value={pwCur} onChange={e => setPwCur(e.target.value)} placeholder="••••••••" style={{ width: '100%' }} />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#a1a1aa', marginBottom: 6 }}>New Password</label>
+                <input className="input-field" type="password" value={pwNew} onChange={e => setPwNew(e.target.value)} placeholder="Min. 6 characters" style={{ width: '100%' }} />
+              </div>
+              {pwErr && <div style={{ fontSize: '0.75rem', color: '#ef4444', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', padding: '9px 11px', borderRadius: 8 }}>{pwErr}</div>}
+              {pwMsg && <div style={{ fontSize: '0.75rem', color: '#22c55e', background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.2)', padding: '9px 11px', borderRadius: 8 }}>{pwMsg}</div>}
+              <button
+                className="btn-primary"
+                style={{ width: '100%', padding: '11px 0', marginTop: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
+                disabled={pwSaving || !pwCur || pwNew.length < 6}
+                onClick={async () => {
+                  setPwSaving(true); setPwErr(''); setPwMsg('')
+                  try {
+                    const r: any = await api.changePassword(pwCur, pwNew)
+                    if (r?.success) {
+                      setPwMsg('Senha atualizada com sucesso!')
+                      setPwCur(''); setPwNew('')
+                      setTimeout(() => setPwModal(false), 1200)
+                    } else {
+                      setPwErr(r?.error || 'Erro ao trocar senha')
+                    }
+                  } catch {
+                    setPwErr('Erro de conexão')
+                  } finally {
+                    setPwSaving(false)
+                  }
+                }}
+              >
+                {pwSaving ? 'Salvando…' : <><Icon d={icons.key} size={13} /> Update Password</>}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </SlidePanel>
   )
 }
@@ -1272,10 +1340,33 @@ function SettingsPanel({ open, onClose }: { open: boolean; onClose: () => void }
   const [apiKey, setApiKey] = useState('')
   const [savedMsg, setSavedMsg] = useState('')
 
+  const [webhookUrl, setWebhookUrl] = useState('')
+  const [defaultTemplate, setDefaultTemplate] = useState('')
+  const [igBusinessId, setIgBusinessId] = useState('')
+  const [saveMsg, setSaveMsg] = useState('')
+
   useEffect(() => {
     if (!open) return
     api.myApiKey().then((r: any) => { if (r?.api_key) setApiKey(r.api_key) }).catch(() => {})
+    api.settings().then((r: any) => {
+      if (r?.settings) {
+        const s = r.settings
+        if (s.n8n_webhook_base) setWebhookUrl(s.n8n_webhook_base)
+        if (s.default_template) setDefaultTemplate(s.default_template)
+        if (s.instagram_business_id) setIgBusinessId(s.instagram_business_id)
+        setAutoPublish(s.auto_publish === 'true' || s.auto_publish === true)
+        setAiCaption(s.ai_caption === 'true' || s.ai_caption === true)
+        setWatermark(s.watermark === 'true' || s.watermark === true)
+      }
+    }).catch(() => {})
   }, [open])
+
+  async function saveSettings(patch: Record<string, string>) {
+    try {
+      const r: any = await api.updateSettings({ settings: patch })
+      if (r?.success) { setSaveMsg('Configurações salvas!'); setTimeout(() => setSaveMsg(''), 2500) }
+    } catch { setSaveMsg('Erro ao salvar'); setTimeout(() => setSaveMsg(''), 2500) }
+  }
 
   const copy = () => {
     navigator.clipboard.writeText(apiKey).catch(() => {})
@@ -1358,8 +1449,9 @@ function SettingsPanel({ open, onClose }: { open: boolean; onClose: () => void }
 
             <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: 14 }}>
               <div style={{ fontSize: '0.75rem', fontWeight: 600, color: '#a1a1aa', marginBottom: 10 }}>Webhook / n8n</div>
-              <input className="input-field" placeholder="https://your-n8n-instance.com/webhook/…" style={{ marginBottom: 8 }} />
-              <button className="btn-secondary" style={{ width: '100%', padding: '9px 0', fontSize: '0.8125rem' }}>Save Webhook URL</button>
+              <input className="input-field" placeholder="https://n8n.arxsolutions.cloud/webhook/…" style={{ marginBottom: 8 }} value={webhookUrl} onChange={e => setWebhookUrl(e.target.value)} />
+              <button className="btn-secondary" style={{ width: '100%', padding: '9px 0', fontSize: '0.8125rem' }} onClick={() => saveSettings({ n8n_webhook_base: webhookUrl })}>Save Webhook URL</button>
+              {saveMsg && <div style={{ fontSize: '0.75rem', color: '#22c55e', marginTop: 8, textAlign: 'center' }}>{saveMsg}</div>}
             </div>
           </>
         )}
@@ -1409,20 +1501,15 @@ function SettingsPanel({ open, onClose }: { open: boolean; onClose: () => void }
           <>
             <div>
               <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#a1a1aa', marginBottom: 6 }}>Default Template</label>
-              <select className="input-field" style={{ appearance: 'none', cursor: 'pointer' }}>
-                <option>Tech Startup Growth</option>
-                <option>Minimal Dark Intro</option>
-                <option>Product Launch Sequence</option>
+              <select className="input-field" style={{ appearance: 'none', cursor: 'pointer' }} value={defaultTemplate} onChange={e => setDefaultTemplate(e.target.value)}>
+                <option value="">Selecionar template padrão…</option>
+                {templates.map(t => <option key={t.id} value={t.name}>{t.name}</option>)}
               </select>
             </div>
 
             <div>
-              <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#a1a1aa', marginBottom: 6 }}>Default Channels</label>
-              <div style={{ display: 'flex', gap: 8 }}>
-                {['instagram', 'linkedin', 'twitter'].map(c => (
-                  <ChannelTag key={c} channel={c} />
-                ))}
-              </div>
+              <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#a1a1aa', marginBottom: 6 }}>Instagram Business ID</label>
+              <input className="input-field" placeholder="Ex: 17841400000000000" value={igBusinessId} onChange={e => setIgBusinessId(e.target.value)} />
             </div>
 
             <div>
@@ -1446,7 +1533,14 @@ function SettingsPanel({ open, onClose }: { open: boolean; onClose: () => void }
               ))}
             </div>
 
-            <button className="btn-primary" style={{ width: '100%', padding: '11px 0', marginTop: 4 }}>Save Defaults</button>
+            <button className="btn-primary" style={{ width: '100%', padding: '11px 0', marginTop: 4 }} onClick={() => saveSettings({
+              default_template: defaultTemplate,
+              instagram_business_id: igBusinessId,
+              auto_publish: String(autoPublish),
+              ai_caption: String(aiCaption),
+              watermark: String(watermark),
+            })}>Save Defaults</button>
+            {saveMsg && <div style={{ fontSize: '0.75rem', color: '#22c55e', textAlign: 'center' }}>{saveMsg}</div>}
           </>
         )}
 
