@@ -4,6 +4,7 @@ import Landing from './imports/Landing'
 import Login from './imports/Login'
 import Signup from './imports/Signup'
 import ArxLogo from './imports/ArxLogo'
+import PasswordStrength from './imports/PasswordStrength'
 
 // ─── Icons ───────────────────────────────────────────────────────────────────
 
@@ -1298,8 +1299,9 @@ function UserPanel({ open, onClose }: { open: boolean; onClose: () => void }) {
                 <input className="input-field" type="password" value={pwCur} onChange={e => setPwCur(e.target.value)} placeholder="••••••••" style={{ width: '100%' }} />
               </div>
               <div>
-                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#a1a1aa', marginBottom: 6 }}>New Password</label>
-                <input className="input-field" type="password" value={pwNew} onChange={e => setPwNew(e.target.value)} placeholder="Min. 6 characters" style={{ width: '100%' }} />
+                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#a1a1aa', marginBottom: 6 }}>Nova Senha</label>
+                <input className="input-field" type="password" value={pwNew} onChange={e => setPwNew(e.target.value)} placeholder="Min. 6 caracteres" style={{ width: '100%' }} />
+                {pwNew.length > 0 && <PasswordStrength value={pwNew} className="mt-3" />}
               </div>
               {pwErr && <div style={{ fontSize: '0.75rem', color: '#ef4444', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', padding: '9px 11px', borderRadius: 8 }}>{pwErr}</div>}
               {pwMsg && <div style={{ fontSize: '0.75rem', color: '#22c55e', background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.2)', padding: '9px 11px', borderRadius: 8 }}>{pwMsg}</div>}
