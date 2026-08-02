@@ -74,6 +74,7 @@ interface Post {
   date: string
   engagement?: string
   thumbnail: string
+  wa_status?: string | null
 }
 
 interface Template {
@@ -141,6 +142,7 @@ type RealPost = {
   thumbnail?: string
   engagement?: string
   slides_data?: any[]
+  wa_status?: string | null
 }
 
 function mapPost(p: RealPost): Post {
@@ -164,6 +166,7 @@ function mapPost(p: RealPost): Post {
     date: dateStr,
     engagement: p.engagement || '—',
     thumbnail: realImg || p.thumbnail || `https://images.unsplash.com/photo-${Math.abs([...raw].reduce((a, c) => a + c.charCodeAt(0), 0)) % 20 + 1000}?w=200&h=200&fit=crop&auto=format`,
+    wa_status: p.wa_status || null,
   }
 }
 
@@ -242,6 +245,25 @@ function StatusBadge({ status }: { status: PostStatus }) {
   return (
     <span className="badge" style={{ background: s.bg, color: s.color }}>
       {status === 'processing' && <span style={{ display: 'inline-block', width: 6, height: 6, borderRadius: '50%', background: s.color, marginRight: 4, animation: 'pulse-glow 1.5s infinite' }} />}
+      {s.label}
+    </span>
+  )
+}
+
+function WaBadge({ status }: { status?: string | null }) {
+  if (!status) return null
+  const map: Record<string, { label: string; bg: string; color: string }> = {
+    sent:     { label: 'WhatsApp enviado',  bg: 'rgba(34,197,94,0.15)',  color: '#22c55e' },
+    approved: { label: 'Aprovado no zap',   bg: 'rgba(139,92,246,0.15)', color: '#8b5cf6' },
+    rejected: { label: 'Rejeitado no zap',  bg: 'rgba(239,68,68,0.15)',  color: '#ef4444' },
+  }
+  const s = map[status]
+  if (!s) return null
+  return (
+    <span className="badge" style={{ background: s.bg, color: s.color }}>
+      {status === 'sent' && '✅ '}
+      {status === 'approved' && '🟣 '}
+      {status === 'rejected' && '⛔ '}
       {s.label}
     </span>
   )
@@ -354,7 +376,10 @@ function Dashboard() {
                 <img src={p.thumbnail} alt={p.title} style={{ width: 36, height: 36, borderRadius: 8, objectFit: 'cover', flexShrink: 0 }} />
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: '0.75rem', fontWeight: 600, color: '#fafafa', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.title}</div>
-                  <StatusBadge status={p.status} />
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 3, flexWrap: 'wrap' }}>
+                    <StatusBadge status={p.status} />
+                    <WaBadge status={p.wa_status} />
+                  </div>
                 </div>
                 <button
                   title="Enviar preview no WhatsApp"
@@ -481,8 +506,9 @@ function PostCard({ post }: { post: Post }) {
       <div style={{ position: 'relative', height: 140, background: '#111' }}>
         <img src={post.thumbnail} alt={post.title} style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: 0.8 }} />
         <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, transparent 40%, rgba(0,0,0,0.7))' }} />
-        <div style={{ position: 'absolute', top: 10, left: 10 }}>
+        <div style={{ position: 'absolute', top: 10, left: 10, display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 6 }}>
           <StatusBadge status={post.status} />
+          <WaBadge status={post.wa_status} />
         </div>
         <div style={{ position: 'absolute', top: 10, right: 10, background: 'rgba(0,0,0,0.5)', borderRadius: 6, padding: '3px 7px', display: 'flex', alignItems: 'center', gap: 4 }}>
           <TypeIcon type={post.type} />
@@ -1762,6 +1788,11 @@ function AdminPage() {
   const [tab, setTab] = useState<'overview' | 'users' | 'clientes' | 'plans'>('overview')
   const [newUser, setNewUser] = useState({ email: '', password: '', full_name: '' })
   const [msg, setMsg] = useState('')
+  const [waCliente, setWaCliente] = useState<any>(null)
+  const [waPhone, setWaPhone] = useState('')
+  const [waSaving, setWaSaving] = useState(false)
+  const [waMsg, setWaMsg] = useState('')
+  const [waErr, setWaErr] = useState('')
 
   useEffect(() => {
     api.adminStats().then(r => { if (r?.stats) setStats(r.stats) }).catch(() => {})
@@ -1913,6 +1944,13 @@ function AdminPage() {
                   <div>{c.telefone || '—'}</div>
                   <div>{fmtDate(c.created_at)}</div>
                 </div>
+                <button
+                  className="btn-ghost"
+                  style={{ flexShrink: 0, padding: '6px 10px', fontSize: '0.6875rem', fontWeight: 600, color: '#4ade80', background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.25)', borderRadius: 8, cursor: 'pointer', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 5 }}
+                  onClick={() => { setWaCliente(c); setWaPhone(c.telefone || ''); setWaMsg(''); setWaErr('') }}
+                >
+                  <span style={{ fontSize: '0.75rem' }}>📲</span> Configurar WhatsApp
+                </button>
               </div>
             ))}
             {clientes.length === 0 && <div style={{ padding: 40, textAlign: 'center', color: '#52525b', fontSize: '0.8125rem' }}>Nenhum cliente</div>}
@@ -1937,6 +1975,59 @@ function AdminPage() {
             </div>
           ))}
           {plans.length === 0 && <div style={{ gridColumn: '1/-1', padding: 40, textAlign: 'center', color: '#52525b' }}>Nenhum plano</div>}
+        </div>
+      )}
+
+      {/* ── Modal Configurar WhatsApp ── */}
+      {waCliente && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 300, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, background: 'rgba(0,0,0,0.72)', backdropFilter: 'blur(8px)' }} onClick={() => setWaCliente(null)}>
+          <div className="glass-card animate-fade-in" style={{ width: '100%', maxWidth: 380, padding: 24 }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+              <h3 style={{ margin: 0, fontSize: '0.9375rem', fontWeight: 600, color: '#fafafa' }}>Configurar WhatsApp</h3>
+              <button className="btn-ghost" style={{ padding: '5px 6px' }} onClick={() => setWaCliente(null)}><Icon d={icons.close} size={15} /></button>
+            </div>
+            <div style={{ fontSize: '0.75rem', color: '#71717a', marginBottom: 14 }}>
+              Cliente: <span style={{ color: '#fafafa', fontWeight: 600 }}>{waCliente.nome || waCliente.email || waCliente.id}</span>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#a1a1aa', marginBottom: 6 }}>Telefone (com DDI)</label>
+                <input
+                  className="input-field"
+                  value={waPhone}
+                  onChange={e => setWaPhone(e.target.value)}
+                  placeholder="5588999680485"
+                  style={{ width: '100%', fontFamily: 'JetBrains Mono, monospace' }}
+                />
+              </div>
+              {waErr && <div style={{ fontSize: '0.75rem', color: '#ef4444', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', padding: '9px 11px', borderRadius: 8 }}>{waErr}</div>}
+              {waMsg && <div style={{ fontSize: '0.75rem', color: '#22c55e', background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.2)', padding: '9px 11px', borderRadius: 8 }}>{waMsg}</div>}
+              <button
+                className="btn-primary"
+                style={{ width: '100%', padding: '11px 0', marginTop: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
+                disabled={waSaving || !waPhone.trim()}
+                onClick={async () => {
+                  setWaSaving(true); setWaErr(''); setWaMsg('')
+                  try {
+                    const r: any = await api.adminUpdateCliente(waCliente.id, { telefone: waPhone.trim() })
+                    if (r?.success) {
+                      setWaMsg('WhatsApp salvo com sucesso!')
+                      setClientes(cs => cs.map(c => c.id === waCliente.id ? { ...c, telefone: waPhone.trim() } : c))
+                      setTimeout(() => setWaCliente(null), 1200)
+                    } else {
+                      setWaErr(r?.error || 'Erro ao salvar')
+                    }
+                  } catch {
+                    setWaErr('Erro de conexão')
+                  } finally {
+                    setWaSaving(false)
+                  }
+                }}
+              >
+                {waSaving ? 'Salvando…' : '💾 Salvar WhatsApp'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

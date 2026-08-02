@@ -124,6 +124,28 @@ export const api = {
   adminCreateUser: (u: any) =>
     request<{ success: boolean; message: string; user?: any }>('/api/admin/users', { method: 'POST', body: JSON.stringify(u) }),
 
+  // Atualiza dados de um cliente whitelabel (ex.: telefone/WhatsApp).
+  // Tenta PATCH /api/admin/clientes/:id; se a rota não existir (404), cai para PUT /api/clientes/:id.
+  adminUpdateCliente: async (id: string, data: any) => {
+    const token = getToken()
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+    if (token) headers['x-arx-token'] = token
+    const doReq = async (path: string, method: string) => {
+      const res = await fetch(`${API}${path}`, { method, headers, body: JSON.stringify(data) })
+      if (res.status === 401) {
+        clearToken()
+        window.location.href = '/login'
+        throw new Error('Unauthorized')
+      }
+      return { status: res.status, body: await res.json().catch(() => ({})) }
+    }
+    let r = await doReq(`/api/admin/clientes/${id}`, 'PATCH')
+    if (r.status === 404) {
+      r = await doReq(`/api/clientes/${id}`, 'PUT')
+    }
+    return r.body
+  },
+
   publishNow: (id: string) =>
     request<{ success: boolean }>(`/api/posts/${id}/publish-now`, { method: 'POST' }),
 
