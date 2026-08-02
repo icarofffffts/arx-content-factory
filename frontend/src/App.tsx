@@ -356,6 +356,20 @@ function Dashboard() {
                   <div style={{ fontSize: '0.75rem', fontWeight: 600, color: '#fafafa', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.title}</div>
                   <StatusBadge status={p.status} />
                 </div>
+                <button
+                  title="Enviar preview no WhatsApp"
+                  onClick={async () => {
+                    const tk = localStorage.getItem('arx_token')
+                    try {
+                      const r = await fetch(`/api/drafts/${p.id}/send-whatsapp`, { headers: { 'x-arx-token': tk || '' } })
+                      const j = await r.json()
+                      alert(j.success ? '✅ Preview enviado no WhatsApp!' : 'Erro: ' + (j.error || 'falha'))
+                    } catch (e) { alert('Erro ao enviar: ' + e) }
+                  }}
+                  style={{ flexShrink: 0, padding: '7px 10px', borderRadius: 8, fontSize: '0.6875rem', fontWeight: 600, cursor: 'pointer', border: '1px solid rgba(34,197,94,0.3)', background: 'rgba(34,197,94,0.1)', color: '#4ade80', display: 'flex', alignItems: 'center', gap: 5 }}
+                >
+                  📲 Enviar
+                </button>
               </div>
             ))}
             {pending.length === 0 && (
