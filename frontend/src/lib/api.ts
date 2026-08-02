@@ -108,6 +108,19 @@ export const api = {
   myApiKey: () =>
     request<{ success: boolean; api_key: any; reused?: boolean }>('/api/me/api-key', { method: 'POST' }),
 
+  // Admin
+  adminStats: () =>
+    request<{ success: boolean; stats: any }>('/api/admin/stats'),
+
+  adminUsers: () =>
+    request<{ success: boolean; users: any[] }>('/api/admin/users'),
+
+  adminClientes: () =>
+    request<{ success: boolean; clientes: any[] }>('/api/admin/clientes'),
+
+  adminPlans: () =>
+    request<{ success: boolean; plans: any[] }>('/api/admin/plans'),
+
   adminCreateUser: (u: any) =>
     request<{ success: boolean; message: string; user?: any }>('/api/admin/users', { method: 'POST', body: JSON.stringify(u) }),
 

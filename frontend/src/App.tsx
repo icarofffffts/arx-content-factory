@@ -60,7 +60,7 @@ const icons = {
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type Page = 'dashboard' | 'content' | 'templates' | 'schedule' | 'analytics'
+type Page = 'dashboard' | 'content' | 'templates' | 'schedule' | 'analytics' | 'admin'
 type PostStatus = 'scheduled' | 'draft' | 'processing' | 'published' | 'pending'
 type ContentType = 'carousel' | 'video' | 'image'
 
@@ -1736,6 +1736,197 @@ function ChatPanel({ open, onClose }: { open: boolean; onClose: () => void }) {
   )
 }
 
+// ─── Admin Page ───────────────────────────────────────────────────────────────
+
+function AdminPage() {
+  const [stats, setStats] = useState<any>(null)
+  const [users, setUsers] = useState<any[]>([])
+  const [clientes, setClientes] = useState<any[]>([])
+  const [plans, setPlans] = useState<any[]>([])
+  const [tab, setTab] = useState<'overview' | 'users' | 'clientes' | 'plans'>('overview')
+  const [newUser, setNewUser] = useState({ email: '', password: '', full_name: '' })
+  const [msg, setMsg] = useState('')
+
+  useEffect(() => {
+    api.adminStats().then(r => { if (r?.stats) setStats(r.stats) }).catch(() => {})
+    api.adminUsers().then(r => { if (r?.users) setUsers(r.users) }).catch(() => {})
+    api.adminClientes().then(r => { if (r?.clientes) setClientes(r.clientes) }).catch(() => {})
+    api.adminPlans().then(r => { if (r?.plans) setPlans(r.plans) }).catch(() => {})
+  }, [])
+
+  async function createUser() {
+    if (!newUser.email || !newUser.password) return
+    const r: any = await api.adminCreateUser(newUser).catch(() => null)
+    if (r?.success) {
+      setMsg('Cliente criado!')
+      setNewUser({ email: '', password: '', full_name: '' })
+      api.adminUsers().then(x => { if (x?.users) setUsers(x.users) }).catch(() => {})
+      setTimeout(() => setMsg(''), 2500)
+    } else {
+      setMsg(r?.error || 'Erro ao criar cliente')
+      setTimeout(() => setMsg(''), 3500)
+    }
+  }
+
+  const tabs = [
+    { key: 'overview', label: 'Visão Geral' },
+    { key: 'users', label: 'Usuários' },
+    { key: 'clientes', label: 'Clientes' },
+    { key: 'plans', label: 'Planos' },
+  ] as const
+
+  const fmtDate = (d: string) => d ? new Date(d).toLocaleDateString('pt-BR') : '—'
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <h3 style={{ margin: 0, fontSize: '0.9375rem', fontWeight: 600, color: '#fafafa' }}>Painel de Administração</h3>
+        <div style={{ flex: 1 }} />
+        <span style={{ fontSize: '0.6875rem', color: '#8b5cf6', background: 'rgba(139,92,246,0.15)', padding: '4px 10px', borderRadius: 9999, fontWeight: 600 }}>ADMIN</span>
+      </div>
+
+      {/* Tabs */}
+      <div style={{ display: 'flex', borderBottom: '1px solid rgba(255,255,255,0.06)', gap: 0, overflowX: 'auto' }}>
+        {tabs.map(t => (
+          <button key={t.key} className={`tab-item ${tab === t.key ? 'active' : ''}`} onClick={() => setTab(t.key)} style={{ whiteSpace: 'nowrap' }}>
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {/* ── Overview ── */}
+      {tab === 'overview' && (
+        <>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
+            {[
+              { label: 'Usuários', value: stats?.total_users ?? '—', color: '#8b5cf6' },
+              { label: 'Posts no sistema', value: stats?.total_posts ?? '—', color: '#3b82f6' },
+              { label: 'Planos', value: stats?.total_plans ?? '—', color: '#22c55e' },
+              { label: 'Sessões ativas', value: stats?.active_sessions ?? '—', color: '#f59e0b' },
+            ].map(s => (
+              <div key={s.label} className="glass-card" style={{ padding: 20 }}>
+                <div style={{ fontSize: '0.6875rem', fontWeight: 500, color: '#71717a', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 10 }}>{s.label}</div>
+                <div style={{ fontSize: '1.875rem', fontWeight: 700, color: s.color, letterSpacing: '-0.02em' }}>{s.value}</div>
+              </div>
+            ))}
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+            <div className="glass-card" style={{ padding: 20 }}>
+              <h3 style={{ margin: '0 0 16px', fontSize: '0.9375rem', fontWeight: 600, color: '#fafafa' }}>Usuários por role</h3>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                {[
+                  { label: 'Administradores', value: stats?.total_admins ?? 0, color: '#8b5cf6' },
+                  { label: 'Clientes (users)', value: stats?.total_clients ?? 0, color: '#3b82f6' },
+                  { label: 'Clientes (tabela clientes)', value: stats?.total_clientes_table ?? 0, color: '#22c55e' },
+                ].map(r => (
+                  <div key={r.label}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+                      <span style={{ fontSize: '0.8125rem', color: '#fafafa', fontWeight: 500 }}>{r.label}</span>
+                      <span style={{ fontSize: '0.8125rem', color: r.color, fontWeight: 700, fontFamily: 'JetBrains Mono, monospace' }}>{r.value}</span>
+                    </div>
+                    <div style={{ height: 6, background: 'rgba(255,255,255,0.06)', borderRadius: 9999, overflow: 'hidden' }}>
+                      <div style={{ height: '100%', width: `${Math.min(100, (Number(r.value) / Math.max(1, Number(stats?.total_users || 1))) * 100)}%`, background: r.color, borderRadius: 9999 }} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="glass-card" style={{ padding: 20 }}>
+              <h3 style={{ margin: '0 0 16px', fontSize: '0.9375rem', fontWeight: 600, color: '#fafafa' }}>Criar cliente (whitelabel)</h3>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <input className="input-field" placeholder="Nome completo" value={newUser.full_name} onChange={e => setNewUser({ ...newUser, full_name: e.target.value })} />
+                <input className="input-field" type="email" placeholder="email@cliente.com" value={newUser.email} onChange={e => setNewUser({ ...newUser, email: e.target.value })} />
+                <input className="input-field" type="password" placeholder="Senha (min. 6)" value={newUser.password} onChange={e => setNewUser({ ...newUser, password: e.target.value })} />
+                {msg && <div style={{ fontSize: '0.75rem', color: msg.includes('erro') || msg.includes('Erro') ? '#ef4444' : '#22c55e', padding: '9px 11px', borderRadius: 8, background: msg.includes('erro') || msg.includes('Erro') ? 'rgba(239,68,68,0.08)' : 'rgba(34,197,94,0.08)' }}>{msg}</div>}
+                <button className="btn-primary" style={{ padding: '10px 0', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }} onClick={createUser}>
+                  <Icon d={icons.plus} size={13} /> Criar cliente
+                </button>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* ── Users ── */}
+      {tab === 'users' && (
+        <div className="glass-card" style={{ padding: 0, overflow: 'hidden' }}>
+          <div style={{ padding: '16px 20px', borderBottom: '1px solid rgba(255,255,255,0.06)', fontSize: '0.8125rem', fontWeight: 600, color: '#fafafa' }}>
+            Usuários do sistema ({users.length})
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            {users.map((u, i) => (
+              <div key={u.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 20px', borderBottom: i < users.length - 1 ? '1px solid rgba(255,255,255,0.04)' : 'none' }}>
+                <div style={{ width: 32, height: 32, borderRadius: '50%', background: u.role === 'admin' ? 'linear-gradient(135deg, #8b5cf6, #3b82f6)' : 'rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.625rem', fontWeight: 700, color: '#fff', flexShrink: 0 }}>
+                  {(u.full_name || u.email || '?')[0].toUpperCase()}
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: '0.8125rem', fontWeight: 600, color: '#fafafa', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{u.full_name || '—'}</div>
+                  <div style={{ fontSize: '0.6875rem', color: '#52525b' }}>{u.email}</div>
+                </div>
+                <div style={{ textAlign: 'right' }}>
+                  <span style={{ fontSize: '0.625rem', fontWeight: 700, color: u.role === 'admin' ? '#8b5cf6' : '#3b82f6', background: u.role === 'admin' ? 'rgba(139,92,246,0.15)' : 'rgba(59,130,246,0.12)', padding: '3px 9px', borderRadius: 9999, textTransform: 'capitalize' }}>{u.role}</span>
+                  <div style={{ fontSize: '0.625rem', color: '#52525b', marginTop: 3 }}>{u.plan_name || 'Sem plano'} · {fmtDate(u.created_at)}</div>
+                </div>
+              </div>
+            ))}
+            {users.length === 0 && <div style={{ padding: 40, textAlign: 'center', color: '#52525b', fontSize: '0.8125rem' }}>Nenhum usuário</div>}
+          </div>
+        </div>
+      )}
+
+      {/* ── Clientes ── */}
+      {tab === 'clientes' && (
+        <div className="glass-card" style={{ padding: 0, overflow: 'hidden' }}>
+          <div style={{ padding: '16px 20px', borderBottom: '1px solid rgba(255,255,255,0.06)', fontSize: '0.8125rem', fontWeight: 600, color: '#fafafa' }}>
+            Clientes ({clientes.length})
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            {clientes.map((c, i) => (
+              <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 20px', borderBottom: i < clientes.length - 1 ? '1px solid rgba(255,255,255,0.04)' : 'none' }}>
+                <div style={{ width: 32, height: 32, borderRadius: 8, background: 'rgba(139,92,246,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.625rem', fontWeight: 700, color: '#8b5cf6', flexShrink: 0 }}>
+                  {(c.nome || '?')[0].toUpperCase()}
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: '0.8125rem', fontWeight: 600, color: '#fafafa', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.nome}</div>
+                  <div style={{ fontSize: '0.6875rem', color: '#52525b' }}>{c.email}</div>
+                </div>
+                <div style={{ textAlign: 'right', fontSize: '0.6875rem', color: '#52525b' }}>
+                  <div>{c.telefone || '—'}</div>
+                  <div>{fmtDate(c.created_at)}</div>
+                </div>
+              </div>
+            ))}
+            {clientes.length === 0 && <div style={{ padding: 40, textAlign: 'center', color: '#52525b', fontSize: '0.8125rem' }}>Nenhum cliente</div>}
+          </div>
+        </div>
+      )}
+
+      {/* ── Plans ── */}
+      {tab === 'plans' && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
+          {plans.map(p => (
+            <div key={p.id} className="glass-card" style={{ padding: 20 }}>
+              <div style={{ fontSize: '0.6875rem', fontWeight: 600, color: '#8b5cf6', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>{p.name}</div>
+              <div style={{ fontSize: '1.5rem', fontWeight: 700, color: '#fafafa', marginBottom: 12 }}>
+                R$ {Number(p.price_monthly).toFixed(2).replace('.', ',')}
+                <span style={{ fontSize: '0.6875rem', color: '#52525b', fontWeight: 500 }}>/mês</span>
+              </div>
+              <div style={{ fontSize: '0.75rem', color: '#71717a' }}>Anual: R$ {Number(p.price_yearly).toFixed(2).replace('.', ',')}</div>
+              <div style={{ marginTop: 12, padding: '9px 12px', borderRadius: 8, background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.2)', fontSize: '0.75rem', color: '#22c55e', fontWeight: 600 }}>
+                {p.active_subscribers} assinantes ativos
+              </div>
+            </div>
+          ))}
+          {plans.length === 0 && <div style={{ gridColumn: '1/-1', padding: 40, textAlign: 'center', color: '#52525b' }}>Nenhum plano</div>}
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ─── Login View ───────────────────────────────────────────────────────────────
 
 function LoginView({ onLogin }: { onLogin: (token: string, user: any) => void }) {
@@ -1894,12 +2085,15 @@ export default function App() {
 
   const closeAll = () => { setNotifOpen(false); setUserOpen(false); setSettingsOpen(false); setChatOpen(false) }
 
+  const isAdmin = user?.role === 'admin'
+
   const navItems: { key: Page; label: string; icon: string }[] = [
     { key: 'dashboard', label: 'Dashboard', icon: icons.dashboard },
     { key: 'content', label: 'Content', icon: icons.content },
     { key: 'templates', label: 'Templates', icon: icons.templates },
     { key: 'schedule', label: 'Schedule', icon: icons.schedule },
     { key: 'analytics', label: 'Analytics', icon: icons.analytics },
+    ...(isAdmin ? [{ key: 'admin' as Page, label: 'Admin', icon: icons.shield }] : []),
   ]
 
   const pageTitles: Record<Page, string> = {
@@ -1908,6 +2102,7 @@ export default function App() {
     templates: 'Templates',
     schedule: 'Schedule',
     analytics: 'Analytics',
+    admin: 'Admin',
   }
 
   const handleUseTemplate = (t: Template) => {
@@ -1946,13 +2141,17 @@ export default function App() {
             <Icon d={icons.settings} size={16} />
             <span>Settings</span>
           </button>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', marginTop: 6 }}>
+          <button className="sidebar-item" style={{ border: 'none', width: '100%', textAlign: 'left', color: '#ef4444' }} onClick={handleLogout}>
+            <Icon d={icons.logout} size={16} />
+            <span>Sair</span>
+          </button>
+          <button onClick={() => { closeAll(); setUserOpen(true) }} style={{ width: '100%', background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', gap: 10, marginTop: 6 }}>
             <div style={{ width: 30, height: 30, borderRadius: '50%', background: 'linear-gradient(135deg, #8b5cf6, #3b82f6)', border: '2px solid rgba(139,92,246,0.5)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.625rem', fontWeight: 700, color: '#fff' }}>{initials || 'A'}</div>
-            <div style={{ minWidth: 0 }}>
+            <div style={{ minWidth: 0, textAlign: 'left' }}>
               <div style={{ fontSize: '0.75rem', fontWeight: 600, color: '#fafafa', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{userName}</div>
               <div style={{ fontSize: '0.625rem', color: '#52525b' }}>{planName} Plan</div>
             </div>
-          </div>
+          </button>
         </div>
       </aside>
 
@@ -1981,6 +2180,7 @@ export default function App() {
           {page === 'templates' && <TemplatesPage onUseTemplate={handleUseTemplate} />}
           {page === 'schedule' && <SchedulePage key={refreshKey} />}
           {page === 'analytics' && <AnalyticsPage key={refreshKey} />}
+          {page === 'admin' && <AdminPage key={refreshKey} />}
         </main>
       </div>
 
