@@ -1,4 +1,5 @@
-import { useState, type ReactNode } from 'react'
+import { useState, useEffect, type ReactNode } from 'react'
+import { api } from './lib/api'
 
 // ─── Icons ───────────────────────────────────────────────────────────────────
 
@@ -118,6 +119,106 @@ const chartData = [
 
 const maxPosts = Math.max(...chartData.map(d => d.posts))
 
+// ─── Real Data Hooks (API) ────────────────────────────────────────────────────
+// These replace the mock data above with live data from the backend.
+// Mocks above remain as fallback while the API loads / on failure.
+
+type RealPost = {
+  id: string
+  title?: string
+  topic?: string
+  status?: string
+  channel?: string
+  channels?: string[]
+  type?: string
+  scheduled_at?: string
+  created_at?: string
+  thumbnail?: string
+  engagement?: string
+}
+
+function mapPost(p: RealPost): Post {
+  const raw = p.title || p.topic || 'Untitled post'
+  const channels = Array.isArray(p.channels) && p.channels.length ? p.channels
+    : p.channel ? [p.channel] : ['all']
+  const type = (p.type === 'video' || p.type === 'image') ? p.type : 'carousel'
+  const status = (['scheduled', 'draft', 'processing', 'published', 'pending'].includes(p.status || '') ? p.status : 'draft') as PostStatus
+  const date = p.scheduled_at || p.created_at || ''
+  const d = date ? new Date(date) : null
+  const dateStr = d ? `${d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} ${d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : '—'
+  return {
+    id: p.id,
+    title: raw,
+    type,
+    status,
+    channels,
+    date: dateStr,
+    engagement: p.engagement || '—',
+    thumbnail: p.thumbnail || `https://images.unsplash.com/photo-${Math.abs([...raw].reduce((a, c) => a + c.charCodeAt(0), 0)) % 20 + 1000}?w=200&h=200&fit=crop&auto=format`,
+  }
+}
+
+function usePosts() {
+  const [items, setItems] = useState<Post[]>(posts)
+  useEffect(() => {
+    let alive = true
+    api.posts()
+      .then((r: any) => { if (alive && Array.isArray(r)) setItems(r.map(mapPost)) })
+      .catch(() => {})
+    return () => { alive = false }
+  }, [])
+  return { items, setItems }
+}
+
+function useMetrics() {
+  const [m, setM] = useState<any>(null)
+  useEffect(() => {
+    let alive = true
+    api.metrics().then(r => { if (alive) setM(r) }).catch(() => {})
+    return () => { alive = false }
+  }, [])
+  return m
+}
+
+function useAnalytics() {
+  const [a, setA] = useState<any>(null)
+  useEffect(() => {
+    let alive = true
+    api.analytics().then(r => { if (alive) setA(r) }).catch(() => {})
+    return () => { alive = false }
+  }, [])
+  return a
+}
+
+function useTemplates() {
+  const [items, setItems] = useState<Template[]>(templates)
+  useEffect(() => {
+    let alive = true
+    api.templates()
+      .then((r: any) => {
+        if (!alive) return
+        const list = Array.isArray(r) ? r : (r && r.templates) || []
+        if (list.length) setItems(list.map((t: any) => ({
+          id: t.id || String(Math.random()),
+          name: t.name || t.title || 'Template',
+          category: t.category || 'Custom',
+          type: (t.type === 'video' || t.type === 'image') ? t.type : 'carousel',
+          slides: t.slides,
+          duration: t.duration,
+          color: t.color || '#0f0f1a',
+          accent: t.accent || '#8b5cf6',
+          rating: t.rating || 4.5,
+          uses: t.uses || 0,
+          tags: t.tags || [],
+          preview: t.preview || '',
+        })))
+      })
+      .catch(() => {})
+    return () => { alive = false }
+  }, [])
+  return items
+}
+
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
 function StatusBadge({ status }: { status: PostStatus }) {
@@ -169,12 +270,24 @@ function ChannelTag({ channel }: { channel: string }) {
 // ─── Pages ────────────────────────────────────────────────────────────────────
 
 function Dashboard() {
+  const metrics = useMetrics()
+  const { items: realPosts } = usePosts()
+  const analytics = useAnalytics()
+
   const stats = [
-    { label: 'Posts Published', value: '142', delta: '+12%', color: '#8b5cf6' },
-    { label: 'Scheduled', value: '28', delta: '+3', color: '#3b82f6' },
-    { label: 'Avg. Engagement', value: '6.4k', delta: '+18%', color: '#22c55e' },
-    { label: 'Active Templates', value: '9', delta: '3 new', color: '#f59e0b' },
+    { label: 'Posts Published', value: metrics ? String(metrics.published ?? metrics.total ?? 0) : '—', delta: '+12%', color: '#8b5cf6' },
+    { label: 'Scheduled', value: metrics ? String(metrics.scheduled ?? 0) : '—', delta: '+3', color: '#3b82f6' },
+    { label: 'Drafts', value: metrics ? String(metrics.draft ?? 0) : '—', delta: 'awaiting', color: '#f59e0b' },
+    { label: 'Processing', value: metrics ? String(metrics.processing ?? 0) : '—', delta: 'in queue', color: '#22c55e' },
   ]
+
+  const chartData2 = analytics?.by_day?.length
+    ? analytics.by_day.map((d: any) => ({ day: String(d.day || d.date || ''), posts: Number(d.total ?? d.count ?? d.posts ?? 0) }))
+    : chartData
+
+  const maxP = Math.max(1, ...chartData2.map((d: { posts: number }) => d.posts))
+
+  const pending = realPosts.filter(p => p.status === 'pending' || p.status === 'draft').slice(0, 6)
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
@@ -198,18 +311,18 @@ function Dashboard() {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
             <div>
               <h3 style={{ margin: 0, fontSize: '0.9375rem', fontWeight: 600, color: '#fafafa' }}>Content Production</h3>
-              <p style={{ margin: '2px 0 0', fontSize: '0.75rem', color: '#71717a' }}>Last 14 days</p>
+              <p style={{ margin: '2px 0 0', fontSize: '0.75rem', color: '#71717a' }}>Posts per day</p>
             </div>
-            <span style={{ fontSize: '0.6875rem', color: '#22c55e', fontWeight: 600, background: 'rgba(34,197,94,0.1)', padding: '4px 10px', borderRadius: 9999 }}>↑ 34% vs prev.</span>
+            <span style={{ fontSize: '0.6875rem', color: '#22c55e', fontWeight: 600, background: 'rgba(34,197,94,0.1)', padding: '4px 10px', borderRadius: 9999 }}>Live data</span>
           </div>
           <div style={{ display: 'flex', alignItems: 'flex-end', gap: 6, height: 120 }}>
-            {chartData.map((d, i) => (
+            {chartData2.map((d: { day: string; posts: number }, i: number) => (
               <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, height: '100%', justifyContent: 'flex-end' }}>
                 <div
                   style={{
                     width: '100%',
-                    height: `${(d.posts / maxPosts) * 100}%`,
-                    background: i === chartData.length - 1 ? '#8b5cf6' : 'rgba(139,92,246,0.3)',
+                    height: `${(d.posts / maxP) * 100}%`,
+                    background: i === chartData2.length - 1 ? '#8b5cf6' : 'rgba(139,92,246,0.3)',
                     borderRadius: '4px 4px 2px 2px',
                     transition: 'height 0.3s ease',
                     position: 'relative',
@@ -217,7 +330,7 @@ function Dashboard() {
                   }}
                   title={`${d.posts} posts`}
                 />
-                {i % 3 === 0 && <span style={{ fontSize: '0.5rem', color: '#52525b', whiteSpace: 'nowrap', transform: 'rotate(-30deg)', marginBottom: -2 }}>{d.day.slice(4)}</span>}
+                {i % 3 === 0 && <span style={{ fontSize: '0.5rem', color: '#52525b', whiteSpace: 'nowrap', transform: 'rotate(-30deg)', marginBottom: -2 }}>{String(d.day).slice(4)}</span>}
               </div>
             ))}
           </div>
@@ -227,19 +340,18 @@ function Dashboard() {
         <div className="glass-card" style={{ padding: 20 }}>
           <h3 style={{ margin: '0 0 16px', fontSize: '0.9375rem', fontWeight: 600, color: '#fafafa' }}>Approval Queue</h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {posts.filter(p => p.status === 'pending' || p.status === 'draft').map(p => (
+            {pending.map(p => (
               <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', background: 'rgba(255,255,255,0.03)', borderRadius: 10, border: '1px solid rgba(255,255,255,0.05)' }}>
                 <img src={p.thumbnail} alt={p.title} style={{ width: 36, height: 36, borderRadius: 8, objectFit: 'cover', flexShrink: 0 }} />
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: '0.75rem', fontWeight: 600, color: '#fafafa', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.title}</div>
                   <StatusBadge status={p.status} />
                 </div>
-                <div style={{ display: 'flex', gap: 6 }}>
-                  <button className="btn-ghost" style={{ padding: '4px 8px', color: '#22c55e', fontSize: 12 }}>✓</button>
-                  <button className="btn-ghost" style={{ padding: '4px 8px', color: '#ef4444', fontSize: 12 }}>✕</button>
-                </div>
               </div>
             ))}
+            {pending.length === 0 && (
+              <div style={{ padding: 24, textAlign: 'center', color: '#52525b', fontSize: '0.8125rem' }}>No posts awaiting approval 🎉</div>
+            )}
           </div>
         </div>
       </div>
@@ -248,18 +360,13 @@ function Dashboard() {
       <div className="glass-card" style={{ padding: 20 }}>
         <h3 style={{ margin: '0 0 16px', fontSize: '0.9375rem', fontWeight: 600, color: '#fafafa' }}>Recent Activity</h3>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-          {[
-            { icon: icons.check, color: '#22c55e', text: '"How We Scaled to 10k Users" published to Instagram', time: '2h ago' },
-            { icon: icons.spark, color: '#8b5cf6', text: 'AI generated 3 carousel scripts for "Tech Startup Growth" template', time: '4h ago' },
-            { icon: icons.calendar, color: '#3b82f6', text: '"Weekly Market Insights #12" scheduled for Aug 7 at 8:00 AM', time: '5h ago' },
-            { icon: icons.video, color: '#f59e0b', text: 'Video render completed for "Q3 Product Roadmap Reveal"', time: '6h ago' },
-          ].map((item, i) => (
-            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 0', borderBottom: i < 3 ? '1px solid rgba(255,255,255,0.04)' : 'none' }}>
-              <div style={{ width: 30, height: 30, borderRadius: 8, background: `${item.color}15`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color: item.color }}>
-                <Icon d={item.icon} size={14} />
+          {realPosts.slice(0, 5).map((p, i) => (
+            <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 0', borderBottom: i < 4 ? '1px solid rgba(255,255,255,0.04)' : 'none' }}>
+              <div style={{ width: 30, height: 30, borderRadius: 8, background: `${p.status === 'published' ? '#22c55e' : '#8b5cf6'}15`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color: p.status === 'published' ? '#22c55e' : '#8b5cf6' }}>
+                <Icon d={p.status === 'published' ? icons.check : icons.spark} size={14} />
               </div>
-              <span style={{ flex: 1, fontSize: '0.8125rem', color: '#a1a1aa' }}>{item.text}</span>
-              <span style={{ fontSize: '0.6875rem', color: '#52525b', whiteSpace: 'nowrap' }}>{item.time}</span>
+              <span style={{ flex: 1, fontSize: '0.8125rem', color: '#a1a1aa', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>"{p.title}" · <span style={{ textTransform: 'capitalize' }}>{p.status}</span></span>
+              <span style={{ fontSize: '0.6875rem', color: '#52525b', whiteSpace: 'nowrap' }}>{p.date}</span>
             </div>
           ))}
         </div>
@@ -271,6 +378,7 @@ function Dashboard() {
 function ContentPage() {
   const [filter, setFilter] = useState<'all' | PostStatus>('all')
   const [search, setSearch] = useState('')
+  const { items: realPosts, setItems: setRealPosts } = usePosts()
   const tabs = [
     { key: 'all', label: 'All' },
     { key: 'scheduled', label: 'Scheduled' },
@@ -279,11 +387,25 @@ function ContentPage() {
     { key: 'published', label: 'Published' },
     { key: 'pending', label: 'Pending' },
   ]
-  const filtered = posts.filter(p => {
+  const filtered = realPosts.filter(p => {
     const matchStatus = filter === 'all' || p.status === filter
     const matchSearch = p.title.toLowerCase().includes(search.toLowerCase())
     return matchStatus && matchSearch
   })
+
+  async function refresh() {
+    const r: any = await api.posts().catch(() => [])
+    if (Array.isArray(r)) setRealPosts(r.map(mapPost))
+  }
+
+  async function handlePublish(id: string) {
+    await api.publishNow(id).catch(() => {})
+    refresh()
+  }
+  async function handleDelete(id: string) {
+    await api.deletePost(id).catch(() => {})
+    refresh()
+  }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
@@ -368,20 +490,23 @@ function PostCard({ post }: { post: Post }) {
 
         {/* Actions */}
         <div style={{ display: 'flex', gap: 6 }}>
-          {post.status === 'draft' && <button className="btn-primary" style={{ flex: 1, padding: '7px 0', fontSize: '0.75rem' }}>Publish</button>}
+          {(post.status === 'draft' || post.status === 'pending') && (
+            <button className="btn-primary" style={{ flex: 1, padding: '7px 0', fontSize: '0.75rem' }} onClick={() => window.dispatchEvent(new CustomEvent('arx-publish', { detail: post.id }))}>
+              Publish
+            </button>
+          )}
           {post.status === 'scheduled' && <button className="btn-secondary" style={{ flex: 1, padding: '7px 0', fontSize: '0.75rem' }}>Reschedule</button>}
           {post.status === 'processing' && <button className="btn-secondary" style={{ flex: 1, padding: '7px 0', fontSize: '0.75rem', opacity: 0.6 }} disabled>Rendering…</button>}
           {post.status === 'published' && <button className="btn-secondary" style={{ flex: 1, padding: '7px 0', fontSize: '0.75rem' }}>Boost</button>}
-          {post.status === 'pending' && <button className="btn-primary" style={{ flex: 1, padding: '7px 0', fontSize: '0.75rem' }}>Approve</button>}
           {post.type === 'carousel' && post.status !== 'published' && (
-            <button className="btn-ghost" style={{ padding: '7px 10px', color: '#8b5cf6', background: 'rgba(139,92,246,0.08)', border: '1px solid rgba(139,92,246,0.2)' }} title="Generate Video">
+            <button className="btn-ghost" style={{ padding: '7px 10px', color: '#8b5cf6', background: 'rgba(139,92,246,0.08)', border: '1px solid rgba(139,92,246,0.2)' }} title="Generate Video" onClick={() => window.dispatchEvent(new CustomEvent('arx-video', { detail: post.id }))}>
               <Icon d={icons.play} size={13} />
             </button>
           )}
           <button className="btn-ghost" style={{ padding: '7px 10px' }} title="Edit">
             <Icon d={icons.edit} size={13} />
           </button>
-          <button className="btn-ghost" style={{ padding: '7px 10px', color: '#ef444480' }} title="Delete">
+          <button className="btn-ghost" style={{ padding: '7px 10px', color: '#ef444480' }} title="Delete" onClick={() => window.dispatchEvent(new CustomEvent('arx-delete', { detail: post.id }))}>
             <Icon d={icons.trash} size={13} />
           </button>
         </div>
@@ -395,13 +520,14 @@ function TemplatesPage({ onUseTemplate }: { onUseTemplate: (t: Template) => void
   const [catFilter, setCatFilter] = useState('All')
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null)
   const [search, setSearch] = useState('')
+  const realTemplates = useTemplates()
 
   const categories = ['All', 'Business', 'Marketing', 'Finance', 'Creative', 'Personal Brand', 'Lifestyle', 'Events', 'Video']
 
-  const filtered = templates.filter(t => {
+  const filtered = realTemplates.filter(t => {
     const matchType = typeFilter === 'all' || t.type === typeFilter
     const matchCat = catFilter === 'All' || t.category === catFilter || (catFilter === 'Video' && t.type === 'video')
-    const matchSearch = t.name.toLowerCase().includes(search.toLowerCase()) || t.tags.some(g => g.toLowerCase().includes(search.toLowerCase()))
+    const matchSearch = t.name.toLowerCase().includes(search.toLowerCase()) || (t.tags || []).some(g => g.toLowerCase().includes(search.toLowerCase()))
     return matchType && matchCat && matchSearch
   })
 
@@ -558,22 +684,24 @@ function TemplateModal({ template: t, onClose, onUse }: { template: Template; on
 function SchedulePage() {
   const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
   const hours = ['8 AM', '10 AM', '12 PM', '2 PM', '4 PM', '6 PM', '8 PM']
-  const scheduled = [
-    { day: 0, hour: 1, title: 'Growth Hacks', type: 'carousel' as ContentType, channel: 'instagram' },
-    { day: 1, hour: 3, title: 'Q3 Roadmap', type: 'video' as ContentType, channel: 'linkedin' },
-    { day: 2, hour: 0, title: 'Market Report', type: 'carousel' as ContentType, channel: 'twitter' },
-    { day: 3, hour: 2, title: 'Team Spotlight', type: 'image' as ContentType, channel: 'instagram' },
-    { day: 4, hour: 4, title: 'Product Reel', type: 'video' as ContentType, channel: 'linkedin' },
-    { day: 5, hour: 1, title: 'Weekend Tips', type: 'carousel' as ContentType, channel: 'instagram' },
-  ]
+  const { items: realPosts } = usePosts()
+
+  const scheduled = realPosts
+    .filter(p => p.status === 'scheduled' && p.date !== '—')
+    .map(p => {
+      const d = new Date(p.date)
+      const day = (d.getDay() + 6) % 7
+      const hour = Math.min(6, Math.max(0, Math.floor(d.getHours() / 2) - 3))
+      return { id: p.id, day, hour, title: p.title, type: p.type, channel: p.channels[0] || 'instagram' }
+    })
+    .slice(0, 30)
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-        <h3 style={{ margin: 0, fontSize: '0.9375rem', fontWeight: 600, color: '#fafafa' }}>Week of Aug 4 – 10, 2026</h3>
+        <h3 style={{ margin: 0, fontSize: '0.9375rem', fontWeight: 600, color: '#fafafa' }}>This week</h3>
         <div style={{ flex: 1 }} />
-        <button className="btn-secondary" style={{ padding: '7px 14px', fontSize: '0.75rem' }}>← Prev</button>
-        <button className="btn-secondary" style={{ padding: '7px 14px', fontSize: '0.75rem' }}>Next →</button>
+        <span style={{ fontSize: '0.75rem', color: '#52525b', fontFamily: 'JetBrains Mono, monospace' }}>{scheduled.length} scheduled</span>
         <button className="btn-primary" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <Icon d={icons.plus} size={14} /> Schedule Post
         </button>
@@ -620,25 +748,40 @@ function SchedulePage() {
 }
 
 function AnalyticsPage() {
+  const analytics = useAnalytics()
+  const { items: realPosts } = usePosts()
+
+  const byStatus = (analytics?.by_status || []).reduce((acc: Record<string, number>, s: any) => {
+    acc[s.status || s.name || 'unknown'] = Number(s.total ?? s.count ?? s.value ?? 0)
+    return acc
+  }, {} as Record<string, number>)
+
+  const totalPosts = realPosts.length
+  const published = byStatus['published'] ?? realPosts.filter(p => p.status === 'published').length
+  const scheduled = byStatus['scheduled'] ?? realPosts.filter(p => p.status === 'scheduled').length
+  const drafts = byStatus['draft'] ?? realPosts.filter(p => p.status === 'draft').length
+  const processing = byStatus['processing'] ?? realPosts.filter(p => p.status === 'processing').length
+
   const metrics = [
-    { label: 'Total Reach', value: '284k', delta: '+22%', color: '#8b5cf6' },
-    { label: 'Impressions', value: '1.2M', delta: '+31%', color: '#3b82f6' },
-    { label: 'Engagements', value: '47.8k', delta: '+18%', color: '#22c55e' },
-    { label: 'Profile Visits', value: '12.4k', delta: '+9%', color: '#f59e0b' },
+    { label: 'Total Posts', value: String(totalPosts), delta: 'all time', color: '#8b5cf6' },
+    { label: 'Published', value: String(published), delta: 'live', color: '#22c55e' },
+    { label: 'Scheduled', value: String(scheduled), delta: 'queued', color: '#3b82f6' },
+    { label: 'Drafts', value: String(drafts), delta: processing ? `${processing} rendering` : 'waiting', color: '#f59e0b' },
   ]
 
-  const channelData = [
-    { name: 'Instagram', reach: 142000, engagement: 28400, color: '#e1306c' },
-    { name: 'LinkedIn', reach: 98000, engagement: 12200, color: '#0a66c2' },
-    { name: 'Twitter / X', reach: 44000, engagement: 7200, color: '#1da1f2' },
-  ]
+  const byChannel = (analytics?.by_channel || []).map((c: any) => ({
+    name: String(c.channel || c.name || 'all').charAt(0).toUpperCase() + String(c.channel || c.name || 'all').slice(1),
+    reach: Number(c.total ?? c.count ?? c.posts ?? 0),
+    engagement: Number(c.total ?? c.count ?? c.posts ?? 0),
+    color: c.channel === 'instagram' ? '#e1306c' : c.channel === 'linkedin' ? '#0a66c2' : c.channel === 'twitter' ? '#1da1f2' : '#8b5cf6',
+  }))
 
-  const topPosts = [
-    { title: 'How We Scaled to 10k Users', type: 'carousel', reach: '48k', eng: '4.2k', rate: '8.75%' },
-    { title: 'SaaS Pricing Models Explained', type: 'carousel', reach: '31k', eng: '2.8k', rate: '9.03%' },
-    { title: 'Q2 Company Update', type: 'video', reach: '24k', eng: '1.9k', rate: '7.92%' },
-    { title: 'Building a Remote Team', type: 'carousel', reach: '19k', eng: '1.6k', rate: '8.42%' },
-  ]
+  const channelData = byChannel.length ? byChannel : []
+
+  const topPosts = [...realPosts]
+    .filter(p => p.status === 'published')
+    .slice(0, 4)
+    .map(p => ({ title: p.title, type: p.type, reach: '—', eng: '—', rate: '—' }))
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
@@ -660,24 +803,22 @@ function AnalyticsPage() {
         <div className="glass-card" style={{ padding: 20 }}>
           <h3 style={{ margin: '0 0 18px', fontSize: '0.9375rem', fontWeight: 600, color: '#fafafa' }}>Channel Breakdown</h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-            {channelData.map(ch => {
-              const maxReach = Math.max(...channelData.map(c => c.reach))
+            {channelData.length ? channelData.map((ch: { name: string; reach: number; engagement: number; color: string }) => {
+              const maxReach = Math.max(...channelData.map((c: { reach: number }) => c.reach))
               return (
                 <div key={ch.name}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
                     <span style={{ fontSize: '0.8125rem', color: '#fafafa', fontWeight: 500 }}>{ch.name}</span>
-                    <span style={{ fontSize: '0.75rem', color: '#a1a1aa', fontFamily: 'JetBrains Mono, monospace' }}>{(ch.reach / 1000).toFixed(0)}k reach</span>
+                    <span style={{ fontSize: '0.75rem', color: '#a1a1aa', fontFamily: 'JetBrains Mono, monospace' }}>{ch.reach} posts</span>
                   </div>
                   <div style={{ height: 6, background: 'rgba(255,255,255,0.06)', borderRadius: 9999, overflow: 'hidden' }}>
                     <div style={{ height: '100%', width: `${(ch.reach / maxReach) * 100}%`, background: ch.color, borderRadius: 9999, transition: 'width 0.5s ease' }} />
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}>
-                    <span style={{ fontSize: '0.625rem', color: '#52525b' }}>Engagement: {(ch.engagement / 1000).toFixed(1)}k</span>
-                    <span style={{ fontSize: '0.625rem', color: ch.color, fontFamily: 'JetBrains Mono, monospace' }}>{((ch.engagement / ch.reach) * 100).toFixed(1)}% rate</span>
-                  </div>
                 </div>
               )
-            })}
+            }) : (
+              <div style={{ padding: 24, textAlign: 'center', color: '#52525b', fontSize: '0.8125rem' }}>No channel data yet</div>
+            )}
           </div>
         </div>
 
@@ -690,14 +831,13 @@ function AnalyticsPage() {
                 <span style={{ width: 22, height: 22, borderRadius: '50%', background: i === 0 ? 'rgba(139,92,246,0.2)' : 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.625rem', fontWeight: 700, color: i === 0 ? '#8b5cf6' : '#52525b', flexShrink: 0 }}>{i + 1}</span>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: '0.75rem', fontWeight: 600, color: '#fafafa', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.title}</div>
-                  <div style={{ fontSize: '0.6rem', color: '#52525b', textTransform: 'capitalize', marginTop: 1 }}>{p.type}</div>
-                </div>
-                <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontSize: '0.75rem', fontWeight: 600, color: '#fafafa', fontFamily: 'JetBrains Mono, monospace' }}>{p.reach}</div>
-                  <div style={{ fontSize: '0.625rem', color: '#22c55e', fontFamily: 'JetBrains Mono, monospace' }}>{p.rate}</div>
+                  <div style={{ fontSize: '0.6rem', color: '#52525b', textTransform: 'capitalize', marginTop: 1 }}>{p.type} · published</div>
                 </div>
               </div>
             ))}
+            {topPosts.length === 0 && (
+              <div style={{ padding: 24, textAlign: 'center', color: '#52525b', fontSize: '0.8125rem' }}>No published posts yet</div>
+            )}
           </div>
         </div>
       </div>
@@ -712,9 +852,33 @@ function NewPostModal({ template, onClose }: { template: Template | null; onClos
   const [postTitle, setPostTitle] = useState(template ? `New post with "${template.name}"` : '')
   const [postType, setPostType] = useState<ContentType>(template?.type || 'carousel')
   const [channels, setChannels] = useState<string[]>(['instagram'])
+  const [caption, setCaption] = useState('')
+  const [scheduleDate, setScheduleDate] = useState('')
+  const [scheduleTime, setScheduleTime] = useState('10:00')
+  const [hashtags, setHashtags] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState('')
 
   const toggleChannel = (c: string) => {
     setChannels(prev => prev.includes(c) ? prev.filter(x => x !== c) : [...prev, c])
+  }
+
+  async function submit() {
+    if (!postTitle.trim()) return
+    setSubmitting(true)
+    setError('')
+    try {
+      const r: any = await api.generate(postTitle.trim(), channels[0] || 'all', scheduleDate ? 'scheduled' : 'now', template?.name || 'clean')
+      if (r?.success) {
+        setStep(3)
+      } else {
+        setError(r?.message || r?.error || 'Falha ao gerar post')
+      }
+    } catch (e: any) {
+      setError(e?.message || 'Erro ao gerar post')
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   return (
@@ -773,22 +937,23 @@ function NewPostModal({ template, onClose }: { template: Template | null; onClos
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
               <div>
                 <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#a1a1aa', marginBottom: 6 }}>Caption / Script</label>
-                <textarea className="input-field" placeholder="Write your caption or paste an AI-generated script here…" rows={5} style={{ resize: 'none' }} />
+                <textarea className="input-field" placeholder="Write your caption or paste an AI-generated script here…" rows={5} style={{ resize: 'none' }} value={caption} onChange={e => setCaption(e.target.value)} />
               </div>
               <div style={{ display: 'flex', gap: 12 }}>
                 <div style={{ flex: 1 }}>
                   <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#a1a1aa', marginBottom: 6 }}>Schedule Date</label>
-                  <input className="input-field" type="date" defaultValue="2026-08-08" />
+                  <input className="input-field" type="date" value={scheduleDate} onChange={e => setScheduleDate(e.target.value)} />
                 </div>
                 <div style={{ flex: 1 }}>
                   <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#a1a1aa', marginBottom: 6 }}>Time</label>
-                  <input className="input-field" type="time" defaultValue="10:00" />
+                  <input className="input-field" type="time" value={scheduleTime} onChange={e => setScheduleTime(e.target.value)} />
                 </div>
               </div>
               <div>
                 <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#a1a1aa', marginBottom: 6 }}>Hashtags</label>
-                <input className="input-field" placeholder="#socialmedia #automation #growth" />
+                <input className="input-field" placeholder="#socialmedia #automation #growth" value={hashtags} onChange={e => setHashtags(e.target.value)} />
               </div>
+              {error && <div style={{ fontSize: '0.75rem', color: '#ef4444', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', padding: '10px 12px', borderRadius: 8 }}>{error}</div>}
             </div>
           )}
 
@@ -820,8 +985,8 @@ function NewPostModal({ template, onClose }: { template: Template | null; onClos
         <div style={{ padding: '16px 24px', borderTop: '1px solid rgba(255,255,255,0.06)', display: 'flex', gap: 10 }}>
           {step > 1 && step < 3 && <button className="btn-secondary" style={{ flex: 1, padding: '11px 0' }} onClick={() => setStep(s => s - 1)}>← Back</button>}
           {step < 3 && (
-            <button className="btn-primary" style={{ flex: 2, padding: '11px 0', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }} onClick={() => setStep(s => s + 1)}>
-              {step === 2 ? <><Icon d={icons.spark} size={14} /> Create Post</> : 'Continue →'}
+            <button className="btn-primary" style={{ flex: 2, padding: '11px 0', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }} onClick={() => { if (step === 2) submit(); else setStep(s => s + 1) }} disabled={submitting}>
+              {step === 2 ? <>{submitting ? 'Generating…' : <><Icon d={icons.spark} size={14} /> Create Post</>}</> : 'Continue →'}
             </button>
           )}
           {step === 3 && <button className="btn-primary" style={{ flex: 1, padding: '11px 0' }} onClick={onClose}>Done</button>}
@@ -951,11 +1116,34 @@ function NotificationsPanel({ open, onClose }: { open: boolean; onClose: () => v
 
 function UserPanel({ open, onClose }: { open: boolean; onClose: () => void }) {
   const [editingName, setEditingName] = useState(false)
-  const [displayName, setDisplayName] = useState('Alex Rivera')
-  const [nameInput, setNameInput] = useState('Alex Rivera')
+  const [displayName, setDisplayName] = useState('Usuário')
+  const [nameInput, setNameInput] = useState('Usuário')
+  const [userEmail, setUserEmail] = useState('')
+  const [planName, setPlanName] = useState('Free')
+  const [postCount, setPostCount] = useState('0')
   const [emailNotifs, setEmailNotifs] = useState(true)
   const [pushNotifs, setPushNotifs] = useState(true)
   const [aiSuggestions, setAiSuggestions] = useState(true)
+
+  useEffect(() => {
+    if (!open) return
+    api.me().then((r: any) => {
+      if (r?.user) {
+        const n = r.user.full_name || r.user.name || 'Usuário'
+        setDisplayName(n)
+        setNameInput(n)
+        setUserEmail(r.user.email || '')
+        setPlanName((r.plan && (r.plan.name || r.plan.slug)) || r.user.plan_name || r.user.plan || 'Free')
+      }
+    }).catch(() => {})
+    api.metrics().then((m: any) => { if (m) setPostCount(String(m.total ?? m.published ?? 0)) }).catch(() => {})
+  }, [open])
+
+  async function handleLogout() {
+    await api.logout().catch(() => {})
+    localStorage.removeItem('arx_token')
+    window.location.reload()
+  }
 
   const Toggle = ({ value, onChange }: { value: boolean; onChange: (v: boolean) => void }) => (
     <button
@@ -980,7 +1168,7 @@ function UserPanel({ open, onClose }: { open: boolean; onClose: () => void }) {
       <div style={{ padding: '28px 24px 20px', borderBottom: '1px solid rgba(255,255,255,0.06)', background: 'linear-gradient(180deg, rgba(139,92,246,0.07) 0%, transparent 100%)', flexShrink: 0 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
           <div style={{ width: 56, height: 56, borderRadius: '50%', background: 'linear-gradient(135deg, #8b5cf6, #3b82f6)', border: '2.5px solid rgba(139,92,246,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.25rem', color: '#fff', fontWeight: 700, flexShrink: 0 }}>
-            AR
+            {displayName.split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase() || 'U'}
           </div>
           <button className="btn-ghost" style={{ padding: '5px 6px' }} onClick={onClose}><Icon d={icons.close} size={15} /></button>
         </div>
@@ -1004,16 +1192,16 @@ function UserPanel({ open, onClose }: { open: boolean; onClose: () => void }) {
             </button>
           </div>
         )}
-        <p style={{ margin: '0 0 10px', fontSize: '0.75rem', color: '#71717a' }}>alex@arxfactory.io</p>
+        <p style={{ margin: '0 0 10px', fontSize: '0.75rem', color: '#71717a' }}>{userEmail || '—'}</p>
         <div style={{ display: 'flex', gap: 8 }}>
-          <span style={{ fontSize: '0.625rem', fontWeight: 700, color: '#8b5cf6', background: 'rgba(139,92,246,0.15)', padding: '3px 10px', borderRadius: 9999, border: '1px solid rgba(139,92,246,0.25)' }}>PRO PLAN</span>
+          <span style={{ fontSize: '0.625rem', fontWeight: 700, color: '#8b5cf6', background: 'rgba(139,92,246,0.15)', padding: '3px 10px', borderRadius: 9999, border: '1px solid rgba(139,92,246,0.25)' }}>{planName.toUpperCase()} PLAN</span>
           <span style={{ fontSize: '0.625rem', fontWeight: 600, color: '#22c55e', background: 'rgba(34,197,94,0.1)', padding: '3px 10px', borderRadius: 9999 }}>● Active</span>
         </div>
       </div>
 
       {/* Stats row */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 0, borderBottom: '1px solid rgba(255,255,255,0.06)', flexShrink: 0 }}>
-        {[{ label: 'Posts', value: '142' }, { label: 'Templates', value: '9' }, { label: 'Reach', value: '284k' }].map((s, i) => (
+        {[{ label: 'Posts', value: postCount }, { label: 'Plan', value: planName.charAt(0).toUpperCase() + planName.slice(1) }, { label: 'Status', value: 'Active' }].map((s, i) => (
           <div key={s.label} style={{ padding: '14px 0', textAlign: 'center', borderRight: i < 2 ? '1px solid rgba(255,255,255,0.06)' : 'none' }}>
             <div style={{ fontSize: '1.125rem', fontWeight: 700, color: '#fafafa', letterSpacing: '-0.01em' }}>{s.value}</div>
             <div style={{ fontSize: '0.625rem', color: '#52525b', marginTop: 2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{s.label}</div>
@@ -1065,7 +1253,7 @@ function UserPanel({ open, onClose }: { open: boolean; onClose: () => void }) {
 
         {/* Logout */}
         <div style={{ padding: '16px 20px 8px', borderTop: '1px solid rgba(255,255,255,0.05)', marginTop: 8 }}>
-          <button className="btn-ghost" style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '10px 0', color: '#ef4444' }}>
+          <button className="btn-ghost" style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '10px 0', color: '#ef4444' }} onClick={handleLogout}>
             <Icon d={icons.logout} size={15} />
             <span style={{ fontSize: '0.8125rem', fontWeight: 600 }}>Sign Out</span>
           </button>
@@ -1081,12 +1269,23 @@ function SettingsPanel({ open, onClose }: { open: boolean; onClose: () => void }
   const [tab, setTab] = useState<'integrations' | 'apikey' | 'defaults' | 'danger'>('integrations')
   const [apiKeyVisible, setApiKeyVisible] = useState(false)
   const [copied, setCopied] = useState(false)
-  const apiKey = 'arx_live_sk_1a2b3c4d5e6f7g8h9i0j'
+  const [apiKey, setApiKey] = useState('')
+  const [savedMsg, setSavedMsg] = useState('')
+
+  useEffect(() => {
+    if (!open) return
+    api.myApiKey().then((r: any) => { if (r?.api_key) setApiKey(r.api_key) }).catch(() => {})
+  }, [open])
 
   const copy = () => {
     navigator.clipboard.writeText(apiKey).catch(() => {})
     setCopied(true)
     setTimeout(() => setCopied(false), 1800)
+  }
+
+  async function regenerateKey() {
+    const r: any = await api.myApiKey().catch(() => null)
+    if (r?.api_key) setApiKey(r.api_key)
   }
 
   const Toggle = ({ value, onChange }: { value: boolean; onChange: (v: boolean) => void }) => (
@@ -1183,7 +1382,7 @@ function SettingsPanel({ open, onClose }: { open: boolean; onClose: () => void }
               </div>
             </div>
 
-            <button className="btn-secondary" style={{ width: '100%', padding: '10px 0', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, fontSize: '0.8125rem' }}>
+            <button className="btn-secondary" style={{ width: '100%', padding: '10px 0', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, fontSize: '0.8125rem' }} onClick={regenerateKey}>
               <Icon d={icons.key} size={13} /> Regenerate Key
             </button>
 
@@ -1310,21 +1509,26 @@ function ChatPanel({ open, onClose }: { open: boolean; onClose: () => void }) {
   const [input, setInput] = useState('')
   const [typing, setTyping] = useState(false)
   const bottomRef = { current: null as HTMLDivElement | null }
-  const responseIdx = { current: 0 }
+  const history = { current: [] as { role: string; content: string }[] }
 
-  const send = () => {
+  const send = async () => {
     const text = input.trim()
     if (!text) return
     const userMsg: ChatMessage = { id: Date.now(), role: 'user', text, time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }
     setMessages(prev => [...prev, userMsg])
     setInput('')
     setTyping(true)
-    setTimeout(() => {
-      const reply = aiResponses[responseIdx.current % aiResponses.length]
-      responseIdx.current++
+    history.current.push({ role: 'user', content: text })
+    try {
+      const r: any = await api.aiChat(text, history.current, 'dashboard')
+      const reply = r?.reply || 'Desculpe, não consegui processar isso agora.'
+      history.current.push({ role: 'assistant', content: reply })
       setMessages(prev => [...prev, { id: Date.now() + 1, role: 'ai', text: reply, time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }])
+    } catch {
+      setMessages(prev => [...prev, { id: Date.now() + 1, role: 'ai', text: 'Falha ao conectar com o assistente. Tente novamente.', time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }])
+    } finally {
       setTyping(false)
-    }, 1200 + Math.random() * 800)
+    }
   }
 
   const suggestions = ['Write a carousel hook', 'Generate hashtags', 'Video script intro', 'Caption for LinkedIn']
@@ -1434,6 +1638,67 @@ function ChatPanel({ open, onClose }: { open: boolean; onClose: () => void }) {
   )
 }
 
+// ─── Login View ───────────────────────────────────────────────────────────────
+
+function LoginView({ onLogin }: { onLogin: (token: string, user: any) => void }) {
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    setError('')
+    setLoading(true)
+    try {
+      const r: any = await api.login(email, password)
+      if (r?.success && r?.token) {
+        onLogin(r.token, r.user)
+      } else {
+        setError(r?.error || 'Erro ao fazer login')
+      }
+    } catch {
+      setError('Erro de conexão com o servidor')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className="aurora-bg" style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, fontFamily: 'Inter, system-ui, sans-serif' }}>
+      <div className="glass-card animate-fade-in" style={{ width: '100%', maxWidth: 380, padding: 32 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 24 }}>
+          <div style={{ width: 36, height: 36, borderRadius: 10, background: '#8b5cf6', display: 'flex', alignItems: 'center', justifyContent: 'center' }} className="animate-pulse-glow">
+            <Icon d={icons.spark} size={17} />
+          </div>
+          <div>
+            <div style={{ fontSize: '0.9375rem', fontWeight: 700, color: '#fafafa' }}>Arx</div>
+            <div style={{ fontSize: '0.5625rem', color: '#52525b', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Content Factory</div>
+          </div>
+        </div>
+        <h1 style={{ margin: '0 0 6px', fontSize: '1.25rem', fontWeight: 700, color: '#fafafa' }}>Entrar</h1>
+        <p style={{ margin: '0 0 24px', fontSize: '0.8125rem', color: '#71717a' }}>Acesse seu painel de controle</p>
+
+        {error && <div style={{ fontSize: '0.75rem', color: '#ef4444', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', padding: '10px 12px', borderRadius: 8, marginBottom: 14 }}>{error}</div>}
+
+        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <div>
+            <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#a1a1aa', marginBottom: 6 }}>Email</label>
+            <input className="input-field" type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="seu@email.com" required style={{ width: '100%' }} />
+          </div>
+          <div>
+            <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#a1a1aa', marginBottom: 6 }}>Senha</label>
+            <input className="input-field" type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" required style={{ width: '100%' }} />
+          </div>
+          <button type="submit" disabled={loading} className="btn-primary" style={{ padding: '11px 0', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 4 }}>
+            {loading ? 'Entrando…' : <><Icon d={icons.spark} size={14} /> Entrar</>}
+          </button>
+        </form>
+      </div>
+    </div>
+  )
+}
+
 // ─── App ──────────────────────────────────────────────────────────────────────
 
 export default function App() {
@@ -1444,7 +1709,87 @@ export default function App() {
   const [userOpen, setUserOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [chatOpen, setChatOpen] = useState(false)
+  const [user, setUser] = useState<any>(null)
+  const [refreshKey, setRefreshKey] = useState(0)
+  const [authed, setAuthed] = useState<boolean | null>(null)
   const unreadNotifs = 3
+
+  // Check auth on mount
+  useEffect(() => {
+    const token = localStorage.getItem('arx_token')
+    if (!token) {
+      setAuthed(false)
+      return
+    }
+    api.me()
+      .then((r: any) => {
+        if (r?.user) {
+          setUser({ ...r.user, plan_name: (r.plan && (r.plan.name || r.plan.slug)) || r.user.plan_name || 'Free' })
+          setAuthed(true)
+        }
+        else setAuthed(false)
+      })
+      .catch(() => setAuthed(false))
+  }, [])
+
+  function handleLogin(token: string, userData: any) {
+    localStorage.setItem('arx_token', token)
+    setUser(userData)
+    setAuthed(true)
+  }
+
+  function handleLogout() {
+    localStorage.removeItem('arx_token')
+    setAuthed(false)
+    setUser(null)
+  }
+
+  // Global actions dispatched by PostCard buttons
+  useEffect(() => {
+    const onPublish = (e: Event) => {
+      const id = (e as CustomEvent).detail
+      api.publishNow(id).then(() => setRefreshKey(k => k + 1)).catch(() => {})
+    }
+    const onDelete = (e: Event) => {
+      const id = (e as CustomEvent).detail
+      if (confirm('Excluir este post?')) {
+        api.deletePost(id).then(() => setRefreshKey(k => k + 1)).catch(() => {})
+      }
+    }
+    const onVideo = (e: Event) => {
+      const id = (e as CustomEvent).detail
+      api.generateVideo(id).then(() => setRefreshKey(k => k + 1)).catch(() => {})
+    }
+    window.addEventListener('arx-publish', onPublish)
+    window.addEventListener('arx-delete', onDelete)
+    window.addEventListener('arx-video', onVideo)
+    return () => {
+      window.removeEventListener('arx-publish', onPublish)
+      window.removeEventListener('arx-delete', onDelete)
+      window.removeEventListener('arx-video', onVideo)
+    }
+  }, [])
+
+  const userName = user?.full_name || user?.name || 'Usuário'
+  const userEmail = user?.email || ''
+  const planName = user?.plan_name || user?.plan || 'Free'
+  const initials = userName.split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase()
+
+  // Auth gate
+  if (authed === false) {
+    return (
+      <LoginView
+        onLogin={handleLogin}
+      />
+    )
+  }
+  if (authed === null) {
+    return (
+      <div className="aurora-bg" style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ width: 36, height: 36, border: '2px solid rgba(139,92,246,0.3)', borderTop: '2px solid #8b5cf6', borderRadius: '50%' }} className="animate-spin-slow" />
+      </div>
+    )
+  }
 
   const closeAll = () => { setNotifOpen(false); setUserOpen(false); setSettingsOpen(false); setChatOpen(false) }
 
@@ -1507,10 +1852,10 @@ export default function App() {
             <span>Settings</span>
           </button>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', marginTop: 6 }}>
-            <div style={{ width: 30, height: 30, borderRadius: '50%', background: 'linear-gradient(135deg, #8b5cf6, #3b82f6)', border: '2px solid rgba(139,92,246,0.5)', flexShrink: 0 }} />
+            <div style={{ width: 30, height: 30, borderRadius: '50%', background: 'linear-gradient(135deg, #8b5cf6, #3b82f6)', border: '2px solid rgba(139,92,246,0.5)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.625rem', fontWeight: 700, color: '#fff' }}>{initials || 'A'}</div>
             <div style={{ minWidth: 0 }}>
-              <div style={{ fontSize: '0.75rem', fontWeight: 600, color: '#fafafa', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Alex Rivera</div>
-              <div style={{ fontSize: '0.625rem', color: '#52525b' }}>Pro Plan</div>
+              <div style={{ fontSize: '0.75rem', fontWeight: 600, color: '#fafafa', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{userName}</div>
+              <div style={{ fontSize: '0.625rem', color: '#52525b' }}>{planName} Plan</div>
             </div>
           </div>
         </div>
@@ -1530,17 +1875,17 @@ export default function App() {
             {unreadNotifs > 0 && <span style={{ position: 'absolute', top: 4, right: 4, width: 16, height: 16, borderRadius: '50%', background: '#8b5cf6', fontSize: '0.5rem', fontWeight: 700, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{unreadNotifs}</span>}
           </button>
           <button onClick={() => { setUserOpen(true); setNotifOpen(false); setSettingsOpen(false); setChatOpen(false) }} style={{ width: 32, height: 32, borderRadius: '50%', background: 'linear-gradient(135deg, #8b5cf6, #3b82f6)', border: '2px solid rgba(139,92,246,0.5)', cursor: 'pointer', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '0.625rem', fontWeight: 700 }}>
-            AR
+            {initials || 'A'}
           </button>
         </header>
 
         {/* Content */}
         <main style={{ flex: 1, overflow: 'auto', padding: 24 }}>
-          {page === 'dashboard' && <Dashboard />}
-          {page === 'content' && <ContentPage />}
+          {page === 'dashboard' && <Dashboard key={refreshKey} />}
+          {page === 'content' && <ContentPage key={refreshKey} />}
           {page === 'templates' && <TemplatesPage onUseTemplate={handleUseTemplate} />}
-          {page === 'schedule' && <SchedulePage />}
-          {page === 'analytics' && <AnalyticsPage />}
+          {page === 'schedule' && <SchedulePage key={refreshKey} />}
+          {page === 'analytics' && <AnalyticsPage key={refreshKey} />}
         </main>
       </div>
 
