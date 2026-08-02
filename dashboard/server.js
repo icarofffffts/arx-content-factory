@@ -12,6 +12,23 @@ app.use(express.json({
   verify: (req, res, buf) => { req.rawBody = buf.toString('utf8'); }
 }));
 
+
+// ─── Security Headers Middleware (Cloudflare não injeta; definimos no app) ───
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  res.setHeader('Permissions-Policy', 'geolocation=(), microphone=(), camera=()');
+  // CSP permissiva para o SPA (estilos inline + imagens externas + fontes)
+  res.setHeader(
+    'Content-Security-Policy',
+    "default-src 'self'; img-src 'self' data: https:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; font-src 'self' https: data:; connect-src 'self' https:; frame-ancestors 'none'"
+  );
+  next();
+});
+
 const MASTER_USER = 'admin';
 const MASTER_PASS = 'arx_secret_2026!';
 const MASTER_TOKEN = crypto.createHmac('sha256', 'arx_master_secret_key_2026').update(`${MASTER_USER}:${MASTER_PASS}`).digest('hex');
@@ -97,6 +114,9 @@ function evoRequest(method, urlPath, body, apiKey = EVO_GLOBAL_KEY) {
         UNIQUE (user_id, platform)
       );
       ALTER TABLE public.content_pipeline ADD COLUMN IF NOT EXISTS user_id TEXT;
+      ALTER TABLE public.content_pipeline ADD COLUMN IF NOT EXISTS wa_status TEXT;
+      ALTER TABLE public.content_pipeline ADD COLUMN IF NOT EXISTS wa_ts TIMESTAMPTZ;
+      ALTER TABLE public.users ADD COLUMN IF NOT EXISTS whatsapp TEXT;
       ALTER TABLE public.users ADD COLUMN IF NOT EXISTS niche TEXT;
     `);
     console.log('[init] whatsapp_instances + demo_requests + social_accounts ready');
@@ -234,7 +254,8 @@ app.use(async (req, res, next) => {
       || req.path === '/api/v2/plans/webhook'
       || req.path === '/api/v1/me' || req.path === '/api/v1/posts'
       || req.path === '/api/v1/generate' || req.path === '/api/v1/templates'
-      || req.path === '/api/demo/request' || req.path.startsWith('/api/social/callback/')) {
+      || req.path === '/api/demo/request' || req.path.startsWith('/api/social/callback/')
+      || req.path === '/api/whatsapp/webhook') {
     return next();
   }
 
@@ -1031,6 +1052,7 @@ app.post('/api/drafts/:id/send-whatsapp', async (req, res) => {
     }
 
     const instanceToken = s.whatsapp_instance_token || process.env.EVOLUTION_INSTANCE_TOKEN || '26cbfa77-76c5-489c-9c98-bd2ce4ed6e8d';
+    const instanceName = s.whatsapp_instance || 'IcaroDev';
     const topic = post.rows[0].topic || 'Sem titulo';
     const slidesData = post.rows[0].slides_data;
     let slideText = '';
@@ -1045,7 +1067,6 @@ app.post('/api/drafts/:id/send-whatsapp', async (req, res) => {
       number: s.whatsapp_number,
       text: preview,
       delay: 1000,
-      quoted: { messageId: '', participant: '' }
     });
 
     const options = {
@@ -1056,6 +1077,7 @@ app.post('/api/drafts/:id/send-whatsapp', async (req, res) => {
       headers: {
         'Content-Type': 'application/json',
         'apikey': instanceToken,
+        'instance': instanceName,
         'Content-Length': Buffer.byteLength(payload)
       }
     };
@@ -1085,6 +1107,7 @@ app.post('/api/drafts/:id/approve-and-notify', async (req, res) => {
     const settings = await pool.query(`SELECT * FROM public.dashboard_settings ORDER BY id DESC LIMIT 1;`);
     const s = settings.rows[0] || {};
     const instanceToken = s.whatsapp_instance_token || process.env.EVOLUTION_INSTANCE_TOKEN || '26cbfa77-76c5-489c-9c98-bd2ce4ed6e8d';
+    const instanceName = s.whatsapp_instance || 'IcaroDev';
 
     if (s.whatsapp_enabled && s.whatsapp_number) {
       const confirmMsg = JSON.stringify({
@@ -1275,6 +1298,44 @@ app.get('/api/v2/auth/me', async (req, res) => {
   }
 });
 
+
+// V2: Update Profile (full_name, avatar)
+app.put('/api/v2/auth/profile', async (req, res) => {
+  try {
+    const token = req.headers['authorization']?.replace('Bearer ', '') || req.headers['x-arx-token'];
+    if (!token) return res.status(401).json({ error: 'Token não fornecido' });
+    const session = await pool.query('SELECT user_id FROM public.sessions WHERE token = $1 AND expires_at > NOW()', [token]);
+    if (session.rows.length === 0) return res.status(401).json({ error: 'Sessão expirada ou inválida' });
+    const { full_name, avatar_url } = req.body;
+    if (!full_name && !avatar_url) return res.status(400).json({ error: 'Nada para atualizar' });
+    const fields = []; const params = []; let i = 1;
+    if (full_name !== undefined) { fields.push('full_name = $' + i++); params.push(String(full_name).slice(0, 120)); }
+    if (avatar_url !== undefined) { fields.push('avatar_url = $' + i++); params.push(String(avatar_url).slice(0, 500)); }
+    params.push(session.rows[0].user_id);
+    const updated = await pool.query('UPDATE public.users SET ' + fields.join(', ') + ' WHERE id = $' + i + ' RETURNING id, email, full_name, role, avatar_url', params);
+    res.json({ success: true, user: updated.rows[0] });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// V2: Change Password
+app.put('/api/v2/auth/password', async (req, res) => {
+  try {
+    const token = req.headers['authorization']?.replace('Bearer ', '') || req.headers['x-arx-token'];
+    if (!token) return res.status(401).json({ error: 'Token não fornecido' });
+    const session = await pool.query('SELECT user_id FROM public.sessions WHERE token = $1 AND expires_at > NOW()', [token]);
+    if (session.rows.length === 0) return res.status(401).json({ error: 'Sessão expirada ou inválida' });
+    const { current_password, new_password } = req.body;
+    if (!current_password || !new_password) return res.status(400).json({ error: 'Senha atual e nova senha obrigatórias' });
+    if (String(new_password).length < 6) return res.status(400).json({ error: 'Nova senha deve ter no mínimo 6 caracteres' });
+    const userRow = await pool.query('SELECT password_hash FROM public.users WHERE id = $1', [session.rows[0].user_id]);
+    const stored = userRow.rows[0]?.password_hash || '';
+    const currentHash = hashPassword(String(current_password));
+    if (stored && stored !== currentHash) return res.status(403).json({ error: 'Senha atual incorreta' });
+    const newHash = hashPassword(String(new_password));
+    await pool.query('UPDATE public.users SET password_hash = $1 WHERE id = $2', [newHash, session.rows[0].user_id]);
+    res.json({ success: true, message: 'Senha atualizada com sucesso' });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
 // V2: List Plans
 app.get('/api/v2/plans', async (req, res) => {
   try {
@@ -1390,6 +1451,94 @@ app.post('/api/v2/plans/webhook', async (req, res) => {
 });
 
 // ============================================================
+// ============================================================
+// ADMIN — visão geral (stats globais)
+// ============================================================
+app.get('/api/admin/stats', async (req, res) => {
+  try {
+    const user = await getUserAsync(req);
+    if (!user || user.role !== 'admin') return res.status(403).json({ error: 'Apenas administradores' });
+    const [users, clientes, posts, plans, sessions] = await Promise.all([
+      pool.query(`SELECT COUNT(*) AS total, COUNT(*) FILTER (WHERE role = 'admin') AS admins, COUNT(*) FILTER (WHERE role = 'user') AS clients FROM public.users`),
+      pool.query(`SELECT COUNT(*) AS total FROM public.clientes`),
+      pool.query(`SELECT COUNT(*) AS total FROM public.content_pipeline`),
+      pool.query(`SELECT COUNT(*) AS total FROM public.plans`),
+      pool.query(`SELECT COUNT(*) AS total FROM public.sessions WHERE expires_at > NOW()`),
+    ]);
+    res.json({
+      success: true,
+      stats: {
+        total_users: Number(users.rows[0].total),
+        total_admins: Number(users.rows[0].admins),
+        total_clients: Number(users.rows[0].clients),
+        total_clientes_table: Number(clientes.rows[0].total),
+        total_posts: Number(posts.rows[0].total),
+        total_plans: Number(plans.rows[0].total),
+        active_sessions: Number(sessions.rows[0].total),
+      }
+    });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// GET /api/admin/users — lista todos os usuários com plano
+app.get('/api/admin/users', async (req, res) => {
+  try {
+    const user = await getUserAsync(req);
+    if (!user || user.role !== 'admin') return res.status(403).json({ error: 'Apenas administradores' });
+    const r = await pool.query(`
+      SELECT u.id, u.email, u.full_name, u.role, u.created_at,
+             pl.name AS plan_name, up.status AS plan_status, up.expires_at
+      FROM public.users u
+      LEFT JOIN public.user_plans up ON up.user_id = u.id AND up.status = 'active'
+      LEFT JOIN public.plans pl ON pl.id = up.plan_id
+      ORDER BY u.created_at DESC
+    `);
+    res.json({ success: true, users: r.rows });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// GET /api/admin/clientes — lista clientes (tabela clientes)
+app.get('/api/admin/clientes', async (req, res) => {
+  try {
+    const user = await getUserAsync(req);
+    if (!user || user.role !== 'admin') return res.status(403).json({ error: 'Apenas administradores' });
+    const r = await pool.query(`SELECT id, nome, email, telefone, created_at FROM public.clientes ORDER BY created_at DESC`);
+    res.json({ success: true, clientes: r.rows });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// PATCH /api/admin/clientes/:id — atualiza telefone (WhatsApp) de um cliente
+app.patch('/api/admin/clientes/:id', async (req, res) => {
+  try {
+    const user = await getUserAsync(req);
+    if (!user || user.role !== 'admin') return res.status(403).json({ error: 'Apenas administradores' });
+    const { telefone } = req.body || {};
+    if (!telefone) return res.status(400).json({ error: 'Campo telefone obrigatorio' });
+    const r = await pool.query(
+      "UPDATE public.clientes SET telefone = $1, updated_at = NOW() WHERE id = $2 RETURNING id, nome, email, telefone",
+      [String(telefone).replace(/[^0-9]/g, ''), req.params.id]
+    );
+    if (r.rows.length === 0) return res.status(404).json({ error: 'Cliente nao encontrado' });
+    res.json({ success: true, cliente: r.rows[0] });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// GET /api/admin/plans — lista planos com contagem de assinantes
+app.get('/api/admin/plans', async (req, res) => {
+  try {
+    const user = await getUserAsync(req);
+    if (!user || user.role !== 'admin') return res.status(403).json({ error: 'Apenas administradores' });
+    const r = await pool.query(`
+      SELECT pl.id, pl.name, pl.slug, pl.price_monthly, pl.price_yearly,
+             COUNT(up.id) FILTER (WHERE up.status = 'active') AS active_subscribers
+      FROM public.plans pl
+      LEFT JOIN public.user_plans up ON up.plan_id = pl.id
+      GROUP BY pl.id ORDER BY pl.price_monthly
+    `);
+    res.json({ success: true, plans: r.rows });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
 // FASE 3 — Templates (marketplace), Whitelabel, Analytics, API pública
 // ============================================================
 
@@ -1616,7 +1765,7 @@ app.put('/api/settings', async (req, res) => {
     if (!user || user.role !== 'admin') return res.status(403).json({ error: 'Apenas administradores podem alterar configurações' });
     const { settings } = req.body;
     if (!settings || typeof settings !== 'object') return res.status(400).json({ error: 'Settings inválido' });
-    const allowed = ['stripe_secret_key', 'stripe_webhook_secret', 'video_api_key', 'video_api_provider', 'n8n_webhook_base', 'instagram_business_id', 'default_template'];
+    const allowed = ['stripe_secret_key', 'stripe_webhook_secret', 'video_api_key', 'video_api_provider', 'n8n_webhook_base', 'instagram_business_id', 'default_template', 'auto_publish', 'ai_caption', 'watermark'];
     for (const [key, value] of Object.entries(settings)) {
       if (!allowed.includes(key)) continue;
       // Não sobrescreve com máscara
@@ -2097,6 +2246,148 @@ if (fs.existsSync(frontendDist)) {
     res.sendFile(path.join(frontendDist, 'index.html'));
   });
 }
+
+// ============================================================
+// WhatsApp Global (Evolution Go) — worker + webhook de aprovação
+// Instância GLOBAL: IcaroDev (só muda o número de destino por cliente)
+// ============================================================
+
+const EVO_INSTANCE = 'IcaroDev';
+const EVO_TOKEN = '26cbfa77-76c5-489c-9c98-bd2ce4ed6e8d';
+
+function sendEvolutionText(number, text) {
+  return new Promise((resolve) => {
+    const payload = JSON.stringify({ number, text, delay: 1000 });
+    const options = {
+      hostname: EVO_HOST,
+      port: EVO_PORT,
+      path: '/send/text',
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': EVO_TOKEN,
+        'instance': EVO_INSTANCE,
+        'Content-Length': Buffer.byteLength(payload)
+      }
+    };
+    const req = http.request(options, (res) => {
+      let body = '';
+      res.on('data', c => body += c);
+      res.on('end', () => resolve({ status: res.statusCode, body }));
+    });
+    req.on('error', (err) => resolve({ status: 0, body: err.message }));
+    req.write(payload);
+    req.end();
+  });
+}
+
+async function resolveWhatsappNumber(userId) {
+  try {
+    if (userId) {
+      const r = await pool.query(`SELECT whatsapp FROM public.users WHERE id = $1 AND whatsapp IS NOT NULL AND whatsapp <> ''`, [userId]);
+      if (r.rows.length > 0) return r.rows[0].whatsapp;
+      // fallback: clientes via email do user
+      const u = await pool.query(`SELECT email FROM public.users WHERE id = $1`, [userId]);
+      if (u.rows.length > 0 && u.rows[0].email) {
+        const c = await pool.query(`SELECT telefone FROM public.clientes WHERE email = $1 AND telefone IS NOT NULL AND telefone <> ''`, [u.rows[0].email]);
+        if (c.rows.length > 0) return c.rows[0].telefone;
+      }
+    }
+    const s = await pool.query(`SELECT whatsapp_number FROM public.dashboard_settings ORDER BY id DESC LIMIT 1`);
+    if (s.rows.length > 0 && s.rows[0].whatsapp_number) return s.rows[0].whatsapp_number;
+    return null;
+  } catch (e) {
+    console.error('[wa-worker] resolveWhatsappNumber error:', e.message);
+    return null;
+  }
+}
+
+async function whatsappAutoSendTick() {
+  try {
+    const r = await pool.query(`
+      SELECT id, topic, user_id, slides_data
+      FROM public.content_pipeline
+      WHERE status = 'draft'
+        AND (wa_status IS NULL OR wa_status = 'pending')
+        AND created_at > NOW() - INTERVAL '2 days'
+      ORDER BY created_at DESC
+      LIMIT 10
+    `);
+    for (const post of r.rows) {
+      const number = await resolveWhatsappNumber(post.user_id);
+      if (!number) {
+        await pool.query(`UPDATE public.content_pipeline SET wa_status = 'pending' WHERE id = $1`, [post.id]);
+        console.log(`[wa-worker] post ${post.id} sem numero de destino (wa_status=pending)`);
+        continue;
+      }
+      let slideText = '';
+      if (post.slides_data) {
+        const slides = typeof post.slides_data === 'string' ? JSON.parse(post.slides_data) : post.slides_data;
+        if (Array.isArray(slides)) slideText = slides.map(s => s.title || s.content || '').join('\n');
+      }
+      const text = `📋 *Novo Conteudo para Revisao!*\n\n*Topico:* ${post.topic || 'Sem titulo'}\n\n${slideText ? `*Slides:*\n${slideText.substring(0, 500)}\n\n` : ''}Responda *SIM* para aprovar ou *NAO* para rejeitar.`;
+      const res = await sendEvolutionText(number, text);
+      if (res.status === 200) {
+        await pool.query(`UPDATE public.content_pipeline SET wa_status = 'sent', wa_ts = NOW() WHERE id = $1`, [post.id]);
+        console.log(`[wa-worker] enviado id=${post.id} -> ${number} evo_status=${res.status} (wa_status=sent)`);
+      } else {
+        await pool.query(`UPDATE public.content_pipeline SET wa_status = 'pending' WHERE id = $1`, [post.id]);
+        console.log(`[wa-worker] falha id=${post.id} -> ${number} evo_status=${res.status} body=${String(res.body).slice(0, 200)} (wa_status=pending)`);
+      }
+    }
+  } catch (e) {
+    console.error('[wa-worker] tick error:', e.message);
+  }
+}
+
+// roda imediatamente + a cada 15s
+setTimeout(whatsappAutoSendTick, 3000);
+setInterval(whatsappAutoSendTick, 15000);
+
+// Webhook de aprovação via WhatsApp (Evolution Go)
+app.post('/api/whatsapp/webhook', async (req, res) => {
+  try {
+    const body = req.body || {};
+    const msg = body.data && body.data.message ? body.data.message : (body.message || {});
+    const conv = (msg.conversation || (msg.extendedTextMessage && msg.extendedTextMessage.text) || '').trim().toUpperCase();
+    const jid = String((body.data && body.data.key && body.data.key.remoteJid) || (body.key && body.key.remoteJid) || '');
+    const number = jid.split('@')[0].split(':')[0];
+
+    if (!number || !conv) return res.json({ success: false, error: 'no message' });
+
+    const userR = await pool.query(`SELECT id FROM public.users WHERE whatsapp = $1`, [number]);
+    let userId = userR.rows.length > 0 ? userR.rows[0].id : null;
+
+    let post = null;
+    if (userId) {
+      const pr = await pool.query(`SELECT id, topic FROM public.content_pipeline WHERE status = 'draft' AND user_id = $1 AND wa_status IS NOT NULL ORDER BY created_at DESC LIMIT 1`, [userId]);
+      if (pr.rows.length > 0) post = pr.rows[0];
+    }
+    if (!post) {
+      const pr = await pool.query(`SELECT id, topic FROM public.content_pipeline WHERE status = 'draft' AND wa_status IS NOT NULL ORDER BY created_at DESC LIMIT 1`);
+      if (pr.rows.length > 0) post = pr.rows[0];
+    }
+
+    if (!post) return res.json({ success: false, error: 'no draft pending' });
+
+    if (conv === 'SIM' || conv === 'APROVAR') {
+      await pool.query(`UPDATE public.content_pipeline SET status = 'scheduled', scheduled_at = NOW() + INTERVAL '15 minutes', wa_status = 'approved' WHERE id = $1`, [post.id]);
+      sendEvolutionText(number, `✅ *Aprovado!* "${post.topic}" foi agendado para publicacao em 15 minutos.`).catch(() => {});
+      console.log(`[wa-webhook] APROVADO ${post.id} por ${number}`);
+      return res.json({ success: true, action: 'approved', post_id: post.id });
+    }
+    if (conv === 'NAO' || conv === 'REJEITAR') {
+      await pool.query(`UPDATE public.content_pipeline SET wa_status = 'rejected' WHERE id = $1`, [post.id]);
+      sendEvolutionText(number, `❌ *Rejeitado.* "${post.topic}" nao sera publicado. Pode pedir uma nova versao no dashboard.`).catch(() => {});
+      console.log(`[wa-webhook] REJEITADO ${post.id} por ${number}`);
+      return res.json({ success: true, action: 'rejected', post_id: post.id });
+    }
+    res.json({ success: true, action: 'ignored', post_id: post.id });
+  } catch (err) {
+    console.error('[wa-webhook] error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
 
 const PORT = 9878;
 app.listen(PORT, '0.0.0.0', () => {
