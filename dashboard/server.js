@@ -29,25 +29,25 @@ app.use((req, res, next) => {
   next();
 });
 
-const MASTER_USER = 'admin';
-const MASTER_PASS = 'arx_secret_2026!';
-const MASTER_TOKEN = crypto.createHmac('sha256', 'arx_master_secret_key_2026').update(`${MASTER_USER}:${MASTER_PASS}`).digest('hex');
+const MASTER_USER = process.env.MASTER_USER || 'admin';
+const MASTER_PASS = process.env.MASTER_PASS || process.env.MASTER_PASS;
+const MASTER_TOKEN = crypto.createHmac('sha256', process.env.MASTER_TOKEN_SECRET || 'arx_master_secret_key_2026').update(`${MASTER_USER}:${MASTER_PASS}`).digest('hex');
 
 // PostgreSQL Database Connection
 const pool = new Pool({
-  user: 'supabase_admin',
-  host: '10.0.1.20',
-  database: 'postgres',
-  password: '635ddc870eca917c87aa2fcbf0abeef59fe5a4e5608f14b055d2884e7b163bfc',
-  port: 5432,
+  user: process.env.DB_USER || 'supabase_admin',
+  host: process.env.DB_HOST || '10.0.1.20',
+  database: process.env.DB_NAME || 'postgres',
+  password: process.env.DB_PASSWORD || process.env.DB_PASSWORD,
+  port: parseInt(process.env.DB_PORT || '5432', 10),
 });
 
 // ============================================================
 // Evolution API helpers
 // ============================================================
-const EVO_HOST = '185.111.156.178';
-const EVO_PORT = 9091;
-const EVO_GLOBAL_KEY = 'arx_evolution_2026';
+const EVO_HOST = process.env.EVO_HOST || '185.111.156.178';
+const EVO_PORT = parseInt(process.env.EVO_PORT || '9091', 10);
+const EVO_GLOBAL_KEY = process.env.EVO_GLOBAL_KEY || process.env.EVO_GLOBAL_KEY;
 
 function evoRequest(method, urlPath, body, apiKey = EVO_GLOBAL_KEY) {
   return new Promise((resolve, reject) => {
@@ -232,15 +232,15 @@ app.post('/api/login', (req, res) => {
   const password = (req.body.password || '').trim();
 
   if (username === MASTER_USER && password === MASTER_PASS) {
-    res.setHeader('Set-Cookie', `arx_token=${MASTER_TOKEN}; Path=/; SameSite=Lax; Max-Age=864000`);
+    res.setHeader('Set-Cookie', `arx_token=${MASTER_TOKEN}; Path=/; SameSite=Lax; Max-Age=864000; HttpOnly; Secure`);
     return res.json({ success: true, token: MASTER_TOKEN });
   }
-  return res.status(401).json({ success: false, error: 'Usuário ou senha incorretos! Use: admin / arx_secret_2026!' });
+  return res.status(401).json({ success: false, error: 'Usuário ou senha incorretos!' });
 });
 
 // Logout Endpoint
 app.post('/api/logout', (req, res) => {
-  res.setHeader('Set-Cookie', `arx_token=; Path=/; Max-Age=0`);
+  res.setHeader('Set-Cookie', `arx_token=; Path=/; Max-Age=0; HttpOnly; Secure`);
   return res.json({ success: true });
 });
 
@@ -1051,7 +1051,7 @@ app.post('/api/drafts/:id/send-whatsapp', async (req, res) => {
       return res.status(400).json({ error: 'WhatsApp nao configurado. Ative nas Configuracoes.' });
     }
 
-    const instanceToken = s.whatsapp_instance_token || process.env.EVOLUTION_INSTANCE_TOKEN || '26cbfa77-76c5-489c-9c98-bd2ce4ed6e8d';
+    const instanceToken = s.whatsapp_instance_token || process.env.EVOLUTION_INSTANCE_TOKEN || process.env.EVOLUTION_INSTANCE_TOKEN;
     const instanceName = s.whatsapp_instance || 'IcaroDev';
     const topic = post.rows[0].topic || 'Sem titulo';
     const slidesData = post.rows[0].slides_data;
@@ -1106,7 +1106,7 @@ app.post('/api/drafts/:id/approve-and-notify', async (req, res) => {
 
     const settings = await pool.query(`SELECT * FROM public.dashboard_settings ORDER BY id DESC LIMIT 1;`);
     const s = settings.rows[0] || {};
-    const instanceToken = s.whatsapp_instance_token || process.env.EVOLUTION_INSTANCE_TOKEN || '26cbfa77-76c5-489c-9c98-bd2ce4ed6e8d';
+    const instanceToken = s.whatsapp_instance_token || process.env.EVOLUTION_INSTANCE_TOKEN || process.env.EVOLUTION_INSTANCE_TOKEN;
     const instanceName = s.whatsapp_instance || 'IcaroDev';
 
     if (s.whatsapp_enabled && s.whatsapp_number) {
@@ -1208,6 +1208,7 @@ app.post('/api/v2/auth/login', async (req, res) => {
       await pool.query(`
         INSERT INTO public.sessions (user_id, token, expires_at) VALUES ($1, $2, $3)
       `, [adminRow.rows[0].id, token, tokenExpires]);
+      res.setHeader('Set-Cookie', `arx_token=${token}; Path=/; SameSite=Lax; Max-Age=2592000; HttpOnly; Secure`);
       return res.json({
         success: true,
         user: { id: adminRow.rows[0].id, email: 'admin@arx.dev', full_name: 'Administrador', role: 'admin' },
@@ -1243,6 +1244,7 @@ app.post('/api/v2/auth/login', async (req, res) => {
       ORDER BY up.created_at DESC LIMIT 1
     `, [user.rows[0].id]);
 
+    res.setHeader('Set-Cookie', `arx_token=${token}; Path=/; SameSite=Lax; Max-Age=2592000; HttpOnly; Secure`);
     res.json({
       success: true,
       user: user.rows[0],
@@ -1258,8 +1260,10 @@ app.post('/api/v2/auth/login', async (req, res) => {
 // V2 Auth: Logout
 app.post('/api/v2/auth/logout', async (req, res) => {
   try {
-    const token = req.headers['authorization']?.replace('Bearer ', '') || req.headers['x-arx-token'];
+    const cookies = parseCookies(req);
+    const token = req.headers['authorization']?.replace('Bearer ', '') || req.headers['x-arx-token'] || cookies.arx_token;
     if (token) await pool.query('DELETE FROM public.sessions WHERE token = $1', [token]);
+    res.setHeader('Set-Cookie', 'arx_token=; Path=/; Max-Age=0; HttpOnly; Secure');
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -2253,7 +2257,7 @@ if (fs.existsSync(frontendDist)) {
 // ============================================================
 
 const EVO_INSTANCE = 'IcaroDev';
-const EVO_TOKEN = '26cbfa77-76c5-489c-9c98-bd2ce4ed6e8d';
+const EVO_TOKEN = process.env.EVOLUTION_INSTANCE_TOKEN || '';
 
 function sendEvolutionText(number, text) {
   return new Promise((resolve) => {
