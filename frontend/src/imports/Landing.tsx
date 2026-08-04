@@ -585,8 +585,8 @@ const TESTIMONIALS = [
 
 // ─── Landing ──────────────────────────────────────────────────────────────────
 
-export default function Landing({ onNavigate, user }: { onNavigate: (p: string) => void; user: any }) {
-  const [showPricing, setShowPricing] = useState(false)
+export default function Landing({ onNavigate, user, initialPricing }: { onNavigate: (p: string) => void; user: any; initialPricing?: boolean }) {
+  const [showPricing, setShowPricing] = useState(!!initialPricing)
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#0a0a0a', color: '#fafafa', fontFamily: 'Inter, system-ui, sans-serif', overflowX: 'hidden' }}>

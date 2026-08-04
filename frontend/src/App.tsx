@@ -2861,8 +2861,24 @@ export default function App() {
   const [user, setUser] = useState<any>(null)
   const [refreshKey, setRefreshKey] = useState(0)
   const [authed, setAuthed] = useState<boolean | null>(null)
-  const [route, setRoute] = useState<'landing' | 'login' | 'signup' | 'dashboard'>('landing')
+  // Roteamento por URL: lê o pathname pra decidir a página inicial (landing/login/signup/pricing/dashboard)
+  const [route, setRoute] = useState<'landing' | 'login' | 'signup' | 'pricing' | 'dashboard'>(() => {
+    const p = window.location.pathname
+    if (p.startsWith('/login')) return 'login'
+    if (p.startsWith('/signup')) return 'signup'
+    if (p.startsWith('/pricing')) return 'pricing'
+    if (p.startsWith('/dashboard')) return 'dashboard'
+    return 'landing'
+  })
   const unreadNotifs = 3
+
+  // Sincroniza a URL quando a rota muda (pushState sem recarregar)
+  const navigate = (p: string) => {
+    const r = (['login', 'signup', 'pricing', 'dashboard'].includes(p) ? p : 'landing') as typeof route
+    setRoute(r)
+    const path = r === 'landing' ? '/' : `/${r}`
+    if (window.location.pathname !== path) window.history.pushState({}, '', path)
+  }
 
   // Check auth on mount
   useEffect(() => {
@@ -2876,6 +2892,11 @@ export default function App() {
         if (r?.user) {
           setUser({ ...r.user, plan_name: (r.plan && (r.plan.name || r.plan.slug)) || r.user.plan_name || 'Free' })
           setAuthed(true)
+          // Logado: qualquer rota pública redireciona pro dashboard
+          const p = window.location.pathname
+          if (p === '/' || p.startsWith('/login') || p.startsWith('/signup') || p.startsWith('/pricing')) {
+            window.history.pushState({}, '', '/dashboard')
+          }
         }
         else setAuthed(false)
       })
@@ -2886,12 +2907,15 @@ export default function App() {
     localStorage.setItem('arx_token', token)
     setUser(userData)
     setAuthed(true)
+    if (window.location.pathname !== '/dashboard') window.history.pushState({}, '', '/dashboard')
   }
 
   function handleLogout() {
     localStorage.removeItem('arx_token')
     setAuthed(false)
     setUser(null)
+    setRoute('landing')
+    if (window.location.pathname !== '/') window.history.pushState({}, '', '/')
   }
 
   // Global actions dispatched by PostCard buttons
@@ -2925,15 +2949,19 @@ export default function App() {
   const planName = user?.plan_name || user?.plan || 'Free'
   const initials = userName.split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase()
 
-  // Auth gate: sem token → landing/login/signup (páginas novas do Figma)
+  // Auth gate: sem token → landing/login/signup/pricing (páginas novas do Figma)
   if (authed === false) {
-    if (route === 'login') {
-      return <Login onLogin={handleLogin} onNavigate={(p: string) => setRoute(p as typeof route)} />
+    if (route === 'login' || route === 'dashboard') {
+      // /dashboard sem sessão → tela de login (usuário quer área logada)
+      return <Login onLogin={handleLogin} onNavigate={navigate} />
     }
     if (route === 'signup') {
-      return <Signup onLogin={handleLogin} onNavigate={(p: string) => setRoute(p as typeof route)} />
+      return <Signup onLogin={handleLogin} onNavigate={navigate} />
     }
-    return <Landing onNavigate={(p: string) => setRoute(p as typeof route)} user={null} />
+    if (route === 'pricing') {
+      return <Landing onNavigate={navigate} user={null} initialPricing />
+    }
+    return <Landing onNavigate={navigate} user={null} />
   }
   if (authed === null) {
     return (
