@@ -1,10 +1,12 @@
-import { useState, useEffect, type ReactNode } from 'react'
+import { useState, useEffect, Component, lazy, Suspense, type ReactNode } from 'react'
 import { api } from './lib/api'
-import Landing from './imports/Landing'
-import Login from './imports/Login'
-import Signup from './imports/Signup'
 import ArxLogo from './imports/ArxLogo'
 import PasswordStrength from './imports/PasswordStrength'
+
+// Lazy-loaded components for bundle splitting
+const Landing = lazy(() => import('./imports/Landing'))
+const Login = lazy(() => import('./imports/Login'))
+const Signup = lazy(() => import('./imports/Signup'))
 
 // ─── Icons ───────────────────────────────────────────────────────────────────
 
@@ -82,6 +84,8 @@ interface Post {
     scheduled_at?: string
     created_at?: string
     topic?: string
+    caption?: string
+    hashtags?: string[]
   }
 }
 
@@ -181,6 +185,12 @@ function mapPost(p: RealPost): Post {
       scheduled_at: p.scheduled_at,
       created_at: p.created_at,
       topic: p.topic,
+      caption: (p as any).caption || (p as any).legenda || '',
+      hashtags: Array.isArray((p as any).hashtags)
+        ? (p as any).hashtags
+        : typeof (p as any).hashtags === 'string' && (p as any).hashtags
+          ? ((p as any).hashtags as string).split(/[,\s]+/).filter(Boolean)
+          : undefined,
     },
   }
 }
@@ -480,6 +490,34 @@ function PostPreviewModal({
           {images.length === 0 && slides.length === 0 && (
             <div style={{ padding: 32, textAlign: 'center', color: '#52525b', fontSize: '0.8125rem', background: 'rgba(255,255,255,0.02)', borderRadius: 10, marginBottom: 16 }}>
               Nenhuma imagem de slide disponível
+            </div>
+          )}
+
+          {/* Caption */}
+          {post._raw?.caption && (
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ fontSize: '0.75rem', fontWeight: 600, color: '#a1a1aa', marginBottom: 8 }}>
+                Legenda
+              </div>
+              <div style={{ padding: '12px 14px', background: 'rgba(255,255,255,0.03)', borderRadius: 8, border: '1px solid rgba(255,255,255,0.05)' }}>
+                <div style={{ fontSize: '0.75rem', color: '#d4d4d8', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{post._raw.caption}</div>
+              </div>
+            </div>
+          )}
+
+          {/* Hashtags */}
+          {post._raw?.hashtags && post._raw.hashtags.length > 0 && (
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ fontSize: '0.75rem', fontWeight: 600, color: '#a1a1aa', marginBottom: 8 }}>
+                Hashtags
+              </div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                {post._raw.hashtags.map((h, i) => (
+                  <span key={i} style={{ fontSize: '0.6875rem', fontWeight: 500, color: '#60a5fa', background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.2)', borderRadius: 9999, padding: '3px 10px' }}>
+                    {h.startsWith('#') ? h : `#${h}`}
+                  </span>
+                ))}
+              </div>
             </div>
           )}
         </div>
@@ -1101,6 +1139,32 @@ function ContentPage() {
   const [previewPost, setPreviewPost] = useState<Post | null>(null)
   const [editPost, setEditPost] = useState<Post | null>(null)
   const [reschedulePost, setReschedulePost] = useState<Post | null>(null)
+  const [generateOpen, setGenerateOpen] = useState(false)
+  const [generateTopic, setGenerateTopic] = useState('')
+  const [generateChannel, setGenerateChannel] = useState('all')
+  const [generating, setGenerating] = useState(false)
+  const [generateMsg, setGenerateMsg] = useState('')
+
+  async function handleGenerate() {
+    if (!generateTopic.trim()) return
+    setGenerating(true)
+    setGenerateMsg('')
+    try {
+      const r: any = await api.generate(generateTopic.trim(), generateChannel, 'now', 'clean')
+      if (r?.success) {
+        setGenerateMsg('✅ Conteúdo gerado com sucesso! Aparecerá na lista em instantes.')
+        setGenerateTopic('')
+        refresh()
+        setTimeout(() => { setGenerateMsg(''); setGenerateOpen(false) }, 2000)
+      } else {
+        setGenerateMsg(r?.message || r?.error || 'Falha ao gerar conteúdo')
+      }
+    } catch (e: any) {
+      setGenerateMsg(e?.message || 'Erro ao gerar conteúdo')
+    } finally {
+      setGenerating(false)
+    }
+  }
 
   const tabs = [
     { key: 'all', label: 'Todos' },
@@ -1137,10 +1201,95 @@ function ContentPage() {
       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
         <input className="input-field" placeholder="Buscar posts…" value={search} onChange={e => setSearch(e.target.value)} style={{ maxWidth: 260 }} />
         <div style={{ flex: 1 }} />
+        <button 
+          className="btn-secondary" 
+          onClick={() => setGenerateOpen(!generateOpen)}
+          style={{ display: 'flex', alignItems: 'center', gap: 6 }}
+        >
+          <Icon d={icons.spark} size={14} /> Gerar conteúdo
+        </button>
         <button className="btn-primary" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <Icon d={icons.plus} size={14} /> Novo Post
         </button>
       </div>
+
+      {/* Generate Content Section */}
+      {generateOpen && (
+        <div className="glass-card" style={{ padding: 20, animation: 'fadeIn 0.2s ease-out' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+            <span style={{ color: '#8b5cf6' }}><Icon d={icons.spark} size={18} /></span>
+            <h3 style={{ margin: 0, fontSize: '0.875rem', fontWeight: 600, color: '#fafafa' }}>Gerar Conteúdo com IA</h3>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <div>
+              <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 500, color: '#a1a1aa', marginBottom: 6 }}>
+                Tema do conteúdo (obrigatório)
+              </label>
+              <input 
+                className="input-field" 
+                placeholder="Ex: 5 dicas para crescer no LinkedIn em 2025"
+                value={generateTopic}
+                onChange={e => setGenerateTopic(e.target.value)}
+                style={{ width: '100%' }}
+              />
+            </div>
+            <div>
+              <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 500, color: '#a1a1aa', marginBottom: 6 }}>
+                Canal de publicação
+              </label>
+              <select 
+                className="input-field"
+                value={generateChannel}
+                onChange={e => setGenerateChannel(e.target.value)}
+                style={{ width: '100%' }}
+              >
+                <option value="all">Todos os canais</option>
+                <option value="linkedin">LinkedIn</option>
+                <option value="instagram">Instagram</option>
+                <option value="twitter">Twitter</option>
+              </select>
+            </div>
+            {generateMsg && (
+              <div style={{ 
+                padding: '10px 12px', 
+                borderRadius: 6, 
+                fontSize: '0.75rem',
+                background: generateMsg.includes('✅') ? 'rgba(34, 197, 94, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+                color: generateMsg.includes('✅') ? '#22c55e' : '#ef4444',
+                border: `1px solid ${generateMsg.includes('✅') ? 'rgba(34, 197, 94, 0.2)' : 'rgba(239, 68, 68, 0.2)'}`
+              }}>
+                {generateMsg}
+              </div>
+            )}
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button 
+                className="btn-primary" 
+                onClick={handleGenerate}
+                disabled={generating || !generateTopic.trim()}
+                style={{ display: 'flex', alignItems: 'center', gap: 6 }}
+              >
+                {generating ? (
+                  <>
+                    <div className="loading-spinner" style={{ width: 14, height: 14 }} />
+                    Gerando...
+                  </>
+                ) : (
+                  <>
+                    <Icon d={icons.spark} size={14} />
+                    Gerar agora
+                  </>
+                )}
+              </button>
+              <button 
+                className="btn-secondary" 
+                onClick={() => { setGenerateOpen(false); setGenerateTopic(''); setGenerateMsg('') }}
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Tabs */}
       <div style={{ display: 'flex', borderBottom: '1px solid rgba(255,255,255,0.06)', gap: 0 }}>
@@ -2848,6 +2997,373 @@ function LoginView({ onLogin }: { onLogin: (token: string, user: any) => void })
   )
 }
 
+// ─── ErrorBoundary ────────────────────────────────────────────────────────────
+
+type ErrorBoundaryProps = { children: ReactNode }
+type ErrorBoundaryState = { hasError: boolean; error: Error | null }
+
+class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
+  constructor(props: ErrorBoundaryProps) {
+    super(props)
+    this.state = { hasError: false, error: null }
+  }
+  static getDerivedStateFromError(error: Error): ErrorBoundaryState {
+    return { hasError: true, error }
+  }
+  componentDidCatch(error: Error, info: React.ErrorInfo) {
+    console.error('[ErrorBoundary]', error, info)
+  }
+  handleReload = () => {
+    this.setState({ hasError: false, error: null })
+    window.location.reload()
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{
+          minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
+          background: '#0a0a0a', fontFamily: 'Inter, system-ui, sans-serif', padding: 24,
+        }}>
+          <div style={{
+            maxWidth: 440, width: '100%', textAlign: 'center',
+            background: '#161616', border: '1px solid rgba(239,68,68,0.25)',
+            borderRadius: 16, padding: 40, boxShadow: '0 20px 50px rgba(0,0,0,0.5)',
+          }}>
+            <div style={{
+              width: 56, height: 56, borderRadius: '50%', margin: '0 auto 20px',
+              background: 'rgba(239,68,68,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10" />
+                <line x1="12" y1="8" x2="12" y2="12" />
+                <line x1="12" y1="16" x2="12.01" y2="16" />
+              </svg>
+            </div>
+            <h2 style={{ margin: '0 0 8px', fontSize: '1.25rem', fontWeight: 700, color: '#fafafa' }}>
+              Algo deu errado
+            </h2>
+            <p style={{ margin: '0 0 24px', fontSize: '0.8125rem', color: '#71717a', lineHeight: 1.6 }}>
+              {this.state.error?.message || 'Ocorreu um erro inesperado na aplicação.'}
+            </p>
+            <button
+              onClick={this.handleReload}
+              style={{
+                padding: '10px 24px', borderRadius: 10, fontSize: '0.8125rem', fontWeight: 600,
+                background: 'linear-gradient(135deg, #8b5cf6, #6366f1)', color: '#fff',
+                border: 'none', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 8,
+                boxShadow: '0 4px 14px rgba(139,92,246,0.3)',
+              }}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="23 4 23 10 17 10" />
+                <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
+              </svg>
+              Recarregar página
+            </button>
+          </div>
+        </div>
+      )
+    }
+    return this.props.children
+  }
+}
+
+// ─── SkeletonLoader ───────────────────────────────────────────────────────────
+
+type SkeletonVariant = 'card' | 'list' | 'dashboard'
+
+function SkeletonLoader({ variant = 'card', count = 3 }: { variant?: SkeletonVariant; count?: number }) {
+  const shimmer = {
+    background: 'linear-gradient(90deg, rgba(255,255,255,0.03) 25%, rgba(255,255,255,0.08) 50%, rgba(255,255,255,0.03) 75%)',
+    backgroundSize: '200% 100%',
+    animation: 'skeleton-shimmer 1.6s ease-in-out infinite',
+    borderRadius: 8,
+  } as React.CSSProperties
+
+  const cardStyle: React.CSSProperties = {
+    background: 'rgba(255,255,255,0.02)',
+    border: '1px solid rgba(255,255,255,0.05)',
+    borderRadius: 12,
+    padding: 16,
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 12,
+  }
+
+  const renderCard = () => (
+    <div style={cardStyle}>
+      <div style={{ ...shimmer, height: 120, borderRadius: 10 }} />
+      <div style={{ ...shimmer, height: 14, width: '70%' }} />
+      <div style={{ ...shimmer, height: 10, width: '50%' }} />
+      <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
+        <div style={{ ...shimmer, height: 22, width: 60, borderRadius: 6 }} />
+        <div style={{ ...shimmer, height: 22, width: 60, borderRadius: 6 }} />
+      </div>
+    </div>
+  )
+
+  const renderListItem = () => (
+    <div style={{ ...cardStyle, flexDirection: 'row', alignItems: 'center', gap: 14, padding: '14px 16px' }}>
+      <div style={{ ...shimmer, width: 40, height: 40, borderRadius: 10, flexShrink: 0 }} />
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <div style={{ ...shimmer, height: 14, width: '60%' }} />
+        <div style={{ ...shimmer, height: 10, width: '40%' }} />
+      </div>
+      <div style={{ ...shimmer, height: 24, width: 72, borderRadius: 6 }} />
+    </div>
+  )
+
+  const renderDashboard = () => (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      {/* Metric cards row */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
+        {[0, 1, 2, 3].map(i => (
+          <div key={i} style={{ ...cardStyle, padding: 16 }}>
+            <div style={{ ...shimmer, height: 10, width: '50%' }} />
+            <div style={{ ...shimmer, height: 24, width: '70%', marginTop: 6 }} />
+            <div style={{ ...shimmer, height: 8, width: '40%', marginTop: 4 }} />
+          </div>
+        ))}
+      </div>
+      {/* Chart area */}
+      <div style={{ ...cardStyle, padding: 20, minHeight: 200 }}>
+        <div style={{ ...shimmer, height: 14, width: '30%', marginBottom: 8 }} />
+        <div style={{ ...shimmer, height: 160, borderRadius: 10 }} />
+      </div>
+      {/* Cards grid */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
+        {[0, 1, 2].map(i => (
+          <div key={i} style={cardStyle}>
+            <div style={{ ...shimmer, height: 80, borderRadius: 10 }} />
+            <div style={{ ...shimmer, height: 12, width: '60%' }} />
+            <div style={{ ...shimmer, height: 10, width: '45%' }} />
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+
+  if (variant === 'list') {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        {Array.from({ length: count }).map((_, i) => (
+          <div key={i}>{renderListItem()}</div>
+        ))}
+        <style>{`@keyframes skeleton-shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }`}</style>
+      </div>
+    )
+  }
+
+  if (variant === 'dashboard') {
+    return (
+      <div>
+        {renderDashboard()}
+        <style>{`@keyframes skeleton-shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }`}</style>
+      </div>
+    )
+  }
+
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 14 }}>
+      {Array.from({ length: count }).map((_, i) => (
+        <div key={i}>{renderCard()}</div>
+      ))}
+      <style>{`@keyframes skeleton-shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }`}</style>
+    </div>
+  )
+}
+
+// ─── OnboardingModal ──────────────────────────────────────────────────────────
+
+const onboardingSteps = [
+  {
+    icon: icons.spark,
+    title: 'Bem-vindo ao Arx!',
+    description: 'Sua Content Factory está pronta para automatizar a criação e publicação de conteúdo em todas as suas redes sociais.',
+    color: '#8b5cf6',
+  },
+  {
+    icon: icons.plus,
+    title: 'Crie seu primeiro post',
+    description: 'Clique em "Novo Post" para começar. Escolha entre carrossel, vídeo ou imagem estática e deixe a IA gerar o conteúdo por você.',
+    color: '#3b82f6',
+  },
+  {
+    icon: icons.schedule,
+    title: 'Agende publicações',
+    description: 'Defina datas e horários para seus posts. O Arx publica automaticamente no Instagram, LinkedIn e Twitter nos melhores horários.',
+    color: '#22c55e',
+  },
+  {
+    icon: icons.analytics,
+    title: 'Acompanhe resultados',
+    description: 'Veja métricas de engajamento em tempo real no painel de Análises. Saiba o que funciona e otimize sua estratégia.',
+    color: '#f59e0b',
+  },
+]
+
+function OnboardingModal({ onComplete }: { onComplete: () => void }) {
+  const [step, setStep] = useState(0)
+  const total = onboardingSteps.length
+  const current = onboardingSteps[step]
+
+  function handleNext() {
+    if (step < total - 1) {
+      setStep(step + 1)
+    } else {
+      localStorage.setItem('arx_onboarding_done', 'true')
+      onComplete()
+    }
+  }
+
+  function handlePrev() {
+    if (step > 0) setStep(step - 1)
+  }
+
+  function handleSkip() {
+    localStorage.setItem('arx_onboarding_done', 'true')
+    onComplete()
+  }
+
+  return (
+    <div style={{
+      position: 'fixed', inset: 0, zIndex: 9500,
+      background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(12px)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      padding: 24, animation: 'fadeIn 0.3s ease',
+    }}>
+      <style>{`
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+      `}</style>
+      <div style={{
+        width: '100%', maxWidth: 480,
+        background: '#161616', borderRadius: 20,
+        border: '1px solid rgba(255,255,255,0.08)',
+        boxShadow: '0 30px 70px rgba(0,0,0,0.6)',
+        overflow: 'hidden',
+      }}>
+        {/* Progress bar */}
+        <div style={{ height: 3, background: 'rgba(255,255,255,0.06)' }}>
+          <div style={{
+            height: '100%',
+            width: `${((step + 1) / total) * 100}%`,
+            background: `linear-gradient(90deg, ${current.color}, ${current.color}88)`,
+            transition: 'width 0.4s ease',
+            borderRadius: 2,
+          }} />
+        </div>
+
+        {/* Content */}
+        <div style={{ padding: '40px 36px 32px', textAlign: 'center', animation: 'slideUp 0.4s ease' }} key={step}>
+          {/* Icon */}
+          <div style={{
+            width: 72, height: 72, borderRadius: 20, margin: '0 auto 24px',
+            background: `${current.color}15`, border: `1px solid ${current.color}30`,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke={current.color} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+              <path d={current.icon} />
+            </svg>
+          </div>
+
+          {/* Step counter */}
+          <div style={{ fontSize: '0.6875rem', fontWeight: 600, color: current.color, marginBottom: 12, letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+            Passo {step + 1} de {total}
+          </div>
+
+          {/* Title */}
+          <h2 style={{ margin: '0 0 12px', fontSize: '1.375rem', fontWeight: 700, color: '#fafafa', lineHeight: 1.3 }}>
+            {current.title}
+          </h2>
+
+          {/* Description */}
+          <p style={{ margin: 0, fontSize: '0.875rem', color: '#a1a1aa', lineHeight: 1.65, maxWidth: 360, marginLeft: 'auto', marginRight: 'auto' }}>
+            {current.description}
+          </p>
+        </div>
+
+        {/* Navigation */}
+        <div style={{
+          padding: '16px 36px 28px',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        }}>
+          {/* Left: skip or back arrow */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            {step > 0 ? (
+              <button
+                onClick={handlePrev}
+                style={{
+                  background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)',
+                  borderRadius: 10, width: 36, height: 36, cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#a1a1aa',
+                  transition: 'all 0.15s',
+                }}
+                onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.1)'; e.currentTarget.style.color = '#fafafa' }}
+                onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; e.currentTarget.style.color = '#a1a1aa' }}
+                title="Anterior"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ transform: 'rotate(180deg)' }}>
+                  <path d={icons.chevronRight} />
+                </svg>
+              </button>
+            ) : (
+              <button
+                onClick={handleSkip}
+                style={{
+                  background: 'none', border: 'none', cursor: 'pointer',
+                  fontSize: '0.75rem', color: '#71717a', padding: '8px 4px',
+                  transition: 'color 0.15s',
+                }}
+                onMouseEnter={e => { e.currentTarget.style.color = '#a1a1aa' }}
+                onMouseLeave={e => { e.currentTarget.style.color = '#71717a' }}
+              >
+                Pular tutorial
+              </button>
+            )}
+          </div>
+
+          {/* Dots indicator */}
+          <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+            {onboardingSteps.map((_, i) => (
+              <div
+                key={i}
+                style={{
+                  width: i === step ? 20 : 6,
+                  height: 6,
+                  borderRadius: 3,
+                  background: i === step ? current.color : 'rgba(255,255,255,0.12)',
+                  transition: 'all 0.3s ease',
+                }}
+              />
+            ))}
+          </div>
+
+          {/* Right: next arrow / finish */}
+          <button
+            onClick={handleNext}
+            style={{
+              background: `linear-gradient(135deg, ${current.color}, ${current.color}cc)`,
+              border: 'none', borderRadius: 10, padding: '8px 18px',
+              cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6,
+              fontSize: '0.75rem', fontWeight: 600, color: '#fff',
+              boxShadow: `0 4px 14px ${current.color}40`,
+              transition: 'transform 0.15s, box-shadow 0.15s',
+            }}
+            onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = `0 6px 20px ${current.color}50` }}
+            onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = `0 4px 14px ${current.color}40` }}
+          >
+            {step === total - 1 ? 'Começar' : 'Próximo'}
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d={icons.chevronRight} />
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ─── App ──────────────────────────────────────────────────────────────────────
 
 export default function App() {
@@ -2870,6 +3386,32 @@ export default function App() {
     if (p.startsWith('/dashboard')) return 'dashboard'
     return 'landing'
   })
+  // Dynamic title based on route
+  useEffect(() => {
+    const titles: Record<typeof route, string> = {
+      landing: 'Arx Content Factory - Automação de Posts com IA',
+      login: 'Entrar - Arx Content Factory',
+      signup: 'Criar Conta - Arx Content Factory',
+      pricing: 'Planos e Preços - Arx Content Factory',
+      dashboard: 'Dashboard - Arx Content Factory',
+    }
+    document.title = titles[route] || 'Arx Content Factory'
+  }, [route])
+
+  // Sync route with browser navigation
+  useEffect(() => {
+    const handlePopState = () => {
+      const p = window.location.pathname
+      if (p.startsWith('/login')) setRoute('login')
+      else if (p.startsWith('/signup')) setRoute('signup')
+      else if (p.startsWith('/pricing')) setRoute('pricing')
+      else if (p.startsWith('/dashboard')) setRoute('dashboard')
+      else setRoute('landing')
+    }
+    window.addEventListener('popstate', handlePopState)
+    return () => window.removeEventListener('popstate', handlePopState)
+  }, [])
+
   const unreadNotifs = 3
 
   // Sincroniza a URL quando a rota muda (pushState sem recarregar)
@@ -2951,17 +3493,26 @@ export default function App() {
 
   // Auth gate: sem token → landing/login/signup/pricing (páginas novas do Figma)
   if (authed === false) {
-    if (route === 'login' || route === 'dashboard') {
-      // /dashboard sem sessão → tela de login (usuário quer área logada)
-      return <Login onLogin={handleLogin} onNavigate={navigate} />
-    }
-    if (route === 'signup') {
-      return <Signup onLogin={handleLogin} onNavigate={navigate} />
-    }
-    if (route === 'pricing') {
-      return <Landing onNavigate={navigate} user={null} initialPricing />
-    }
-    return <Landing onNavigate={navigate} user={null} />
+    return (
+      <Suspense fallback={
+        <div className="aurora-bg" style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ width: 36, height: 36, border: '2px solid rgba(139,92,246,0.3)', borderTop: '2px solid #8b5cf6', borderRadius: '50%' }} className="animate-spin-slow" />
+        </div>
+      }>
+        {(() => {
+          if (route === 'login' || route === 'dashboard') {
+            return <Login onLogin={handleLogin} onNavigate={navigate} />
+          }
+          if (route === 'signup') {
+            return <Signup onLogin={handleLogin} onNavigate={navigate} />
+          }
+          if (route === 'pricing') {
+            return <Landing onNavigate={navigate} user={null} initialPricing />
+          }
+          return <Landing onNavigate={navigate} user={null} />
+        })()}
+      </Suspense>
+    )
   }
   if (authed === null) {
     return (

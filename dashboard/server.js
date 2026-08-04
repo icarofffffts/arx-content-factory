@@ -6,6 +6,9 @@ const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
 
+// IA ArxDevs — assistente Telegram com conhecimento + acesso ao sistema
+const assistant = require('./assistant');
+
 const app = express();
 // Preserva rawBody para verificação de assinatura (Stripe webhook)
 app.use(express.json({
@@ -255,7 +258,7 @@ app.use(async (req, res, next) => {
       || req.path === '/api/v1/me' || req.path === '/api/v1/posts'
       || req.path === '/api/v1/generate' || req.path === '/api/v1/templates'
       || req.path === '/api/demo/request' || req.path.startsWith('/api/social/callback/')
-      || req.path === '/api/whatsapp/webhook') {
+      || req.path === '/api/whatsapp/webhook' || req.path === '/api/assistant/webhook') {
     return next();
   }
 
@@ -333,6 +336,8 @@ app.get('/api/posts', async (req, res) => {
     const user = await getUserAsync(req);
     if (!user) return res.status(401).json({ error: 'Não autorizado' });
     const statusFilter = req.query.status;
+    const channelFilter = req.query.channel;
+    const q = String(req.query.q || '').trim();
     let query = `
       SELECT 
         id, topic, slides_data, media_paths, instagram_media_paths, status, 
@@ -349,11 +354,110 @@ app.get('/api/posts', async (req, res) => {
     const conds = [];
     if (user.role !== 'admin') { conds.push(`user_id = $${params.length + 1}`); params.push(user.id); }
     if (statusFilter && statusFilter !== 'all') { conds.push(`status = $${params.length + 1}`); params.push(statusFilter); }
+    if (channelFilter && channelFilter !== 'all') { conds.push(`channel = $${params.length + 1}`); params.push(channelFilter); }
+    if (q) { conds.push(`(topic ILIKE $${params.length + 1} OR COALESCE(linkedin_caption,'') ILIKE $${params.length + 1} OR COALESCE(instagram_caption,'') ILIKE $${params.length + 1})`); params.push(`%${q}%`); }
     if (conds.length > 0) query += ` WHERE ` + conds.join(' AND ');
 
-    query += ` ORDER BY created_at DESC LIMIT 50;`;
+    query += ` ORDER BY created_at DESC LIMIT 100;`;
     const result = await pool.query(query, params);
     res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 4b. API: Bulk Actions (aprovar / rejeitar / excluir / reagendar em lote)
+app.post('/api/posts/bulk', async (req, res) => {
+  try {
+    const user = await getUserAsync(req);
+    if (!user) return res.status(401).json({ error: 'Não autorizado' });
+    const { ids, action, scheduled_at } = req.body || {};
+    if (!Array.isArray(ids) || ids.length === 0) return res.status(400).json({ error: 'Informe ids[]' });
+    const placeholders = ids.map((_, i) => `$${i + 1}`).join(',');
+    const params = [...ids];
+    let sql = '';
+    if (action === 'approve') {
+      sql = `UPDATE public.content_pipeline SET status = 'scheduled', scheduled_at = NOW() + INTERVAL '15 minutes', updated_at = NOW() WHERE id IN (${placeholders}) AND status = 'draft' RETURNING id, topic`;
+    } else if (action === 'publish') {
+      sql = `UPDATE public.content_pipeline SET status = 'scheduled', scheduled_at = NOW(), updated_at = NOW() WHERE id IN (${placeholders}) RETURNING id, topic`;
+    } else if (action === 'pause') {
+      sql = `UPDATE public.content_pipeline SET status = 'paused', updated_at = NOW() WHERE id IN (${placeholders}) AND status = 'scheduled' RETURNING id, topic`;
+    } else if (action === 'resume') {
+      sql = `UPDATE public.content_pipeline SET status = 'scheduled', updated_at = NOW() WHERE id IN (${placeholders}) AND status = 'paused' RETURNING id, topic`;
+    } else if (action === 'reject' || action === 'delete') {
+      sql = `DELETE FROM public.content_pipeline WHERE id IN (${placeholders}) RETURNING id, topic`;
+    } else if (action === 'reschedule') {
+      if (!scheduled_at) return res.status(400).json({ error: 'Informe scheduled_at para reschedule' });
+      params.push(scheduled_at);
+      sql = `UPDATE public.content_pipeline SET scheduled_at = $${params.length}, status = 'scheduled', updated_at = NOW() WHERE id IN (${placeholders}) RETURNING id, topic`;
+    } else {
+      return res.status(400).json({ error: `Ação desconhecida: ${action}` });
+    }
+    const result = await pool.query(sql, params);
+    res.json({ success: true, count: result.rowCount, posts: result.rows });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 4c. API: Criar agendamento recorrente (ex.: todo dia útil às 9h)
+app.post('/api/schedule/recurring', async (req, res) => {
+  try {
+    const user = await getUserAsync(req);
+    if (!user) return res.status(401).json({ error: 'Não autorizado' });
+    const { topic, channel, template, frequency, time, days, start_date, count } = req.body || {};
+    // frequency: 'daily' | 'weekdays' | 'weekly'; days: [0-6] (0=Domingo); time: 'HH:MM'
+    if (!topic) return res.status(400).json({ error: 'Informe topic' });
+    if (!time || !/^\d{2}:\d{2}$/.test(time)) return res.status(400).json({ error: 'Informe time no formato HH:MM' });
+
+    const pool2 = await pool;
+    await pool2.query(`CREATE TABLE IF NOT EXISTS public.recurring_schedules (
+      id BIGSERIAL PRIMARY KEY,
+      user_id INTEGER NOT NULL,
+      topic TEXT NOT NULL,
+      channel TEXT NOT NULL DEFAULT 'all',
+      template TEXT NOT NULL DEFAULT 'clean',
+      frequency TEXT NOT NULL DEFAULT 'daily',
+      days INTEGER[] DEFAULT '{1,2,3,4,5}',
+      time TEXT NOT NULL,
+      start_date DATE NOT NULL DEFAULT CURRENT_DATE,
+      count INTEGER DEFAULT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      active BOOLEAN NOT NULL DEFAULT TRUE
+    );`);
+
+    const daysArr = Array.isArray(days) && days.length ? days : (frequency === 'weekdays' ? [1,2,3,4,5] : (frequency === 'weekly' ? [1] : [0,1,2,3,4,5,6]));
+    const result = await pool2.query(
+      `INSERT INTO public.recurring_schedules (user_id, topic, channel, template, frequency, days, time, start_date, count)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *`,
+      [user.id, String(topic), String(channel || 'all'), String(template || 'clean'), String(frequency || 'daily'), daysArr, time, start_date || new Date().toISOString().slice(0,10), count ? parseInt(count) : null]
+    );
+    res.json({ success: true, schedule: result.rows[0] });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/schedule/recurring', async (req, res) => {
+  try {
+    const user = await getUserAsync(req);
+    if (!user) return res.status(401).json({ error: 'Não autorizado' });
+    const r = await pool.query(
+      `SELECT * FROM public.recurring_schedules WHERE user_id = $1 AND active = TRUE ORDER BY created_at DESC`,
+      [user.id]
+    ).catch(() => ({ rows: [] }));
+    res.json({ success: true, schedules: r.rows });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete('/api/schedule/recurring/:id', async (req, res) => {
+  try {
+    const user = await getUserAsync(req);
+    if (!user) return res.status(401).json({ error: 'Não autorizado' });
+    await pool.query(`UPDATE public.recurring_schedules SET active = FALSE WHERE id = $1 AND user_id = $2`, [req.params.id, user.id]);
+    res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -2397,3 +2501,106 @@ const PORT = 9878;
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`Arx Content Factory Master Dashboard running on port ${PORT}`);
 });
+
+// ============================================================
+// Worker: Agendamento recorrente (dispara geração nos horários)
+// ============================================================
+const RECURRING_TICK_MS = 60000; // checa a cada 1 min
+let recurringLastRun = {}; // chave: scheduleId:YYYY-MM-DD:HH:MM
+
+async function recurringTick() {
+  try {
+    const r = await pool.query(
+      `SELECT * FROM public.recurring_schedules WHERE active = TRUE`
+    ).catch(() => ({ rows: [] }));
+    if (!r.rows.length) return;
+    const now = new Date();
+    const todayISO = now.toISOString().slice(0, 10);
+    const dow = now.getDay(); // 0=Dom
+    const hhmm = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+
+    for (const s of r.rows) {
+      // Frequência
+      let shouldRun = false;
+      if (s.frequency === 'weekdays' && [1,2,3,4,5].includes(dow)) shouldRun = true;
+      else if (s.frequency === 'weekly' && (s.days || []).includes(dow)) shouldRun = true;
+      else if (s.frequency === 'daily' && (s.days || []).includes(dow)) shouldRun = true;
+
+      if (!shouldRun) continue;
+      if (String(s.time).slice(0, 5) !== hhmm) continue;
+      if (s.start_date && new Date(s.start_date) > now) continue;
+      // Contador de execuções
+      if (s.count != null) {
+        const execCount = await pool.query(
+          `SELECT COUNT(*)::int AS c FROM public.content_pipeline WHERE topic = $1 AND user_id = $2 AND created_at > NOW() - INTERVAL '24 hours'`,
+          [String(s.topic), s.user_id]
+        ).catch(() => ({ rows: [{ c: 0 }] }));
+        if (execCount.rows[0].c >= s.count) continue;
+      }
+      const key = `${s.id}:${todayISO}:${hhmm}`;
+      if (recurringLastRun[key]) continue;
+      recurringLastRun[key] = true;
+
+      // Dispara o fluxo de geração (webhook n8n) em modo draft
+      const params = new URLSearchParams({ topic: String(s.topic), channel: String(s.channel || 'all'), publish_mode: 'draft', template: String(s.template || 'clean') });
+      const genReq = https.get({ hostname: 'n8n.arxsolutions.cloud', port: 443, path: '/webhook/content-factory?' + params.toString(), timeout: 30000 }, (res) => {
+        res.resume();
+        console.log(`[recurring] gerou post para schedule ${s.id} (${s.topic}) -> HTTP ${res.statusCode}`);
+      });
+      genReq.on('error', (e) => console.error(`[recurring] erro ao gerar schedule ${s.id}: ${e.message}`));
+      genReq.on('timeout', () => { genReq.destroy(); console.error(`[recurring] timeout schedule ${s.id}`); });
+    }
+  } catch (e) {
+    console.error('[recurring] tick error:', e.message);
+  }
+}
+setInterval(recurringTick, RECURRING_TICK_MS);
+console.log('[recurring] worker de agendamento recorrente ativo (a cada 60s)');
+
+// ============================================================
+// Worker: Publicação automática de posts agendados
+// (status='scheduled' com scheduled_at <= NOW() → publica via publish-now)
+// ============================================================
+const PUBLISH_TICK_MS = 30000; // checa a cada 30s
+let publishRunning = false;
+
+async function publishScheduledTick() {
+  if (publishRunning) return;
+  publishRunning = true;
+  try {
+    // Busca posts agendados com hora de publicar vencida (atraso máx. 10 min p/ evitar duplicar)
+    const r = await pool.query(`
+      SELECT id FROM public.content_pipeline
+      WHERE status = 'scheduled' AND scheduled_at IS NOT NULL
+        AND scheduled_at <= NOW()
+        AND scheduled_at > NOW() - INTERVAL '10 minutes'
+      ORDER BY scheduled_at ASC
+      LIMIT 5
+    `).catch(() => ({ rows: [] }));
+    if (!r.rows.length) return;
+
+    for (const post of r.rows) {
+      try {
+        // Marca como processing antes pra não duplicar se o tick rodar 2x
+        await pool.query(`UPDATE public.content_pipeline SET status = 'processing', updated_at = NOW() WHERE id = $1 AND status = 'scheduled'`, [post.id]);
+        // Chama o publish-now internamente como admin
+        const req = http.request({ hostname: '127.0.0.1', port: PORT, path: `/api/posts/${post.id}/publish-now`, method: 'POST', timeout: 30000, headers: { 'x-arx-token': MASTER_TOKEN || '', 'Content-Type': 'application/json' } }, (res) => {
+          let d = '';
+          res.on('data', c => d += c);
+          res.on('end', () => console.log(`[publish-worker] post ${post.id} -> HTTP ${res.statusCode}: ${d.slice(0, 120)}`));
+        });
+        req.on('error', (e) => console.error(`[publish-worker] post ${post.id} erro: ${e.message}`));
+        req.on('timeout', () => { req.destroy(); console.error(`[publish-worker] post ${post.id} timeout`); });
+        req.end();
+      } catch (e) {
+        console.error(`[publish-worker] post ${post.id} erro interno: ${e.message}`);
+      }
+    }
+  } catch (e) {
+    console.error('[publish-worker] tick error:', e.message);
+  } finally {
+    publishRunning = false;
+  }
+}
+setInterval(publishScheduledTick, PUBLISH_TICK_MS);
+console.log('[publish-worker] publicação automática agendada ativa (a cada 30s)');

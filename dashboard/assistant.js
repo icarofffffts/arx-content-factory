@@ -89,12 +89,113 @@ async function setUserModel(userId, model) {
 }
 
 async function getMemory(userId, limit = 16) {
-  const r = await pool.query(
+  // NOVO: prioriza system_summary + últimas 10 msgs normais
+  const userIdStr = String(userId);
+  
+  // 1. Buscar system_summary (se existir)
+  const summaryRes = await pool.query(
     `SELECT role, content FROM public.ai_assistant_memory
-     WHERE phone = $1 ORDER BY created_at DESC LIMIT $2`,
-    [String(userId), limit]
+     WHERE phone = $1 AND role = 'system_summary'
+     ORDER BY created_at DESC LIMIT 1`,
+    [userIdStr]
   );
-  return r.rows.reverse();
+  
+  // 2. Buscar últimas 10 msgs normais (user/assistant, excluindo system_summary)
+  const normalRes = await pool.query(
+    `SELECT role, content FROM public.ai_assistant_memory
+     WHERE phone = $1 AND role IN ('user', 'assistant')
+     ORDER BY created_at DESC LIMIT 10`,
+    [userIdStr]
+  );
+  
+  const normalMsgs = normalRes.rows.reverse();
+  
+  // 3. Montar array: [summary?, ...last10]
+  const result = [];
+  if (summaryRes.rows.length > 0) {
+    result.push({ role: 'system', content: summaryRes.rows[0].content });
+  }
+  result.push(...normalMsgs.map(m => ({ role: m.role === 'user' ? 'user' : 'assistant', content: m.content })));
+  
+  return result;
+}
+
+// NOVO: Sumariza mensagens antigas quando conversa passa de 20 msgs
+async function summarizeOldMessages(userId) {
+  const userIdStr = String(userId);
+  
+  try {
+    // Contar total de msgs normais (user/assistant)
+    const countRes = await pool.query(
+      `SELECT COUNT(*)::int AS total FROM public.ai_assistant_memory
+       WHERE phone = $1 AND role IN ('user', 'assistant')`,
+      [userIdStr]
+    );
+    
+    const total = countRes.rows[0].total;
+    
+    // Só sumarizar se passou de 20 msgs
+    if (total <= 20) return false;
+    
+    // Buscar as 10 mais antigas (excluindo as últimas 10 recentes)
+    const oldRes = await pool.query(
+      `SELECT id, role, content FROM public.ai_assistant_memory
+       WHERE phone = $1 AND role IN ('user', 'assistant')
+       ORDER BY created_at ASC
+       LIMIT $2`,
+      [userIdStr, Math.max(0, total - 10)]
+    );
+    
+    if (oldRes.rows.length === 0) return false;
+    
+    // Montar contexto pra sumarizar
+    const contextLines = oldRes.rows.map(r => `${r.role}: ${r.content}`).join('\n');
+    const prompt = `Resuma em 3 bullets o contexto desta conversa:\n\n${contextLines}`;
+    
+    // Chamar DeepSeek pra sumarizar
+    const summaryRes = await chatCompletionWithFallback(
+      [{ role: 'user', content: prompt }],
+      null,
+      'none',
+      'deepseek-v4-flash'
+    );
+    
+    const summary = (summaryRes.choices && summaryRes.choices[0] && summaryRes.choices[0].message && summaryRes.choices[0].message.content) 
+      ? summaryRes.choices[0].message.content.trim() 
+      : '';
+    
+    if (!summary) {
+      console.error('[ia-arxdevs] summarizeOldMessages: DeepSeek retornou summary vazio');
+      return false;
+    }
+    
+    // Salvar como system_summary (substituir anterior se existir)
+    await pool.query(
+      `DELETE FROM public.ai_assistant_memory WHERE phone = $1 AND role = 'system_summary'`,
+      [userIdStr]
+    );
+    await pool.query(
+      `INSERT INTO public.ai_assistant_memory (phone, role, content)
+       VALUES ($1, 'system_summary', $2)`,
+      [userIdStr, summary.slice(0, 1000)]
+    );
+    
+    // Opcional: deletar msgs antigas que foram sumarizadas (limpar espaço)
+    const oldIds = oldRes.rows.map(r => r.id);
+    if (oldIds.length > 0) {
+      await pool.query(
+        `DELETE FROM public.ai_assistant_memory
+         WHERE id = ANY($1) AND role IN ('user', 'assistant')`,
+        [oldIds]
+      );
+    }
+    
+    console.log(`[ia-arxdevs] memória sumarizada para user ${userId}: ${oldRes.rows.length} msgs antigas → 1 summary`);
+    return true;
+  } catch (e) {
+    console.error('[ia-arxdevs] summarizeOldMessages error:', e.message);
+    return false;
+  }
 }
 
 async function saveMemory(userId, role, content) {
@@ -469,7 +570,7 @@ async function runAgent(userId, userName, userText) {
   const preferredModel = await getUserModel(userId);
   const messages = [
     { role: 'system', content: buildSystemPrompt(userId) },
-    ...memory.map(m => ({ role: m.role === 'user' ? 'user' : 'assistant', content: m.content })),
+    ...memory.map(m => ({ role: m.role, content: m.content })),
     { role: 'user', content: userText },
   ];
 
@@ -603,6 +704,9 @@ async function handleTelegramWebhook(req, res) {
 
     const reply = await runAgent(userId, name || 'Icaro', text);
     await saveMemory(userId, 'assistant', reply);
+
+    // NOVO: Após cada resposta, verificar se precisa sumarizar memória antiga
+    summarizeOldMessages(userId).catch(e => console.error('[ia-arxdevs] summarize error:', e.message));
 
     // Dividir mensagem se necessário (Telegram: ~4096 chars por msg)
     const chunks = [];

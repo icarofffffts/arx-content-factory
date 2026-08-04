@@ -75,6 +75,31 @@ export const api = {
   posts: (status?: string) =>
     request<any[]>(`/api/posts${status ? `?status=${status}` : ''}`),
 
+  postsFiltered: (opts: { status?: string; channel?: string; q?: string } = {}) => {
+    const params = new URLSearchParams()
+    if (opts.status && opts.status !== 'all') params.set('status', opts.status)
+    if (opts.channel && opts.channel !== 'all') params.set('channel', opts.channel)
+    if (opts.q) params.set('q', opts.q)
+    const qs = params.toString()
+    return request<any[]>(`/api/posts${qs ? `?${qs}` : ''}`)
+  },
+
+  bulkPosts: (ids: string[], action: string, scheduled_at?: string) =>
+    request<{ success: boolean; count: number; posts: any[] }>('/api/posts/bulk', {
+      method: 'POST', body: JSON.stringify({ ids, action, scheduled_at })
+    }),
+
+  recurringSchedules: () =>
+    request<{ success: boolean; schedules: any[] }>('/api/schedule/recurring'),
+
+  createRecurringSchedule: (data: any) =>
+    request<{ success: boolean; schedule: any }>('/api/schedule/recurring', {
+      method: 'POST', body: JSON.stringify(data)
+    }),
+
+  deleteRecurringSchedule: (id: string) =>
+    request<{ success: boolean }>(`/api/schedule/recurring/${id}`, { method: 'DELETE' }),
+
   drafts: () =>
     request<any[]>('/api/drafts'),
 

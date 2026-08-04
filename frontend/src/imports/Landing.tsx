@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import Pricing from './Pricing'
 import ArxLogo from './ArxLogo'
+import { api } from '../lib/api'
 
 // ─── Real SVG logos ───────────────────────────────────────────────────────────
 
@@ -587,6 +588,17 @@ const TESTIMONIALS = [
 
 export default function Landing({ onNavigate, user, initialPricing }: { onNavigate: (p: string) => void; user: any; initialPricing?: boolean }) {
   const [showPricing, setShowPricing] = useState(!!initialPricing)
+  const [metrics, setMetrics] = useState<any>(null)
+
+  useEffect(() => {
+    api.metrics()
+      .then((data) => {
+        setMetrics(data)
+      })
+      .catch((err) => {
+        console.error('Failed to fetch metrics:', err)
+      })
+  }, [])
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#0a0a0a', color: '#fafafa', fontFamily: 'Inter, system-ui, sans-serif', overflowX: 'hidden' }}>
@@ -656,7 +668,12 @@ export default function Landing({ onNavigate, user, initialPricing }: { onNaviga
       {/* ── STATS ── */}
       <section style={{ position: 'relative', zIndex: 1, padding: '64px 24px' }}>
         <div style={{ maxWidth: 900, margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', background: 'rgba(255,255,255,0.03)', borderRadius: 20, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.07)' }}>
-          {STATS.map((s, i) => (
+          {(metrics ? [
+            { value: metrics.total_posts || 0, suffix: '+', label: 'posts publicados' },
+            { value: metrics.total_videos || 0, suffix: '+', label: 'vídeos gerados' },
+            { value: metrics.total_users || 0, suffix: '+', label: 'usuários ativos' },
+            { value: 3.2, suffix: 'h', label: 'economizados por dia' },
+          ] : STATS).map((s, i) => (
             <div key={i} style={{ padding: '32px 20px', textAlign: 'center', borderRight: i < 3 ? '1px solid rgba(255,255,255,0.06)' : 'none', transition: 'background 0.2s' }} onMouseEnter={e => ((e.currentTarget as HTMLDivElement).style.background = 'rgba(139,92,246,0.05)')} onMouseLeave={e => ((e.currentTarget as HTMLDivElement).style.background = 'transparent')}>
               <div style={{ fontSize: '2.5rem', fontWeight: 900, letterSpacing: '-0.04em', background: 'linear-gradient(135deg,#fafafa,#a1a1aa)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
                 <Counter target={s.value} suffix={s.suffix} />
@@ -804,15 +821,64 @@ export default function Landing({ onNavigate, user, initialPricing }: { onNaviga
       </section>
 
       {/* ── FOOTER ── */}
-      <footer style={{ position: 'relative', zIndex: 1, borderTop: '1px solid rgba(255,255,255,0.06)', padding: '32px 24px' }}>
-        <div style={{ maxWidth: 1160, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <ArxLogo size={26} wordmarkColor="#52525b" />
+      <footer style={{ position: 'relative', zIndex: 1, borderTop: '1px solid rgba(255,255,255,0.06)', padding: '48px 24px 40px' }}>
+        <div style={{ maxWidth: 1160, margin: '0 auto' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 40 }}>
+            {/* Marca */}
+            <div style={{ maxWidth: 280 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
+                <ArxLogo size={30} glow />
+              </div>
+              <p style={{ margin: 0, color: '#52525b', fontSize: '0.8125rem', lineHeight: 1.6 }}>
+                IA gera posts para LinkedIn, Instagram e GitHub. Você aprova pelo WhatsApp em segundos.
+              </p>
+              <div style={{ display: 'flex', gap: 12, marginTop: 18 }}>
+                {[
+                  { label: 'Instagram', icon: 'M16 11.37A4 4 0 1112.63 8 4 4 0 0116 11.37zM17.5 6.5h.01M7 2h10a5 5 0 015 5v10a5 5 0 01-5 5H7a5 5 0 01-5-5V7a5 5 0 015-5z' },
+                  { label: 'LinkedIn', icon: 'M16 8a6 6 0 016 6v7h-4v-7a2 2 0 00-2-2 2 2 0 00-2 2v7h-4v-7a6 6 0 016-6zM2 9h4v12H2z M4 6a2 2 0 100-4 2 2 0 000 4z' },
+                  { label: 'Twitter', icon: 'M23 3a10.9 10.9 0 01-3.14 1.53 4.48 4.48 0 00-7.86 3v1A10.66 10.66 0 013 4s-4 9 5 13a11.64 11.64 0 01-7 2c9 5 20 0 20-11.5a4.5 4.5 0 00-.08-.83A7.72 7.72 0 0023 3z' },
+                ].map(s => (
+                  <a key={s.label} href="#" aria-label={s.label} style={{ width: 34, height: 34, borderRadius: 10, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#71717a', transition: 'all 0.2s' }}
+                     onMouseEnter={e => { const d = e.currentTarget; d.style.color = '#8b5cf6'; d.style.borderColor = 'rgba(139,92,246,0.4)'; d.style.background = 'rgba(139,92,246,0.1)' }}
+                     onMouseLeave={e => { const d = e.currentTarget; d.style.color = '#71717a'; d.style.borderColor = 'rgba(255,255,255,0.08)'; d.style.background = 'rgba(255,255,255,0.05)' }}>
+                    <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><path d={s.icon} /></svg>
+                  </a>
+                ))}
+              </div>
+            </div>
+
+            {/* Links */}
+            <div style={{ display: 'flex', gap: 64, flexWrap: 'wrap' }}>
+              <div>
+                <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#fafafa', marginBottom: 14, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Produto</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  <FooterLink onClick={() => setShowPricing(true)}>Preços</FooterLink>
+                  <FooterLink onClick={() => onNavigate('signup')}>Começar Grátis</FooterLink>
+                  <FooterLink onClick={() => onNavigate('login')}>Entrar</FooterLink>
+                </div>
+              </div>
+              <div>
+                <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#fafafa', marginBottom: 14, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Recursos</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  <FooterLink onClick={() => setShowPricing(true)}>Geração com IA</FooterLink>
+                  <FooterLink onClick={() => setShowPricing(true)}>Aprovação WhatsApp</FooterLink>
+                  <FooterLink onClick={() => setShowPricing(true)}>Templates</FooterLink>
+                </div>
+              </div>
+              <div>
+                <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#fafafa', marginBottom: 14, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Legal</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  <FooterLink onClick={() => alert('Termos de Uso — em breve.')}>Termos de Uso</FooterLink>
+                  <FooterLink onClick={() => alert('Política de Privacidade — em breve.')}>Privacidade</FooterLink>
+                  <FooterLink onClick={() => alert('Contato: contato@arxfactory.io')}>Contato</FooterLink>
+                </div>
+              </div>
+            </div>
           </div>
-          <div style={{ display: 'flex', gap: 24, fontSize: '0.8125rem', color: '#3f3f46' }}>
-            <span>© 2026 Arx Developers</span>
-            <FooterLink onClick={() => onNavigate('login')}>Entrar</FooterLink>
-            <FooterLink onClick={() => setShowPricing(true)}>Preços</FooterLink>
+
+          <div style={{ marginTop: 36, paddingTop: 20, borderTop: '1px solid rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
+            <span style={{ fontSize: '0.75rem', color: '#3f3f46' }}>© 2026 Arx Content Factory. Todos os direitos reservados.</span>
+            <span style={{ fontSize: '0.75rem', color: '#3f3f46' }}>Feito com 💜 no Brasil</span>
           </div>
         </div>
       </footer>
