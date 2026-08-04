@@ -22,7 +22,7 @@ const DEMO_POST = {
 }
 
 const NAV: { id: SubPage; icon: string; label: string }[] = [
-  { id: 'dashboard', icon: 'D', label: 'Dashboard' },
+  { id: 'dashboard', icon: 'D', label: 'Painel' },
   { id: 'content', icon: 'C', label: 'Conteúdo' },
   { id: 'suggestions', icon: 'IA', label: 'Sugestões IA' },
   { id: 'social', icon: 'S', label: 'Social Bot' },

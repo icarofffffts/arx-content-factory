@@ -49,7 +49,7 @@ export default function Signup({ onLogin, onNavigate }: {
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-2 text-gray-400">Email</label>
+            <label className="block text-sm font-medium mb-2 text-gray-400">E-mail</label>
             <input type="email" value={email} onChange={e => setEmail(e.target.value)}
               className="glass-input w-full" placeholder="seu@email.com" required />
           </div>

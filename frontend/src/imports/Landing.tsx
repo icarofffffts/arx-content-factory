@@ -412,7 +412,7 @@ function LiveMockup() {
       )
     },
     {
-      label: 'Templates',
+      label: 'Modelos',
       body: (
         <div style={{ padding: 12, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
           {[
@@ -729,12 +729,12 @@ export default function Landing({ onNavigate, user }: { onNavigate: (p: string) 
         </div>
         <div style={{ display: 'flex', gap: 20, animation: 'scrollLeft 28s linear infinite', width: 'max-content', padding: '4px 20px' }}>
           {[
-            { url: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=420&h=268&fit=crop&auto=format', label: 'Analytics' },
+            { url: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=420&h=268&fit=crop&auto=format', label: 'Análises' },
             { url: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=420&h=268&fit=crop&auto=format', label: 'Calendário' },
             { url: 'https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=420&h=268&fit=crop&auto=format', label: 'Performance' },
-            { url: 'https://images.unsplash.com/photo-1556761175-4b46a572b786?w=420&h=268&fit=crop&auto=format', label: 'Templates' },
-            { url: 'https://images.unsplash.com/photo-1553877522-43269d4ea984?w=420&h=268&fit=crop&auto=format', label: 'IA Generation' },
-            { url: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=420&h=268&fit=crop&auto=format', label: 'Analytics' },
+            { url: 'https://images.unsplash.com/photo-1556761175-4b46a572b786?w=420&h=268&fit=crop&auto=format', label: 'Modelos' },
+            { url: 'https://images.unsplash.com/photo-1553877522-43269d4ea984?w=420&h=268&fit=crop&auto=format', label: 'Geração com IA' },
+            { url: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=420&h=268&fit=crop&auto=format', label: 'Análises' },
             { url: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=420&h=268&fit=crop&auto=format', label: 'Calendário' },
             { url: 'https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=420&h=268&fit=crop&auto=format', label: 'Performance' },
           ].map((img, i) => (

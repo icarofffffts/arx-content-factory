@@ -69,7 +69,7 @@ export default function Login({ onLogin, onNavigate }: {
             )}
 
             <div>
-              <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, color: '#a1a1aa', marginBottom: 7 }}>Email</label>
+              <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, color: '#a1a1aa', marginBottom: 7 }}>E-mail</label>
               <input
                 type="email" value={email} onChange={e => setEmail(e.target.value)}
                 placeholder="seu@email.com" required

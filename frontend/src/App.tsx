@@ -62,7 +62,7 @@ const icons = {
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type Page = 'dashboard' | 'content' | 'templates' | 'schedule' | 'analytics' | 'admin'
-type PostStatus = 'scheduled' | 'draft' | 'processing' | 'published' | 'pending'
+type PostStatus = 'scheduled' | 'draft' | 'processing' | 'published' | 'pending' | 'paused'
 type ContentType = 'carousel' | 'video' | 'image'
 
 interface Post {
@@ -75,6 +75,14 @@ interface Post {
   engagement?: string
   thumbnail: string
   wa_status?: string | null
+  // Raw fields kept for preview/edit modals
+  _raw?: {
+    slides_data?: any[]
+    media_paths?: string[]
+    scheduled_at?: string
+    created_at?: string
+    topic?: string
+  }
 }
 
 interface Template {
@@ -116,11 +124,11 @@ const templates: Template[] = [
 ]
 
 const chartData = [
-  { day: 'Jul 20', posts: 3 }, { day: 'Jul 21', posts: 5 }, { day: 'Jul 22', posts: 2 },
-  { day: 'Jul 23', posts: 7 }, { day: 'Jul 24', posts: 4 }, { day: 'Jul 25', posts: 6 },
-  { day: 'Jul 26', posts: 8 }, { day: 'Jul 27', posts: 3 }, { day: 'Jul 28', posts: 9 },
-  { day: 'Jul 29', posts: 5 }, { day: 'Jul 30', posts: 11 }, { day: 'Jul 31', posts: 7 },
-  { day: 'Aug 1', posts: 13 }, { day: 'Aug 2', posts: 9 },
+  { day: '20 Jul', posts: 3 }, { day: '21 Jul', posts: 5 }, { day: '22 Jul', posts: 2 },
+  { day: '23 Jul', posts: 7 }, { day: '24 Jul', posts: 4 }, { day: '25 Jul', posts: 6 },
+  { day: '26 Jul', posts: 8 }, { day: '27 Jul', posts: 3 }, { day: '28 Jul', posts: 9 },
+  { day: '29 Jul', posts: 5 }, { day: '30 Jul', posts: 11 }, { day: '31 Jul', posts: 7 },
+  { day: '1 Ago', posts: 13 }, { day: '2 Ago', posts: 9 },
 ]
 
 const maxPosts = Math.max(...chartData.map(d => d.posts))
@@ -150,10 +158,10 @@ function mapPost(p: RealPost): Post {
   const channels = Array.isArray(p.channels) && p.channels.length ? p.channels
     : p.channel ? [p.channel] : ['all']
   const type = (p.type === 'video' || p.type === 'image') ? p.type : 'carousel'
-  const status = (['scheduled', 'draft', 'processing', 'published', 'pending'].includes(p.status || '') ? p.status : 'draft') as PostStatus
+  const status = (['scheduled', 'draft', 'processing', 'published', 'pending', 'paused'].includes(p.status || '') ? p.status : 'draft') as PostStatus
   const date = p.scheduled_at || p.created_at || ''
   const d = date ? new Date(date) : null
-  const dateStr = d ? `${d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} ${d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : '—'
+  const dateStr = (d && !isNaN(d.getTime())) ? d.toISOString() : ''
   // Real thumbnail from slides_data[0].image_url when available
   const slides: any[] = Array.isArray((p as any).slides_data) ? (p as any).slides_data : []
   const realImg = slides[0]?.image_url || slides[0]?.image || ''
@@ -167,7 +175,25 @@ function mapPost(p: RealPost): Post {
     engagement: p.engagement || '—',
     thumbnail: realImg || p.thumbnail || `https://images.unsplash.com/photo-${Math.abs([...raw].reduce((a, c) => a + c.charCodeAt(0), 0)) % 20 + 1000}?w=200&h=200&fit=crop&auto=format`,
     wa_status: p.wa_status || null,
+    _raw: {
+      slides_data: slides.length ? slides : undefined,
+      media_paths: Array.isArray((p as any).media_paths) ? (p as any).media_paths : undefined,
+      scheduled_at: p.scheduled_at,
+      created_at: p.created_at,
+      topic: p.topic,
+    },
   }
+}
+
+// Formata dia do grafico: aceita 'YYYY-MM-DD', 'Jul 20', '20 Jul' -> exibe '20/07' ou '20 Jul'
+function formatChartDay(day: string): string {
+  const s = String(day || '').trim()
+  if (!s) return '—'
+  const m = s.match(/^(\d{4})-(\d{2})-(\d{2})/)
+  if (m) return `${m[3]}/${m[2]}`
+  const iso = new Date(s)
+  if (!isNaN(iso.getTime())) return iso.toLocaleDateString('pt-BR', { day: 'numeric', month: 'numeric' })
+  return s.slice(0, 6)
 }
 
 function usePosts() {
@@ -235,11 +261,12 @@ function useTemplates() {
 
 function StatusBadge({ status }: { status: PostStatus }) {
   const map: Record<PostStatus, { label: string; bg: string; color: string }> = {
-    scheduled: { label: 'Scheduled', bg: 'rgba(59,130,246,0.15)', color: '#3b82f6' },
-    draft:     { label: 'Draft',     bg: 'rgba(113,113,122,0.15)', color: '#71717a' },
-    processing:{ label: 'Processing',bg: 'rgba(245,158,11,0.15)', color: '#f59e0b' },
-    published: { label: 'Published', bg: 'rgba(34,197,94,0.15)', color: '#22c55e' },
-    pending:   { label: 'Pending',   bg: 'rgba(245,158,11,0.15)', color: '#f59e0b' },
+    scheduled: { label: 'Agendado', bg: 'rgba(59,130,246,0.15)', color: '#3b82f6' },
+    draft:     { label: 'Rascunho',     bg: 'rgba(113,113,122,0.15)', color: '#71717a' },
+    processing:{ label: 'Processando',bg: 'rgba(245,158,11,0.15)', color: '#f59e0b' },
+    published: { label: 'Publicado', bg: 'rgba(34,197,94,0.15)', color: '#22c55e' },
+    pending:   { label: 'Pendente',   bg: 'rgba(245,158,11,0.15)', color: '#f59e0b' },
+    paused:    { label: 'Pausado',    bg: 'rgba(113,113,122,0.15)', color: '#a1a1aa' },
   }
   const s = map[status]
   return (
@@ -298,18 +325,594 @@ function ChannelTag({ channel }: { channel: string }) {
   )
 }
 
+// ─── Modals ───────────────────────────────────────────────────────────────────
+
+function PostPreviewModal({
+  post,
+  onClose,
+  onApprove,
+  onReject,
+  onEdit,
+  onReschedule,
+  onSendWhatsApp,
+  onPause,
+  onPublishNow,
+  onDelete,
+}: {
+  post: Post
+  onClose: () => void
+  onApprove?: () => void
+  onReject?: () => void
+  onEdit?: () => void
+  onReschedule?: () => void
+  onSendWhatsApp?: () => void
+  onPause?: () => void
+  onPublishNow?: () => void
+  onDelete?: () => void
+}) {
+  const [loading, setLoading] = useState<string | null>(null)
+  const slides: any[] = post._raw?.slides_data || []
+  const mediaPaths: string[] = post._raw?.media_paths || []
+
+  // Images to show: from slides_data or media_paths
+  const images: string[] = slides.length
+    ? slides.map((s: any) => s.image_url || s.image || '').filter(Boolean)
+    : mediaPaths.filter(Boolean)
+
+  const scheduleStr = post.date
+    ? new Date(post.date).toLocaleString('pt-BR', {
+        day: '2-digit', month: '2-digit', year: 'numeric',
+        hour: '2-digit', minute: '2-digit',
+      })
+    : 'Não agendado'
+
+  const statusLabel: Record<string, string> = {
+    scheduled: 'Agendado', draft: 'Rascunho', processing: 'Processando',
+    published: 'Publicado', pending: 'Pendente',
+  }
+
+  async function handleAction(action: string, fn?: () => void) {
+    if (fn) {
+      setLoading(action)
+      fn()
+      setTimeout(() => { setLoading(null); onClose() }, 300)
+    }
+  }
+
+  return (
+    <div
+      style={{
+        position: 'fixed', inset: 0, zIndex: 9000,
+        background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(8px)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        padding: 24,
+      }}
+      onClick={onClose}
+    >
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{
+          width: '100%', maxWidth: 680, maxHeight: '90vh', overflow: 'auto',
+          background: '#161616', borderRadius: 16,
+          border: '1px solid rgba(255,255,255,0.08)',
+          boxShadow: '0 25px 60px rgba(0,0,0,0.5)',
+        }}
+      >
+        {/* Header */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <TypeIcon type={post.type} />
+            <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 600, color: '#fafafa' }}>Preview do Post</h3>
+          </div>
+          <button
+            onClick={onClose}
+            style={{ background: 'rgba(255,255,255,0.06)', border: 'none', borderRadius: 8, width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#a1a1aa', transition: 'background 0.15s' }}
+            onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.12)')}
+            onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.06)')}
+          >
+            <Icon d={icons.close} size={16} />
+          </button>
+        </div>
+
+        {/* Body */}
+        <div style={{ padding: 20 }}>
+          {/* Title + Status */}
+          <div style={{ marginBottom: 16 }}>
+            <h2 style={{ margin: '0 0 8px', fontSize: '1.125rem', fontWeight: 700, color: '#fafafa', lineHeight: 1.3 }}>{post.title}</h2>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+              <StatusBadge status={post.status} />
+              <WaBadge status={post.wa_status} />
+              <span style={{ fontSize: '0.75rem', color: '#71717a', display: 'flex', alignItems: 'center', gap: 4 }}>
+                <Icon d={icons.calendar} size={12} />
+                {scheduleStr}
+              </span>
+            </div>
+          </div>
+
+          {/* Channels */}
+          {post.channels.length > 0 && (
+            <div style={{ display: 'flex', gap: 6, marginBottom: 16, flexWrap: 'wrap' }}>
+              {post.channels.map(c => <ChannelTag key={c} channel={c} />)}
+            </div>
+          )}
+
+          {/* Slides */}
+          {images.length > 0 && (
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ fontSize: '0.75rem', fontWeight: 600, color: '#a1a1aa', marginBottom: 10 }}>
+                Slides ({images.length})
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: images.length <= 2 ? 'repeat(auto-fit, minmax(200px, 1fr))' : 'repeat(3, 1fr)', gap: 10 }}>
+                {images.map((img: string, i: number) => (
+                  <div key={i} style={{ position: 'relative', borderRadius: 10, overflow: 'hidden', background: '#111', aspectRatio: '1/1' }}>
+                    <img src={img} alt={`Slide ${i + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'linear-gradient(transparent, rgba(0,0,0,0.7))', padding: '8px 10px' }}>
+                      <span style={{ fontSize: '0.625rem', fontWeight: 700, color: '#fff' }}>Slide {i + 1}</span>
+                      {slides[i]?.title && <div style={{ fontSize: '0.5625rem', color: '#a1a1aa', marginTop: 2 }}>{slides[i].title}</div>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Slide texts (carousel content) */}
+          {slides.length > 0 && (
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ fontSize: '0.75rem', fontWeight: 600, color: '#a1a1aa', marginBottom: 8 }}>
+                Conteúdo dos Slides
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {slides.map((s: any, i: number) => (
+                  <div key={i} style={{ padding: '10px 12px', background: 'rgba(255,255,255,0.03)', borderRadius: 8, border: '1px solid rgba(255,255,255,0.05)' }}>
+                    <div style={{ fontSize: '0.6875rem', fontWeight: 700, color: '#a78bfa', marginBottom: 4 }}>
+                      {s.slide_number ? `#${s.slide_number}` : `#${i + 1}`} {s.title || ''}
+                    </div>
+                    {s.body && <div style={{ fontSize: '0.75rem', color: '#a1a1aa', lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>{s.body}</div>}
+                    {s.quote && <div style={{ fontSize: '0.6875rem', color: '#f59e0b', fontStyle: 'italic', marginTop: 4 }}>"{s.quote}"</div>}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* No images placeholder */}
+          {images.length === 0 && slides.length === 0 && (
+            <div style={{ padding: 32, textAlign: 'center', color: '#52525b', fontSize: '0.8125rem', background: 'rgba(255,255,255,0.02)', borderRadius: 10, marginBottom: 16 }}>
+              Nenhuma imagem de slide disponível
+            </div>
+          )}
+        </div>
+
+        {/* Action buttons */}
+        <div style={{ padding: '16px 20px', borderTop: '1px solid rgba(255,255,255,0.06)', display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          {onApprove && (
+            <button
+              disabled={loading !== null}
+              onClick={() => handleAction('approve', onApprove)}
+              style={{
+                padding: '8px 16px', borderRadius: 8, fontSize: '0.75rem', fontWeight: 600,
+                cursor: loading ? 'wait' : 'pointer',
+                border: '1px solid rgba(34,197,94,0.4)', background: 'rgba(34,197,94,0.12)',
+                color: '#4ade80', display: 'flex', alignItems: 'center', gap: 6,
+              }}
+            >
+              {loading === 'approve' ? '⏳...' : '✅ Aprovar'}
+            </button>
+          )}
+          {onReject && (
+            <button
+              disabled={loading !== null}
+              onClick={() => handleAction('reject', onReject)}
+              style={{
+                padding: '8px 16px', borderRadius: 8, fontSize: '0.75rem', fontWeight: 600,
+                cursor: loading ? 'wait' : 'pointer',
+                border: '1px solid rgba(239,68,68,0.4)', background: 'rgba(239,68,68,0.12)',
+                color: '#f87171', display: 'flex', alignItems: 'center', gap: 6,
+              }}
+            >
+              {loading === 'reject' ? '⏳...' : '❌ Rejeitar'}
+            </button>
+          )}
+          {onEdit && (
+            <button
+              disabled={loading !== null}
+              onClick={() => handleAction('edit', onEdit)}
+              style={{
+                padding: '8px 16px', borderRadius: 8, fontSize: '0.75rem', fontWeight: 600,
+                cursor: loading ? 'wait' : 'pointer',
+                border: '1px solid rgba(139,92,246,0.4)', background: 'rgba(139,92,246,0.12)',
+                color: '#a78bfa', display: 'flex', alignItems: 'center', gap: 6,
+              }}
+            >
+              {loading === 'edit' ? '⏳...' : '✏️ Editar'}
+            </button>
+          )}
+          {onReschedule && (
+            <button
+              disabled={loading !== null}
+              onClick={() => handleAction('reschedule', onReschedule)}
+              style={{
+                padding: '8px 16px', borderRadius: 8, fontSize: '0.75rem', fontWeight: 600,
+                cursor: loading ? 'wait' : 'pointer',
+                border: '1px solid rgba(59,130,246,0.4)', background: 'rgba(59,130,246,0.12)',
+                color: '#60a5fa', display: 'flex', alignItems: 'center', gap: 6,
+              }}
+            >
+              {loading === 'reschedule' ? '⏳...' : '📅 Reagendar'}
+            </button>
+          )}
+          {onSendWhatsApp && (
+            <button
+              disabled={loading !== null}
+              onClick={() => handleAction('whatsapp', onSendWhatsApp)}
+              style={{
+                padding: '8px 16px', borderRadius: 8, fontSize: '0.75rem', fontWeight: 600,
+                cursor: loading ? 'wait' : 'pointer',
+                border: '1px solid rgba(34,197,94,0.3)', background: 'rgba(34,197,94,0.1)',
+                color: '#4ade80', display: 'flex', alignItems: 'center', gap: 6,
+              }}
+            >
+              {loading === 'whatsapp' ? '⏳...' : '📲 Enviar WhatsApp'}
+            </button>
+          )}
+          {onPause && (post.status === 'scheduled') && (
+            <button
+              disabled={loading !== null}
+              onClick={() => handleAction('pause', onPause)}
+              style={{
+                padding: '8px 16px', borderRadius: 8, fontSize: '0.75rem', fontWeight: 600,
+                cursor: loading ? 'wait' : 'pointer',
+                border: '1px solid rgba(245,158,11,0.4)', background: 'rgba(245,158,11,0.12)',
+                color: '#fbbf24', display: 'flex', alignItems: 'center', gap: 6,
+              }}
+            >
+              {loading === 'pause' ? '⏳...' : '⏸ Pausar'}
+            </button>
+          )}
+          {onPause && (post.status === 'paused') && (
+            <button
+              disabled={loading !== null}
+              onClick={() => handleAction('pause', onPause)}
+              style={{
+                padding: '8px 16px', borderRadius: 8, fontSize: '0.75rem', fontWeight: 600,
+                cursor: loading ? 'wait' : 'pointer',
+                border: '1px solid rgba(34,197,94,0.4)', background: 'rgba(34,197,94,0.12)',
+                color: '#4ade80', display: 'flex', alignItems: 'center', gap: 6,
+              }}
+            >
+              {loading === 'pause' ? '⏳...' : '▶️ Retomar'}
+            </button>
+          )}
+          {onPublishNow && (post.status === 'scheduled' || post.status === 'paused') && (
+            <button
+              disabled={loading !== null}
+              onClick={() => handleAction('publish', onPublishNow)}
+              style={{
+                padding: '8px 16px', borderRadius: 8, fontSize: '0.75rem', fontWeight: 600,
+                cursor: loading ? 'wait' : 'pointer',
+                border: '1px solid rgba(245,158,11,0.4)', background: 'rgba(245,158,11,0.12)',
+                color: '#fbbf24', display: 'flex', alignItems: 'center', gap: 6,
+              }}
+            >
+              {loading === 'publish' ? '⏳...' : '⚡ Publicar Agora'}
+            </button>
+          )}
+          {onDelete && (
+            <div style={{ flex: 1 }} />
+          )}
+          {onDelete && (
+            <button
+              disabled={loading !== null}
+              onClick={() => handleAction('delete', onDelete)}
+              style={{
+                padding: '8px 16px', borderRadius: 8, fontSize: '0.75rem', fontWeight: 600,
+                cursor: loading ? 'wait' : 'pointer',
+                border: '1px solid rgba(239,68,68,0.3)', background: 'rgba(239,68,68,0.08)',
+                color: '#ef4444', display: 'flex', alignItems: 'center', gap: 6,
+              }}
+            >
+              {loading === 'delete' ? '⏳...' : '🗑 Excluir'}
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function PostEditModal({
+  post,
+  onClose,
+  onSave,
+}: {
+  post: Post
+  onClose: () => void
+  onSave: (newTitle: string, scheduledAt: string) => void
+}) {
+  const [title, setTitle] = useState(post.title)
+  const [scheduledAt, setScheduledAt] = useState(() => {
+    const d = post.date ? new Date(post.date) : new Date()
+    // Format to YYYY-MM-DDTHH:MM for datetime-local input
+    if (isNaN(d.getTime())) return ''
+    const pad = (n: number) => String(n).padStart(2, '0')
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+  })
+  const [saving, setSaving] = useState(false)
+
+  async function handleSave() {
+    setSaving(true)
+    // Convert datetime-local to "YYYY-MM-DD HH:MM" format for the API
+    const dtStr = scheduledAt.replace('T', ' ')
+    onSave(title, dtStr)
+    setTimeout(() => { setSaving(false); onClose() }, 400)
+  }
+
+  return (
+    <div
+      style={{
+        position: 'fixed', inset: 0, zIndex: 9100,
+        background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(8px)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        padding: 24,
+      }}
+      onClick={onClose}
+    >
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{
+          width: '100%', maxWidth: 440,
+          background: '#161616', borderRadius: 16,
+          border: '1px solid rgba(255,255,255,0.08)',
+          boxShadow: '0 25px 60px rgba(0,0,0,0.5)',
+        }}
+      >
+        {/* Header */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+          <h3 style={{ margin: 0, fontSize: '0.9375rem', fontWeight: 600, color: '#fafafa' }}>Editar Post</h3>
+          <button
+            onClick={onClose}
+            style={{ background: 'rgba(255,255,255,0.06)', border: 'none', borderRadius: 8, width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#a1a1aa' }}
+          >
+            <Icon d={icons.close} size={16} />
+          </button>
+        </div>
+
+        {/* Body */}
+        <div style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 16 }}>
+          {/* Title field */}
+          <div>
+            <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#a1a1aa', marginBottom: 6 }}>Título</label>
+            <input
+              className="input-field"
+              value={title}
+              onChange={e => setTitle(e.target.value)}
+              placeholder="Título do post..."
+              style={{ width: '100%' }}
+            />
+          </div>
+
+          {/* Schedule field */}
+          <div>
+            <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#a1a1aa', marginBottom: 6 }}>Data e Hora de Agendamento</label>
+            <input
+              type="datetime-local"
+              className="input-field"
+              value={scheduledAt}
+              onChange={e => setScheduledAt(e.target.value)}
+              style={{ width: '100%', colorScheme: 'dark' }}
+            />
+          </div>
+
+          {/* Status badge */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ fontSize: '0.75rem', color: '#71717a' }}>Status atual:</span>
+            <StatusBadge status={post.status} />
+          </div>
+        </div>
+
+        {/* Actions */}
+        <div style={{ padding: '16px 20px', borderTop: '1px solid rgba(255,255,255,0.06)', display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+          <button
+            onClick={onClose}
+            style={{
+              padding: '8px 16px', borderRadius: 8, fontSize: '0.75rem', fontWeight: 600,
+              cursor: 'pointer', border: '1px solid rgba(255,255,255,0.1)',
+              background: 'transparent', color: '#a1a1aa',
+            }}
+          >
+            Cancelar
+          </button>
+          <button
+            disabled={saving || !title.trim()}
+            onClick={handleSave}
+            style={{
+              padding: '8px 20px', borderRadius: 8, fontSize: '0.75rem', fontWeight: 600,
+              cursor: saving ? 'wait' : 'pointer',
+              border: 'none', background: '#8b5cf6', color: '#fff',
+              opacity: saving || !title.trim() ? 0.5 : 1,
+              display: 'flex', alignItems: 'center', gap: 6,
+            }}
+          >
+            {saving ? '⏳ Salvando...' : '💾 Salvar'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function RescheduleModal({
+  post,
+  onClose,
+  onReschedule,
+}: {
+  post: Post
+  onClose: () => void
+  onReschedule: (scheduledAt: string) => void
+}) {
+  const [scheduledAt, setScheduledAt] = useState(() => {
+    const d = post.date ? new Date(post.date) : new Date(Date.now() + 3600000)
+    if (isNaN(d.getTime())) return ''
+    const pad = (n: number) => String(n).padStart(2, '0')
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+  })
+  const [saving, setSaving] = useState(false)
+
+  // Quick options
+  const quickOptions = [
+    { label: 'Daqui 1h', offset: 1 },
+    { label: 'Daqui 3h', offset: 3 },
+    { label: 'Amanhã 10h', offset: null },
+    { label: 'Segunda 10h', offset: null },
+  ]
+
+  function applyQuick(hoursOffset: number | null, label: string) {
+    const d = new Date()
+    if (label === 'Amanhã 10h') {
+      d.setDate(d.getDate() + 1)
+      d.setHours(10, 0, 0, 0)
+    } else if (label === 'Segunda 10h') {
+      const daysUntilMonday = (8 - d.getDay()) % 7 || 7
+      d.setDate(d.getDate() + daysUntilMonday)
+      d.setHours(10, 0, 0, 0)
+    } else if (hoursOffset) {
+      d.setHours(d.getHours() + hoursOffset)
+    }
+    const pad = (n: number) => String(n).padStart(2, '0')
+    setScheduledAt(`${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`)
+  }
+
+  async function handleReschedule() {
+    setSaving(true)
+    const dtStr = scheduledAt.replace('T', ' ')
+    onReschedule(dtStr)
+    setTimeout(() => { setSaving(false); onClose() }, 400)
+  }
+
+  return (
+    <div
+      style={{
+        position: 'fixed', inset: 0, zIndex: 9100,
+        background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(8px)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        padding: 24,
+      }}
+      onClick={onClose}
+    >
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{
+          width: '100%', maxWidth: 420,
+          background: '#161616', borderRadius: 16,
+          border: '1px solid rgba(255,255,255,0.08)',
+          boxShadow: '0 25px 60px rgba(0,0,0,0.5)',
+        }}
+      >
+        {/* Header */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+          <h3 style={{ margin: 0, fontSize: '0.9375rem', fontWeight: 600, color: '#fafafa' }}>📅 Reagendar Post</h3>
+          <button
+            onClick={onClose}
+            style={{ background: 'rgba(255,255,255,0.06)', border: 'none', borderRadius: 8, width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#a1a1aa' }}
+          >
+            <Icon d={icons.close} size={16} />
+          </button>
+        </div>
+
+        {/* Body */}
+        <div style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <div style={{ fontSize: '0.8125rem', color: '#a1a1aa' }}>
+            Reagendar: <span style={{ color: '#fafafa', fontWeight: 600 }}>{post.title}</span>
+          </div>
+
+          {/* Quick options */}
+          <div>
+            <label style={{ display: 'block', fontSize: '0.6875rem', fontWeight: 600, color: '#71717a', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Atalhos</label>
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+              {quickOptions.map(opt => (
+                <button
+                  key={opt.label}
+                  onClick={() => applyQuick(opt.offset, opt.label)}
+                  style={{
+                    padding: '6px 12px', borderRadius: 8, fontSize: '0.6875rem', fontWeight: 600,
+                    cursor: 'pointer', border: '1px solid rgba(59,130,246,0.3)',
+                    background: 'rgba(59,130,246,0.08)', color: '#60a5fa',
+                    transition: 'background 0.15s',
+                  }}
+                  onMouseEnter={e => (e.currentTarget.style.background = 'rgba(59,130,246,0.2)')}
+                  onMouseLeave={e => (e.currentTarget.style.background = 'rgba(59,130,246,0.08)')}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Date picker */}
+          <div>
+            <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#a1a1aa', marginBottom: 6 }}>Nova Data e Hora</label>
+            <input
+              type="datetime-local"
+              className="input-field"
+              value={scheduledAt}
+              onChange={e => setScheduledAt(e.target.value)}
+              style={{ width: '100%', colorScheme: 'dark' }}
+            />
+          </div>
+        </div>
+
+        {/* Actions */}
+        <div style={{ padding: '16px 20px', borderTop: '1px solid rgba(255,255,255,0.06)', display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+          <button
+            onClick={onClose}
+            style={{
+              padding: '8px 16px', borderRadius: 8, fontSize: '0.75rem', fontWeight: 600,
+              cursor: 'pointer', border: '1px solid rgba(255,255,255,0.1)',
+              background: 'transparent', color: '#a1a1aa',
+            }}
+          >
+            Cancelar
+          </button>
+          <button
+            disabled={saving || !scheduledAt}
+            onClick={handleReschedule}
+            style={{
+              padding: '8px 20px', borderRadius: 8, fontSize: '0.75rem', fontWeight: 600,
+              cursor: saving ? 'wait' : 'pointer',
+              border: 'none', background: '#3b82f6', color: '#fff',
+              opacity: saving || !scheduledAt ? 0.5 : 1,
+              display: 'flex', alignItems: 'center', gap: 6,
+            }}
+          >
+            {saving ? '⏳...' : '📅 Confirmar Reagendamento'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ─── Pages ────────────────────────────────────────────────────────────────────
 
 function Dashboard() {
   const metrics = useMetrics()
-  const { items: realPosts } = usePosts()
+  const { items: realPosts, setItems: setRealPosts } = usePosts()
   const analytics = useAnalytics()
+  const [previewPost, setPreviewPost] = useState<Post | null>(null)
+  const [editPost, setEditPost] = useState<Post | null>(null)
+  const [reschedulePost, setReschedulePost] = useState<Post | null>(null)
+
+  async function refresh() {
+    const r: any = await api.posts().catch(() => [])
+    if (Array.isArray(r)) setRealPosts(r.map(mapPost))
+  }
 
   const stats = [
-    { label: 'Posts Published', value: metrics ? String(metrics.published ?? metrics.total ?? 0) : '—', delta: '+12%', color: '#8b5cf6' },
-    { label: 'Scheduled', value: metrics ? String(metrics.scheduled ?? 0) : '—', delta: '+3', color: '#3b82f6' },
-    { label: 'Drafts', value: metrics ? String(metrics.draft ?? 0) : '—', delta: 'awaiting', color: '#f59e0b' },
-    { label: 'Processing', value: metrics ? String(metrics.processing ?? 0) : '—', delta: 'in queue', color: '#22c55e' },
+    { label: 'Posts Publicados', value: metrics ? String(metrics.published ?? metrics.total ?? 0) : '—', delta: '+12%', color: '#8b5cf6' },
+    { label: 'Agendados', value: metrics ? String(metrics.scheduled ?? 0) : '—', delta: '+3', color: '#3b82f6' },
+    { label: 'Rascunhos', value: metrics ? String(metrics.draft ?? 0) : '—', delta: 'aguardando', color: '#f59e0b' },
+    { label: 'Processando', value: metrics ? String(metrics.processing ?? 0) : '—', delta: 'na fila', color: '#22c55e' },
   ]
 
   const chartData2 = analytics?.by_day?.length
@@ -341,10 +944,10 @@ function Dashboard() {
         <div className="glass-card" style={{ padding: 20 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
             <div>
-              <h3 style={{ margin: 0, fontSize: '0.9375rem', fontWeight: 600, color: '#fafafa' }}>Content Production</h3>
-              <p style={{ margin: '2px 0 0', fontSize: '0.75rem', color: '#71717a' }}>Posts per day</p>
+              <h3 style={{ margin: 0, fontSize: '0.9375rem', fontWeight: 600, color: '#fafafa' }}>Produção de Conteúdo</h3>
+              <p style={{ margin: '2px 0 0', fontSize: '0.75rem', color: '#71717a' }}>Posts por dia</p>
             </div>
-            <span style={{ fontSize: '0.6875rem', color: '#22c55e', fontWeight: 600, background: 'rgba(34,197,94,0.1)', padding: '4px 10px', borderRadius: 9999 }}>Live data</span>
+            <span style={{ fontSize: '0.6875rem', color: '#22c55e', fontWeight: 600, background: 'rgba(34,197,94,0.1)', padding: '4px 10px', borderRadius: 9999 }}>Dados ao vivo</span>
           </div>
           <div style={{ display: 'flex', alignItems: 'flex-end', gap: 6, height: 120 }}>
             {chartData2.map((d: { day: string; posts: number }, i: number) => (
@@ -361,18 +964,24 @@ function Dashboard() {
                   }}
                   title={`${d.posts} posts`}
                 />
-                {i % 3 === 0 && <span style={{ fontSize: '0.5rem', color: '#52525b', whiteSpace: 'nowrap', transform: 'rotate(-30deg)', marginBottom: -2 }}>{String(d.day).slice(4)}</span>}
+                {i % 2 === 0 && <span style={{ fontSize: '0.5625rem', color: '#52525b', whiteSpace: 'nowrap', marginTop: 2 }}>{formatChartDay(d.day)}</span>}
               </div>
             ))}
           </div>
         </div>
 
-        {/* Approval Queue */}
+        {/* Fila de Aprovação */}
         <div className="glass-card" style={{ padding: 20 }}>
-          <h3 style={{ margin: '0 0 16px', fontSize: '0.9375rem', fontWeight: 600, color: '#fafafa' }}>Approval Queue</h3>
+          <h3 style={{ margin: '0 0 16px', fontSize: '0.9375rem', fontWeight: 600, color: '#fafafa' }}>Fila de Aprovação</h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {pending.map(p => (
-              <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', background: 'rgba(255,255,255,0.03)', borderRadius: 10, border: '1px solid rgba(255,255,255,0.05)' }}>
+              <div
+                key={p.id}
+                onClick={() => setPreviewPost(p)}
+                style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', background: 'rgba(255,255,255,0.03)', borderRadius: 10, border: '1px solid rgba(255,255,255,0.05)', cursor: 'pointer', transition: 'background 0.15s, border-color 0.15s' }}
+                onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; e.currentTarget.style.borderColor = 'rgba(139,92,246,0.3)' }}
+                onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.03)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.05)' }}
+              >
                 <img src={p.thumbnail} alt={p.title} style={{ width: 36, height: 36, borderRadius: 8, objectFit: 'cover', flexShrink: 0 }} />
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: '0.75rem', fontWeight: 600, color: '#fafafa', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.title}</div>
@@ -381,44 +990,106 @@ function Dashboard() {
                     <WaBadge status={p.wa_status} />
                   </div>
                 </div>
-                <button
-                  title="Enviar preview no WhatsApp"
-                  onClick={async () => {
-                    const tk = localStorage.getItem('arx_token')
-                    try {
-                      const r = await fetch(`/api/drafts/${p.id}/send-whatsapp`, { headers: { 'x-arx-token': tk || '' } })
-                      const j = await r.json()
-                      alert(j.success ? '✅ Preview enviado no WhatsApp!' : 'Erro: ' + (j.error || 'falha'))
-                    } catch (e) { alert('Erro ao enviar: ' + e) }
-                  }}
-                  style={{ flexShrink: 0, padding: '7px 10px', borderRadius: 8, fontSize: '0.6875rem', fontWeight: 600, cursor: 'pointer', border: '1px solid rgba(34,197,94,0.3)', background: 'rgba(34,197,94,0.1)', color: '#4ade80', display: 'flex', alignItems: 'center', gap: 5 }}
-                >
-                  📲 Enviar
-                </button>
+                <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
+                  <button
+                    title="Enviar preview no WhatsApp"
+                    onClick={async (e) => {
+                      e.stopPropagation()
+                      const tk = localStorage.getItem('arx_token')
+                      try {
+                        const r = await fetch(`/api/drafts/${p.id}/send-whatsapp`, { method: 'POST', headers: { 'x-arx-token': tk || '', 'Content-Type': 'application/json' } })
+                        const j = await r.json()
+                        alert(j.success ? '✅ Preview enviado no WhatsApp!' : 'Erro: ' + (j.error || 'falha'))
+                      } catch (e) { alert('Erro ao enviar: ' + e) }
+                    }}
+                    style={{ padding: '5px 8px', borderRadius: 6, fontSize: '0.625rem', fontWeight: 600, cursor: 'pointer', border: '1px solid rgba(34,197,94,0.3)', background: 'rgba(34,197,94,0.1)', color: '#4ade80', display: 'flex', alignItems: 'center', gap: 4 }}
+                  >
+                    📲
+                  </button>
+                  <button
+                    title="Rejeitar"
+                    onClick={async (e) => {
+                      e.stopPropagation()
+                      if (!confirm('Rejeitar este post?')) return
+                      await api.rejectDraft(p.id).catch(() => {})
+                      refresh()
+                    }}
+                    style={{ padding: '5px 8px', borderRadius: 6, fontSize: '0.625rem', fontWeight: 600, cursor: 'pointer', border: '1px solid rgba(239,68,68,0.3)', background: 'rgba(239,68,68,0.1)', color: '#f87171', display: 'flex', alignItems: 'center', gap: 4 }}
+                  >
+                    ❌
+                  </button>
+                  <button
+                    title="Reagendar"
+                    onClick={(e) => { e.stopPropagation(); setReschedulePost(p) }}
+                    style={{ padding: '5px 8px', borderRadius: 6, fontSize: '0.625rem', fontWeight: 600, cursor: 'pointer', border: '1px solid rgba(59,130,246,0.3)', background: 'rgba(59,130,246,0.1)', color: '#60a5fa', display: 'flex', alignItems: 'center', gap: 4 }}
+                  >
+                    📅
+                  </button>
+                </div>
               </div>
             ))}
             {pending.length === 0 && (
-              <div style={{ padding: 24, textAlign: 'center', color: '#52525b', fontSize: '0.8125rem' }}>No posts awaiting approval 🎉</div>
+              <div style={{ padding: 24, textAlign: 'center', color: '#52525b', fontSize: '0.8125rem' }}>Nenhum post aguardando aprovação 🎉</div>
             )}
           </div>
         </div>
       </div>
 
-      {/* Recent Activity */}
+      {/* Atividade Recente */}
       <div className="glass-card" style={{ padding: 20 }}>
-        <h3 style={{ margin: '0 0 16px', fontSize: '0.9375rem', fontWeight: 600, color: '#fafafa' }}>Recent Activity</h3>
+        <h3 style={{ margin: '0 0 16px', fontSize: '0.9375rem', fontWeight: 600, color: '#fafafa' }}>Atividade Recente</h3>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
           {realPosts.slice(0, 5).map((p, i) => (
             <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 0', borderBottom: i < 4 ? '1px solid rgba(255,255,255,0.04)' : 'none' }}>
               <div style={{ width: 30, height: 30, borderRadius: 8, background: `${p.status === 'published' ? '#22c55e' : '#8b5cf6'}15`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color: p.status === 'published' ? '#22c55e' : '#8b5cf6' }}>
                 <Icon d={p.status === 'published' ? icons.check : icons.spark} size={14} />
               </div>
-              <span style={{ flex: 1, fontSize: '0.8125rem', color: '#a1a1aa', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>"{p.title}" · <span style={{ textTransform: 'capitalize' }}>{p.status}</span></span>
-              <span style={{ fontSize: '0.6875rem', color: '#52525b', whiteSpace: 'nowrap' }}>{p.date}</span>
+              <span style={{ flex: 1, fontSize: '0.8125rem', color: '#a1a1aa', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>"{p.title}" · <span style={{ textTransform: 'capitalize' }}>{{ 'draft': 'Rascunho', 'scheduled': 'Agendado', 'published': 'Publicado', 'processing': 'Processando', 'pending': 'Pendente', 'paused': 'Pausado' }[p.status] || p.status }</span></span>
+              <span style={{ fontSize: '0.6875rem', color: '#52525b', fontFamily: 'JetBrains Mono, monospace' }}>{p.date ? new Date(p.date).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }) : '—'}</span>
             </div>
           ))}
         </div>
       </div>
+
+      {/* Modals */}
+      {previewPost && (
+        <PostPreviewModal
+          post={previewPost}
+          onClose={() => setPreviewPost(null)}
+          onApprove={async () => { await api.approveDraft(previewPost.id).catch(() => {}); refresh() }}
+          onReject={async () => { await api.rejectDraft(previewPost.id).catch(() => {}); refresh() }}
+          onEdit={() => { setEditPost(previewPost); setPreviewPost(null) }}
+          onReschedule={() => { setReschedulePost(previewPost); setPreviewPost(null) }}
+          onSendWhatsApp={async () => {
+            const tk = localStorage.getItem('arx_token')
+            try {
+              const r = await fetch(`/api/drafts/${previewPost.id}/send-whatsapp`, { method: 'POST', headers: { 'x-arx-token': tk || '', 'Content-Type': 'application/json' } })
+              const j = await r.json()
+              alert(j.success ? '✅ Preview enviado no WhatsApp!' : 'Erro: ' + (j.error || 'falha'))
+            } catch (e) { alert('Erro ao enviar: ' + e) }
+          }}
+        />
+      )}
+      {editPost && (
+        <PostEditModal
+          post={editPost}
+          onClose={() => setEditPost(null)}
+          onSave={async (newTitle, scheduledAt) => {
+            await api.reschedule(editPost.id, scheduledAt).catch(() => {})
+            refresh()
+          }}
+        />
+      )}
+      {reschedulePost && (
+        <RescheduleModal
+          post={reschedulePost}
+          onClose={() => setReschedulePost(null)}
+          onReschedule={async (scheduledAt) => {
+            await api.reschedule(reschedulePost.id, scheduledAt).catch(() => {})
+            refresh()
+          }}
+        />
+      )}
     </div>
   )
 }
@@ -427,13 +1098,17 @@ function ContentPage() {
   const [filter, setFilter] = useState<'all' | PostStatus>('all')
   const [search, setSearch] = useState('')
   const { items: realPosts, setItems: setRealPosts } = usePosts()
+  const [previewPost, setPreviewPost] = useState<Post | null>(null)
+  const [editPost, setEditPost] = useState<Post | null>(null)
+  const [reschedulePost, setReschedulePost] = useState<Post | null>(null)
+
   const tabs = [
-    { key: 'all', label: 'All' },
-    { key: 'scheduled', label: 'Scheduled' },
-    { key: 'draft', label: 'Drafts' },
-    { key: 'processing', label: 'Processing' },
-    { key: 'published', label: 'Published' },
-    { key: 'pending', label: 'Pending' },
+    { key: 'all', label: 'Todos' },
+    { key: 'scheduled', label: 'Agendado' },
+    { key: 'draft', label: 'Rascunho' },
+    { key: 'processing', label: 'Processando' },
+    { key: 'published', label: 'Publicado' },
+    { key: 'pending', label: 'Pendente' },
   ]
   const filtered = realPosts.filter(p => {
     const matchStatus = filter === 'all' || p.status === filter
@@ -451,6 +1126,7 @@ function ContentPage() {
     refresh()
   }
   async function handleDelete(id: string) {
+    if (!confirm('Excluir este post?')) return
     await api.deletePost(id).catch(() => {})
     refresh()
   }
@@ -459,13 +1135,10 @@ function ContentPage() {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
       {/* Toolbar */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-        <input className="input-field" placeholder="Search posts…" value={search} onChange={e => setSearch(e.target.value)} style={{ maxWidth: 260 }} />
+        <input className="input-field" placeholder="Buscar posts…" value={search} onChange={e => setSearch(e.target.value)} style={{ maxWidth: 260 }} />
         <div style={{ flex: 1 }} />
-        <button className="btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.8125rem' }}>
-          <Icon d={icons.filter} size={13} /> Filter
-        </button>
         <button className="btn-primary" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <Icon d={icons.plus} size={14} /> New Post
+          <Icon d={icons.plus} size={14} /> Novo Post
         </button>
       </div>
 
@@ -481,26 +1154,83 @@ function ContentPage() {
       {/* Grid */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
         {filtered.map(post => (
-          <PostCard key={post.id} post={post} />
+          <PostCard
+            key={post.id}
+            post={post}
+            onPreview={() => setPreviewPost(post)}
+            onPause={async () => { await api.togglePause(post.id).catch(() => {}); refresh() }}
+            onPublishNow={async () => { await api.publishNow(post.id).catch(() => {}); refresh() }}
+            onReschedule={() => setReschedulePost(post)}
+            onDelete={() => handleDelete(post.id)}
+          />
         ))}
         {filtered.length === 0 && (
           <div style={{ gridColumn: '1/-1', padding: 48, textAlign: 'center', color: '#52525b', fontSize: '0.875rem' }}>
-            No posts match your filters.
+            Nenhum post corresponde aos seus filtros.
           </div>
         )}
       </div>
+
+      {/* Modals */}
+      {previewPost && (
+        <PostPreviewModal
+          post={previewPost}
+          onClose={() => setPreviewPost(null)}
+          onEdit={() => { setEditPost(previewPost); setPreviewPost(null) }}
+          onReschedule={() => { setReschedulePost(previewPost); setPreviewPost(null) }}
+          onPause={async () => { await api.togglePause(previewPost.id).catch(() => {}); refresh() }}
+          onPublishNow={async () => { await api.publishNow(previewPost.id).catch(() => {}); refresh() }}
+          onDelete={async () => { if (confirm('Excluir este post?')) { await api.deletePost(previewPost.id).catch(() => {}); refresh(); setPreviewPost(null) } }}
+          onSendWhatsApp={async () => {
+            const tk = localStorage.getItem('arx_token')
+            try {
+              const r = await fetch(`/api/drafts/${previewPost.id}/send-whatsapp`, { method: 'POST', headers: { 'x-arx-token': tk || '', 'Content-Type': 'application/json' } })
+              const j = await r.json()
+              alert(j.success ? '✅ Preview enviado no WhatsApp!' : 'Erro: ' + (j.error || 'falha'))
+            } catch (e) { alert('Erro ao enviar: ' + e) }
+          }}
+        />
+      )}
+      {editPost && (
+        <PostEditModal
+          post={editPost}
+          onClose={() => setEditPost(null)}
+          onSave={async (newTitle, scheduledAt) => {
+            await api.reschedule(editPost.id, scheduledAt).catch(() => {})
+            refresh()
+          }}
+        />
+      )}
+      {reschedulePost && (
+        <RescheduleModal
+          post={reschedulePost}
+          onClose={() => setReschedulePost(null)}
+          onReschedule={async (scheduledAt) => {
+            await api.reschedule(reschedulePost.id, scheduledAt).catch(() => {})
+            refresh()
+          }}
+        />
+      )}
     </div>
   )
 }
 
-function PostCard({ post }: { post: Post }) {
+function PostCard({ post, onPreview, onPause, onPublishNow, onReschedule, onDelete }: {
+  post: Post
+  onPreview?: () => void
+  onPause?: () => void
+  onPublishNow?: () => void
+  onReschedule?: () => void
+  onDelete?: () => void
+}) {
   const [hovered, setHovered] = useState(false)
   return (
     <div
       className="glass-card animate-fade-in"
-      style={{ overflow: 'hidden', cursor: 'default', transition: 'border-color 0.2s, box-shadow 0.2s', borderColor: hovered ? 'rgba(139,92,246,0.25)' : 'rgba(255,255,255,0.06)', boxShadow: hovered ? '0 0 24px rgba(139,92,246,0.12)' : 'none' }}
+      style={{ overflow: 'hidden', cursor: 'pointer', transition: 'border-color 0.2s, box-shadow 0.2s', borderColor: hovered ? 'rgba(139,92,246,0.25)' : 'rgba(255,255,255,0.06)', boxShadow: hovered ? '0 0 24px rgba(139,92,246,0.12)' : 'none' }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
+      onClick={onPreview}
     >
       {/* Thumbnail */}
       <div style={{ position: 'relative', height: 140, background: '#111' }}>
@@ -530,7 +1260,7 @@ function PostCard({ post }: { post: Post }) {
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 5, color: '#71717a', fontSize: '0.6875rem' }}>
             <Icon d={icons.clock} size={11} />
-            <span style={{ fontFamily: 'JetBrains Mono, monospace' }}>{post.date}</span>
+            <span style={{ fontFamily: 'JetBrains Mono, monospace' }}>{post.date ? new Date(post.date).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '—'}</span>
           </div>
           {post.engagement !== '—' && (
             <span style={{ fontSize: '0.6875rem', color: '#22c55e', fontFamily: 'JetBrains Mono, monospace' }}>♡ {post.engagement}</span>
@@ -538,26 +1268,56 @@ function PostCard({ post }: { post: Post }) {
         </div>
 
         {/* Actions */}
-        <div style={{ display: 'flex', gap: 6 }}>
-          {(post.status === 'draft' || post.status === 'pending') && (
-            <button className="btn-primary" style={{ flex: 1, padding: '7px 0', fontSize: '0.75rem' }} onClick={() => window.dispatchEvent(new CustomEvent('arx-publish', { detail: post.id }))}>
-              Publish
-            </button>
-          )}
-          {post.status === 'scheduled' && <button className="btn-secondary" style={{ flex: 1, padding: '7px 0', fontSize: '0.75rem' }}>Reschedule</button>}
-          {post.status === 'processing' && <button className="btn-secondary" style={{ flex: 1, padding: '7px 0', fontSize: '0.75rem', opacity: 0.6 }} disabled>Rendering…</button>}
-          {post.status === 'published' && <button className="btn-secondary" style={{ flex: 1, padding: '7px 0', fontSize: '0.75rem' }}>Boost</button>}
-          {post.type === 'carousel' && post.status !== 'published' && (
-            <button className="btn-ghost" style={{ padding: '7px 10px', color: '#8b5cf6', background: 'rgba(139,92,246,0.08)', border: '1px solid rgba(139,92,246,0.2)' }} title="Generate Video" onClick={() => window.dispatchEvent(new CustomEvent('arx-video', { detail: post.id }))}>
+        <div style={{ display: 'flex', gap: 6 }} onClick={e => e.stopPropagation()}>
+          {/* Play button for carousel posts (generate video) */}
+          {post.type === 'carousel' && post.status !== 'published' && post.status !== 'processing' && (
+            <button className="btn-ghost" style={{ padding: '7px 10px', color: '#8b5cf6', background: 'rgba(139,92,246,0.08)', border: '1px solid rgba(139,92,246,0.2)' }} title="Gerar Vídeo" onClick={() => window.dispatchEvent(new CustomEvent('arx-video', { detail: post.id }))}>
               <Icon d={icons.play} size={13} />
             </button>
           )}
-          <button className="btn-ghost" style={{ padding: '7px 10px' }} title="Edit">
-            <Icon d={icons.edit} size={13} />
-          </button>
-          <button className="btn-ghost" style={{ padding: '7px 10px', color: '#ef444480' }} title="Delete" onClick={() => window.dispatchEvent(new CustomEvent('arx-delete', { detail: post.id }))}>
-            <Icon d={icons.trash} size={13} />
-          </button>
+          {/* Pause/Resume for scheduled */}
+          {onPause && (post.status === 'scheduled' || post.status === 'paused') && (
+            <button
+              style={{ padding: '7px 10px', borderRadius: 6, fontSize: '0.6875rem', fontWeight: 600, cursor: 'pointer', border: post.status === 'scheduled' ? '1px solid rgba(245,158,11,0.3)' : '1px solid rgba(34,197,94,0.3)', background: post.status === 'scheduled' ? 'rgba(245,158,11,0.08)' : 'rgba(34,197,94,0.08)', color: post.status === 'scheduled' ? '#fbbf24' : '#4ade80', display: 'flex', alignItems: 'center', gap: 4 }}
+              title={post.status === 'scheduled' ? 'Pausar' : 'Retomar'}
+              onClick={onPause}
+            >
+              {post.status === 'scheduled' ? '⏸' : '▶️'}
+            </button>
+          )}
+          {/* Publish Now for scheduled/paused */}
+          {onPublishNow && (post.status === 'scheduled' || post.status === 'paused') && (
+            <button
+              style={{ padding: '7px 10px', borderRadius: 6, fontSize: '0.6875rem', fontWeight: 600, cursor: 'pointer', border: '1px solid rgba(245,158,11,0.3)', background: 'rgba(245,158,11,0.08)', color: '#fbbf24', display: 'flex', alignItems: 'center', gap: 4 }}
+              title="Publicar Agora"
+              onClick={onPublishNow}
+            >
+              ⚡
+            </button>
+          )}
+          {/* Reschedule */}
+          {onReschedule && (post.status === 'scheduled' || post.status === 'paused') && (
+            <button
+              style={{ padding: '7px 10px', borderRadius: 6, fontSize: '0.6875rem', fontWeight: 600, cursor: 'pointer', border: '1px solid rgba(59,130,246,0.3)', background: 'rgba(59,130,246,0.08)', color: '#60a5fa', display: 'flex', alignItems: 'center', gap: 4 }}
+              title="Reagendar"
+              onClick={onReschedule}
+            >
+              📅
+            </button>
+          )}
+          {/* Publish for draft/pending */}
+          {(post.status === 'draft' || post.status === 'pending') && (
+            <button className="btn-primary" style={{ flex: 1, padding: '7px 0', fontSize: '0.75rem' }} onClick={() => window.dispatchEvent(new CustomEvent('arx-publish', { detail: post.id }))}>
+              Publicar
+            </button>
+          )}
+          {post.status === 'processing' && <button className="btn-secondary" style={{ flex: 1, padding: '7px 0', fontSize: '0.75rem', opacity: 0.6 }} disabled>Renderizando…</button>}
+          {/* Delete */}
+          {onDelete && (
+            <button className="btn-ghost" style={{ padding: '7px 10px', color: '#ef444480' }} title="Excluir" onClick={onDelete}>
+              <Icon d={icons.trash} size={13} />
+            </button>
+          )}
         </div>
       </div>
     </div>
@@ -566,16 +1326,28 @@ function PostCard({ post }: { post: Post }) {
 
 function TemplatesPage({ onUseTemplate }: { onUseTemplate: (t: Template) => void }) {
   const [typeFilter, setTypeFilter] = useState<'all' | ContentType>('all')
-  const [catFilter, setCatFilter] = useState('All')
+  const [catFilter, setCatFilter] = useState('Todos')
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null)
   const [search, setSearch] = useState('')
   const realTemplates = useTemplates()
 
-  const categories = ['All', 'Business', 'Marketing', 'Finance', 'Creative', 'Personal Brand', 'Lifestyle', 'Events', 'Video']
+  // Categoria visivel (PT) -> valor original no dataset
+  const catDisplay: Record<string, string> = {
+    'Todos': 'All',
+    'Negócios': 'Business',
+    'Marketing': 'Marketing',
+    'Finanças': 'Finance',
+    'Criativo': 'Creative',
+    'Marca Pessoal': 'Personal Brand',
+    'Estilo de Vida': 'Lifestyle',
+    'Eventos': 'Events',
+    'Vídeo': 'Video',
+  }
+  const categories = Object.keys(catDisplay)
 
   const filtered = realTemplates.filter(t => {
     const matchType = typeFilter === 'all' || t.type === typeFilter
-    const matchCat = catFilter === 'All' || t.category === catFilter || (catFilter === 'Video' && t.type === 'video')
+    const matchCat = catFilter === 'Todos' || t.category === catDisplay[catFilter] || (catFilter === 'Vídeo' && t.type === 'video')
     const matchSearch = t.name.toLowerCase().includes(search.toLowerCase()) || (t.tags || []).some(g => g.toLowerCase().includes(search.toLowerCase()))
     return matchType && matchCat && matchSearch
   })
@@ -584,19 +1356,19 @@ function TemplatesPage({ onUseTemplate }: { onUseTemplate: (t: Template) => void
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-        <input className="input-field" placeholder="Search templates…" value={search} onChange={e => setSearch(e.target.value)} style={{ maxWidth: 260 }} />
+        <input className="input-field" placeholder="Buscar modelos…" value={search} onChange={e => setSearch(e.target.value)} style={{ maxWidth: 260 }} />
         <div style={{ display: 'flex', gap: 6 }}>
           {(['all', 'carousel', 'video'] as const).map(type => (
             <button key={type} onClick={() => setTypeFilter(type)} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 12px', borderRadius: 8, fontSize: '0.75rem', fontWeight: 500, cursor: 'pointer', border: '1px solid', transition: 'all 0.15s', background: typeFilter === type ? 'rgba(139,92,246,0.15)' : 'transparent', borderColor: typeFilter === type ? 'rgba(139,92,246,0.4)' : 'rgba(255,255,255,0.08)', color: typeFilter === type ? '#a78bfa' : '#71717a' }}>
               {type === 'carousel' && <Icon d={icons.layers} size={12} />}
               {type === 'video' && <Icon d={icons.video} size={12} />}
               {type === 'all' && <Icon d={icons.grid} size={12} />}
-              {type === 'all' ? 'All Types' : type.charAt(0).toUpperCase() + type.slice(1)}
+              {type === 'all' ? 'Todos os Tipos' : type.charAt(0).toUpperCase() + type.slice(1)}
             </button>
           ))}
         </div>
         <div style={{ flex: 1 }} />
-        <span style={{ fontSize: '0.75rem', color: '#52525b', fontFamily: 'JetBrains Mono, monospace' }}>{filtered.length} templates</span>
+        <span style={{ fontSize: '0.75rem', color: '#52525b', fontFamily: 'JetBrains Mono, monospace' }}>{filtered.length} modelos</span>
       </div>
 
       {/* Categories */}
@@ -615,7 +1387,7 @@ function TemplatesPage({ onUseTemplate }: { onUseTemplate: (t: Template) => void
         ))}
         {filtered.length === 0 && (
           <div style={{ gridColumn: '1/-1', padding: 48, textAlign: 'center', color: '#52525b', fontSize: '0.875rem' }}>
-            No templates match your search.
+            Nenhum modelo corresponde à sua busca.
           </div>
         )}
       </div>
@@ -707,10 +1479,10 @@ function TemplateModal({ template: t, onClose, onUse }: { template: Template; on
         <div style={{ padding: 24 }}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 20 }}>
             {[
-              { label: 'Type', value: t.type.charAt(0).toUpperCase() + t.type.slice(1) },
-              { label: t.slides ? 'Slides' : 'Duration', value: t.slides ? `${t.slides} slides` : t.duration },
-              { label: 'Best for', value: t.tags.join(', ') },
-              { label: 'Category', value: t.category },
+              { label: 'Tipo', value: t.type.charAt(0).toUpperCase() + t.type.slice(1) },
+              { label: t.slides ? 'Slides' : 'Duração', value: t.slides ? `${t.slides} slides` : t.duration },
+              { label: 'Melhor para', value: t.tags.join(', ') },
+              { label: 'Categoria', value: t.category },
             ].map(row => (
               <div key={row.label} style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 10, padding: '10px 14px', border: '1px solid rgba(255,255,255,0.05)' }}>
                 <div style={{ fontSize: '0.625rem', color: '#52525b', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>{row.label}</div>
@@ -719,9 +1491,9 @@ function TemplateModal({ template: t, onClose, onUse }: { template: Template; on
             ))}
           </div>
           <div style={{ display: 'flex', gap: 10 }}>
-            <button className="btn-secondary" style={{ flex: 1, padding: '11px 0' }} onClick={onClose}>Cancel</button>
+            <button className="btn-secondary" style={{ flex: 1, padding: '11px 0' }} onClick={onClose}>Cancelar</button>
             <button className="btn-primary" style={{ flex: 2, padding: '11px 0', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }} onClick={onUse}>
-              <Icon d={icons.spark} size={14} /> Use This Template
+              <Icon d={icons.spark} size={14} /> Usar Este Modelo
             </button>
           </div>
         </div>
@@ -731,12 +1503,12 @@ function TemplateModal({ template: t, onClose, onUse }: { template: Template; on
 }
 
 function SchedulePage() {
-  const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
-  const hours = ['8 AM', '10 AM', '12 PM', '2 PM', '4 PM', '6 PM', '8 PM']
+  const days = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom']
+  const hours = ['8h', '10h', '12h', '14h', '16h', '18h', '20h']
   const { items: realPosts } = usePosts()
 
   const scheduled = realPosts
-    .filter(p => p.status === 'scheduled' && p.date !== '—')
+    .filter(p => p.status === 'scheduled' && p.date)
     .map(p => {
       const d = new Date(p.date)
       const day = (d.getDay() + 6) % 7
@@ -748,11 +1520,11 @@ function SchedulePage() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-        <h3 style={{ margin: 0, fontSize: '0.9375rem', fontWeight: 600, color: '#fafafa' }}>This week</h3>
+        <h3 style={{ margin: 0, fontSize: '0.9375rem', fontWeight: 600, color: '#fafafa' }}>Esta semana</h3>
         <div style={{ flex: 1 }} />
-        <span style={{ fontSize: '0.75rem', color: '#52525b', fontFamily: 'JetBrains Mono, monospace' }}>{scheduled.length} scheduled</span>
+        <span style={{ fontSize: '0.75rem', color: '#52525b', fontFamily: 'JetBrains Mono, monospace' }}>{scheduled.length} agendados</span>
         <button className="btn-primary" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <Icon d={icons.plus} size={14} /> Schedule Post
+          <Icon d={icons.plus} size={14} /> Agendar Post
         </button>
       </div>
 
@@ -812,10 +1584,10 @@ function AnalyticsPage() {
   const processing = byStatus['processing'] ?? realPosts.filter(p => p.status === 'processing').length
 
   const metrics = [
-    { label: 'Total Posts', value: String(totalPosts), delta: 'all time', color: '#8b5cf6' },
-    { label: 'Published', value: String(published), delta: 'live', color: '#22c55e' },
-    { label: 'Scheduled', value: String(scheduled), delta: 'queued', color: '#3b82f6' },
-    { label: 'Drafts', value: String(drafts), delta: processing ? `${processing} rendering` : 'waiting', color: '#f59e0b' },
+    { label: 'Total de Posts', value: String(totalPosts), delta: 'acumulado', color: '#8b5cf6' },
+    { label: 'Publicados', value: String(published), delta: 'ao vivo', color: '#22c55e' },
+    { label: 'Agendado', value: String(scheduled), delta: 'na fila', color: '#3b82f6' },
+    { label: 'Rascunho', value: String(drafts), delta: processing ? `${processing} renderizando` : 'aguardando', color: '#f59e0b' },
   ]
 
   const byChannel = (analytics?.by_channel || []).map((c: any) => ({
@@ -850,7 +1622,7 @@ function AnalyticsPage() {
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
         {/* Channel Breakdown */}
         <div className="glass-card" style={{ padding: 20 }}>
-          <h3 style={{ margin: '0 0 18px', fontSize: '0.9375rem', fontWeight: 600, color: '#fafafa' }}>Channel Breakdown</h3>
+          <h3 style={{ margin: '0 0 18px', fontSize: '0.9375rem', fontWeight: 600, color: '#fafafa' }}>Divisão por Canal</h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             {channelData.length ? channelData.map((ch: { name: string; reach: number; engagement: number; color: string }) => {
               const maxReach = Math.max(...channelData.map((c: { reach: number }) => c.reach))
@@ -866,26 +1638,26 @@ function AnalyticsPage() {
                 </div>
               )
             }) : (
-              <div style={{ padding: 24, textAlign: 'center', color: '#52525b', fontSize: '0.8125rem' }}>No channel data yet</div>
+              <div style={{ padding: 24, textAlign: 'center', color: '#52525b', fontSize: '0.8125rem' }}>Sem dados de canal ainda</div>
             )}
           </div>
         </div>
 
         {/* Top Posts */}
         <div className="glass-card" style={{ padding: 20 }}>
-          <h3 style={{ margin: '0 0 18px', fontSize: '0.9375rem', fontWeight: 600, color: '#fafafa' }}>Top Performing Posts</h3>
+          <h3 style={{ margin: '0 0 18px', fontSize: '0.9375rem', fontWeight: 600, color: '#fafafa' }}>Posts com Melhor Desempenho</h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {topPosts.map((p, i) => (
               <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px', background: 'rgba(255,255,255,0.03)', borderRadius: 10, border: '1px solid rgba(255,255,255,0.05)' }}>
                 <span style={{ width: 22, height: 22, borderRadius: '50%', background: i === 0 ? 'rgba(139,92,246,0.2)' : 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.625rem', fontWeight: 700, color: i === 0 ? '#8b5cf6' : '#52525b', flexShrink: 0 }}>{i + 1}</span>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: '0.75rem', fontWeight: 600, color: '#fafafa', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.title}</div>
-                  <div style={{ fontSize: '0.6rem', color: '#52525b', textTransform: 'capitalize', marginTop: 1 }}>{p.type} · published</div>
+                  <div style={{ fontSize: '0.6rem', color: '#52525b', textTransform: 'capitalize', marginTop: 1 }}>{p.type} · publicado</div>
                 </div>
               </div>
             ))}
             {topPosts.length === 0 && (
-              <div style={{ padding: 24, textAlign: 'center', color: '#52525b', fontSize: '0.8125rem' }}>No published posts yet</div>
+              <div style={{ padding: 24, textAlign: 'center', color: '#52525b', fontSize: '0.8125rem' }}>Nenhum post publicado ainda</div>
             )}
           </div>
         </div>
@@ -894,11 +1666,11 @@ function AnalyticsPage() {
   )
 }
 
-// ─── New Post Modal ───────────────────────────────────────────────────────────
+// ─── Novo Post Modal ───────────────────────────────────────────────────────────
 
 function NewPostModal({ template, onClose }: { template: Template | null; onClose: () => void }) {
   const [step, setStep] = useState(1)
-  const [postTitle, setPostTitle] = useState(template ? `New post with "${template.name}"` : '')
+  const [postTitle, setPostTitle] = useState(template ? `Novo post com "${template.name}"` : '')
   const [postType, setPostType] = useState<ContentType>(template?.type || 'carousel')
   const [channels, setChannels] = useState<string[]>(['instagram'])
   const [caption, setCaption] = useState('')
@@ -919,7 +1691,7 @@ function NewPostModal({ template, onClose }: { template: Template | null; onClos
     try {
       const r: any = await api.generate(postTitle.trim(), channels[0] || 'all', scheduleDate ? 'scheduled' : 'now', template?.name || 'clean')
       if (r?.success) {
-        setStep(3)
+        setStep(2)
       } else {
         setError(r?.message || r?.error || 'Falha ao gerar post')
       }
@@ -936,12 +1708,12 @@ function NewPostModal({ template, onClose }: { template: Template | null; onClos
         {/* Header */}
         <div style={{ padding: '20px 24px', borderBottom: '1px solid rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div>
-            <h2 style={{ margin: 0, fontSize: '1rem', fontWeight: 600, color: '#fafafa' }}>Create New Post</h2>
-            {template && <p style={{ margin: '2px 0 0', fontSize: '0.75rem', color: '#8b5cf6' }}>Using "{template.name}" template</p>}
+            <h2 style={{ margin: 0, fontSize: '1rem', fontWeight: 600, color: '#fafafa' }}>Criar Novo Post</h2>
+            {template && <p style={{ margin: '2px 0 0', fontSize: '0.75rem', color: '#8b5cf6' }}>Usando o modelo "{template.name}"</p>}
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <div style={{ display: 'flex', gap: 4 }}>
-              {[1, 2, 3].map(s => (
+              {[1, 2].map(s => (
                 <div key={s} style={{ width: 24, height: 3, borderRadius: 9999, background: step >= s ? '#8b5cf6' : 'rgba(255,255,255,0.08)', transition: 'background 0.3s' }} />
               ))}
             </div>
@@ -953,11 +1725,11 @@ function NewPostModal({ template, onClose }: { template: Template | null; onClos
           {step === 1 && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
               <div>
-                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#a1a1aa', marginBottom: 6 }}>Post Title</label>
-                <input className="input-field" value={postTitle} onChange={e => setPostTitle(e.target.value)} placeholder="e.g. 5 Tips for Growing on LinkedIn…" />
+                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#a1a1aa', marginBottom: 6 }}>Título do Post</label>
+                <input className="input-field" value={postTitle} onChange={e => setPostTitle(e.target.value)} placeholder="ex.: 5 Dicas para Crescer no LinkedIn…" />
               </div>
               <div>
-                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#a1a1aa', marginBottom: 8 }}>Content Type</label>
+                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#a1a1aa', marginBottom: 8 }}>Tipo de Conteúdo</label>
                 <div style={{ display: 'flex', gap: 8 }}>
                   {(['carousel', 'video', 'image'] as ContentType[]).map(type => (
                     <button key={type} onClick={() => setPostType(type)} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, padding: '14px 10px', borderRadius: 12, border: '1px solid', cursor: 'pointer', transition: 'all 0.15s', background: postType === type ? 'rgba(139,92,246,0.12)' : 'rgba(255,255,255,0.02)', borderColor: postType === type ? 'rgba(139,92,246,0.4)' : 'rgba(255,255,255,0.08)' }}>
@@ -970,7 +1742,7 @@ function NewPostModal({ template, onClose }: { template: Template | null; onClos
                 </div>
               </div>
               <div>
-                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#a1a1aa', marginBottom: 8 }}>Channels</label>
+                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#a1a1aa', marginBottom: 8 }}>Canais</label>
                 <div style={{ display: 'flex', gap: 8 }}>
                   {(['instagram', 'twitter', 'linkedin'] as const).map(c => (
                     <button key={c} onClick={() => toggleChannel(c)} style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '9px 10px', borderRadius: 10, border: '1px solid', cursor: 'pointer', transition: 'all 0.15s', background: channels.includes(c) ? 'rgba(139,92,246,0.1)' : 'rgba(255,255,255,0.02)', borderColor: channels.includes(c) ? 'rgba(139,92,246,0.35)' : 'rgba(255,255,255,0.08)' }}>
@@ -979,45 +1751,26 @@ function NewPostModal({ template, onClose }: { template: Template | null; onClos
                   ))}
                 </div>
               </div>
+              <div style={{ padding: '12px 14px', background: 'rgba(139,92,246,0.06)', border: '1px solid rgba(139,92,246,0.15)', borderRadius: 10 }}>
+                <div style={{ fontSize: '0.75rem', color: '#a78bfa', fontWeight: 500, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <Icon d={icons.spark} size={13} /> A IA vai gerar slides, legenda e hashtags automaticamente sobre o tema acima.
+                </div>
+              </div>
             </div>
           )}
 
           {step === 2 && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-              <div>
-                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#a1a1aa', marginBottom: 6 }}>Caption / Script</label>
-                <textarea className="input-field" placeholder="Write your caption or paste an AI-generated script here…" rows={5} style={{ resize: 'none' }} value={caption} onChange={e => setCaption(e.target.value)} />
-              </div>
-              <div style={{ display: 'flex', gap: 12 }}>
-                <div style={{ flex: 1 }}>
-                  <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#a1a1aa', marginBottom: 6 }}>Schedule Date</label>
-                  <input className="input-field" type="date" value={scheduleDate} onChange={e => setScheduleDate(e.target.value)} />
-                </div>
-                <div style={{ flex: 1 }}>
-                  <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#a1a1aa', marginBottom: 6 }}>Time</label>
-                  <input className="input-field" type="time" value={scheduleTime} onChange={e => setScheduleTime(e.target.value)} />
-                </div>
-              </div>
-              <div>
-                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#a1a1aa', marginBottom: 6 }}>Hashtags</label>
-                <input className="input-field" placeholder="#socialmedia #automation #growth" value={hashtags} onChange={e => setHashtags(e.target.value)} />
-              </div>
-              {error && <div style={{ fontSize: '0.75rem', color: '#ef4444', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', padding: '10px 12px', borderRadius: 8 }}>{error}</div>}
-            </div>
-          )}
-
-          {step === 3 && (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 20, padding: '8px 0 16px' }}>
               <div style={{ width: 64, height: 64, borderRadius: '50%', background: 'rgba(34,197,94,0.12)', border: '2px solid rgba(34,197,94,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#22c55e' }}>
                 <Icon d={icons.check} size={28} />
               </div>
               <div style={{ textAlign: 'center' }}>
-                <h3 style={{ margin: '0 0 6px', fontSize: '1rem', fontWeight: 600, color: '#fafafa' }}>Post Created!</h3>
-                <p style={{ margin: 0, fontSize: '0.8125rem', color: '#71717a' }}>"{postTitle || 'Your post'}" has been added to the queue and will be published at the scheduled time.</p>
+                <h3 style={{ margin: '0 0 6px', fontSize: '1rem', fontWeight: 600, color: '#fafafa' }}>Post Criado!</h3>
+                <p style={{ margin: 0, fontSize: '0.8125rem', color: '#71717a' }}>"{postTitle || 'Seu post'}" foi adicionado à fila e será publicado no horário agendado.</p>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, width: '100%' }}>
                 {[{ icon: icons.layers, label: postType, detail: postType === 'carousel' ? '8 slides' : '0:30 video' },
-                  { icon: icons.calendar, label: 'Scheduled', detail: 'Aug 8 at 10:00 AM' }].map(item => (
+                  { icon: icons.calendar, label: 'Agendado', detail: '8 Ago às 10:00' }].map(item => (
                   <div key={item.label} style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 10, padding: '12px 14px', display: 'flex', gap: 10, alignItems: 'center' }}>
                     <span style={{ color: '#8b5cf6' }}><Icon d={item.icon} size={16} /></span>
                     <div>
@@ -1032,13 +1785,13 @@ function NewPostModal({ template, onClose }: { template: Template | null; onClos
         </div>
 
         <div style={{ padding: '16px 24px', borderTop: '1px solid rgba(255,255,255,0.06)', display: 'flex', gap: 10 }}>
-          {step > 1 && step < 3 && <button className="btn-secondary" style={{ flex: 1, padding: '11px 0' }} onClick={() => setStep(s => s - 1)}>← Back</button>}
-          {step < 3 && (
-            <button className="btn-primary" style={{ flex: 2, padding: '11px 0', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }} onClick={() => { if (step === 2) submit(); else setStep(s => s + 1) }} disabled={submitting}>
-              {step === 2 ? <>{submitting ? 'Generating…' : <><Icon d={icons.spark} size={14} /> Create Post</>}</> : 'Continue →'}
+          {step === 1 && (
+            <button className="btn-primary" style={{ flex: 1, padding: '11px 0', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }} onClick={submit} disabled={submitting || !postTitle.trim()}>
+              {submitting ? <><Icon d={icons.spark} size={14} /> Gerando…</> : <><Icon d={icons.spark} size={14} /> Gerar com IA</>}
             </button>
           )}
-          {step === 3 && <button className="btn-primary" style={{ flex: 1, padding: '11px 0' }} onClick={onClose}>Done</button>}
+          {step === 2 && <button className="btn-primary" style={{ flex: 1, padding: '11px 0' }} onClick={onClose}>Concluir</button>}
+          {error && <div style={{ flex: 1, alignSelf: 'center', fontSize: '0.75rem', color: '#ef4444' }}>{error}</div>}
         </div>
       </div>
     </div>
@@ -1084,13 +1837,13 @@ function SlidePanel({ open, onClose, width = 380, children }: { open: boolean; o
 // ─── Notifications Panel ──────────────────────────────────────────────────────
 
 const notifications = [
-  { id: 1, type: 'success', icon: icons.check, title: '"Growth Hacks" published', body: 'Your post went live on Instagram · 4.2k impressions so far', time: '2h ago', unread: true },
-  { id: 2, type: 'info', icon: icons.zap, title: 'Video render complete', body: '"Q3 Roadmap Reveal" is ready to schedule or publish', time: '4h ago', unread: true },
-  { id: 3, type: 'warning', icon: icons.info, title: 'Post pending approval', body: '"Weekly Market Insights #12" is waiting for your review', time: '5h ago', unread: true },
-  { id: 4, type: 'success', icon: icons.spark, title: 'AI scripts generated', body: '3 new carousel scripts ready in your drafts', time: 'Yesterday', unread: false },
-  { id: 5, type: 'info', icon: icons.calendar, title: 'Schedule reminder', body: '"Team Spotlight" is scheduled for tomorrow at 11:00 AM', time: 'Yesterday', unread: false },
-  { id: 6, type: 'success', icon: icons.analytics, title: 'Analytics milestone', body: 'Your reach this week surpassed 100k — best week yet 🎉', time: '2 days ago', unread: false },
-  { id: 7, type: 'info', icon: icons.creditCard, title: 'Billing renewed', body: 'Pro Plan — $49/mo billed successfully for Aug 2026', time: '3 days ago', unread: false },
+  { id: 1, type: 'success', icon: icons.check, title: '"Growth Hacks" publicado', body: 'Seu post foi ao ar no Instagram · 4.2k impressões até agora', time: 'há 2h', unread: true },
+  { id: 2, type: 'info', icon: icons.zap, title: 'Renderização de vídeo concluída', body: '"Q3 Roadmap Reveal" está pronto para agendar ou publicar', time: 'há 4h', unread: true },
+  { id: 3, type: 'warning', icon: icons.info, title: 'Post aguardando aprovação', body: '"Weekly Market Insights #12" está esperando sua revisão', time: 'há 5h', unread: true },
+  { id: 4, type: 'success', icon: icons.spark, title: 'Scripts de IA gerados', body: '3 novos roteiros de carrossel prontos nos seus rascunhos', time: 'Ontem', unread: false },
+  { id: 5, type: 'info', icon: icons.calendar, title: 'Lembrete de agendamento', body: '"Team Spotlight" está agendado para amanhã às 11:00', time: 'Ontem', unread: false },
+  { id: 6, type: 'success', icon: icons.analytics, title: 'Marco de análises', body: 'Seu alcance esta semana passou de 100k — melhor semana até agora 🎉', time: 'há 2 dias', unread: false },
+  { id: 7, type: 'info', icon: icons.creditCard, title: 'Cobrança renovada', body: 'Plano Pro — $49/mês cobrado com sucesso para Ago 2026', time: 'há 3 dias', unread: false },
 ]
 
 function NotificationsPanel({ open, onClose }: { open: boolean; onClose: () => void }) {
@@ -1107,14 +1860,14 @@ function NotificationsPanel({ open, onClose }: { open: boolean; onClose: () => v
       <div style={{ padding: '20px 20px 16px', borderBottom: '1px solid rgba(255,255,255,0.06)', flexShrink: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <h2 style={{ margin: 0, fontSize: '0.9375rem', fontWeight: 600, color: '#fafafa' }}>Notifications</h2>
+            <h2 style={{ margin: 0, fontSize: '0.9375rem', fontWeight: 600, color: '#fafafa' }}>Notificações</h2>
             {unreadCount > 0 && (
               <span style={{ fontSize: '0.625rem', fontWeight: 700, color: '#fff', background: '#8b5cf6', padding: '2px 7px', borderRadius: 9999 }}>{unreadCount}</span>
             )}
           </div>
           <div style={{ display: 'flex', gap: 6 }}>
             {unreadCount > 0 && (
-              <button className="btn-ghost" style={{ fontSize: '0.6875rem', padding: '4px 10px', color: '#8b5cf6' }} onClick={markAll}>Mark all read</button>
+              <button className="btn-ghost" style={{ fontSize: '0.6875rem', padding: '4px 10px', color: '#8b5cf6' }} onClick={markAll}>Marcar tudo como lido</button>
             )}
             <button className="btn-ghost" style={{ padding: '5px 6px' }} onClick={onClose}><Icon d={icons.close} size={15} /></button>
           </div>
@@ -1145,7 +1898,7 @@ function NotificationsPanel({ open, onClose }: { open: boolean; onClose: () => v
               <p style={{ margin: '0 0 6px', fontSize: '0.75rem', color: '#71717a', lineHeight: 1.4 }}>{n.body}</p>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <span style={{ fontSize: '0.625rem', color: '#52525b', fontFamily: 'JetBrains Mono, monospace' }}>{n.time}</span>
-                <button className="btn-ghost" style={{ padding: '2px 6px', fontSize: '0.625rem', color: '#52525b' }} onClick={() => dismiss(n.id)}>Dismiss</button>
+                <button className="btn-ghost" style={{ padding: '2px 6px', fontSize: '0.625rem', color: '#52525b' }} onClick={() => dismiss(n.id)}>Dispensar</button>
               </div>
             </div>
           </div>
@@ -1153,7 +1906,7 @@ function NotificationsPanel({ open, onClose }: { open: boolean; onClose: () => v
         {items.length === 0 && (
           <div style={{ padding: 48, textAlign: 'center' }}>
             <div style={{ fontSize: 32, marginBottom: 12 }}>🎉</div>
-            <p style={{ margin: 0, color: '#52525b', fontSize: '0.875rem' }}>All caught up!</p>
+            <p style={{ margin: 0, color: '#52525b', fontSize: '0.875rem' }}>Tudo em dia!</p>
           </div>
         )}
       </div>
@@ -1247,7 +2000,7 @@ function UserPanel({ open, onClose }: { open: boolean; onClose: () => void }) {
                 localStorage.setItem('arx_user_name', n)
                 window.location.reload()
               }
-            }}>Save</button>
+            }}>Salvar</button>
           </div>
         ) : (
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
@@ -1259,14 +2012,14 @@ function UserPanel({ open, onClose }: { open: boolean; onClose: () => void }) {
         )}
         <p style={{ margin: '0 0 10px', fontSize: '0.75rem', color: '#71717a' }}>{userEmail || '—'}</p>
         <div style={{ display: 'flex', gap: 8 }}>
-          <span style={{ fontSize: '0.625rem', fontWeight: 700, color: '#8b5cf6', background: 'rgba(139,92,246,0.15)', padding: '3px 10px', borderRadius: 9999, border: '1px solid rgba(139,92,246,0.25)' }}>{planName.toUpperCase()} PLAN</span>
-          <span style={{ fontSize: '0.625rem', fontWeight: 600, color: '#22c55e', background: 'rgba(34,197,94,0.1)', padding: '3px 10px', borderRadius: 9999 }}>● Active</span>
+          <span style={{ fontSize: '0.625rem', fontWeight: 700, color: '#8b5cf6', background: 'rgba(139,92,246,0.15)', padding: '3px 10px', borderRadius: 9999, border: '1px solid rgba(139,92,246,0.25)' }}>{planName.toUpperCase()} PLANO</span>
+          <span style={{ fontSize: '0.625rem', fontWeight: 600, color: '#22c55e', background: 'rgba(34,197,94,0.1)', padding: '3px 10px', borderRadius: 9999 }}>● Ativo</span>
         </div>
       </div>
 
       {/* Stats row */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 0, borderBottom: '1px solid rgba(255,255,255,0.06)', flexShrink: 0 }}>
-        {[{ label: 'Posts', value: postCount }, { label: 'Plan', value: planName.charAt(0).toUpperCase() + planName.slice(1) }, { label: 'Status', value: 'Active' }].map((s, i) => (
+        {[{ label: 'Posts', value: postCount }, { label: 'Plano', value: planName.charAt(0).toUpperCase() + planName.slice(1) }, { label: 'Status', value: 'Ativo' }].map((s, i) => (
           <div key={s.label} style={{ padding: '14px 0', textAlign: 'center', borderRight: i < 2 ? '1px solid rgba(255,255,255,0.06)' : 'none' }}>
             <div style={{ fontSize: '1.125rem', fontWeight: 700, color: '#fafafa', letterSpacing: '-0.01em' }}>{s.value}</div>
             <div style={{ fontSize: '0.625rem', color: '#52525b', marginTop: 2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{s.label}</div>
@@ -1276,15 +2029,15 @@ function UserPanel({ open, onClose }: { open: boolean; onClose: () => void }) {
 
       {/* Sections */}
       <div style={{ flex: 1, padding: '12px 0' }}>
-        {/* Account */}
+        {/* Conta */}
         <div style={{ padding: '8px 20px 4px' }}>
-          <span style={{ fontSize: '0.625rem', fontWeight: 700, color: '#52525b', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Account</span>
+          <span style={{ fontSize: '0.625rem', fontWeight: 700, color: '#52525b', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Conta</span>
         </div>
         {[
-          { icon: icons.user, label: 'Edit Profile', sub: 'Name, photo, bio', action: () => setEditingName(true) },
-          { icon: icons.key, label: 'Change Password', sub: 'Update your login password', action: () => { setPwCur(''); setPwNew(''); setPwMsg(''); setPwErr(''); setPwModal(true) } },
-          { icon: icons.creditCard, label: 'Billing & Plan', sub: `${planName} · Active`, action: () => {} },
-          { icon: icons.globe, label: 'Connected Accounts', sub: 'Instagram, LinkedIn, Twitter', action: () => {} },
+          { icon: icons.user, label: 'Editar Perfil', sub: 'Nome, foto, bio', action: () => setEditingName(true) },
+          { icon: icons.key, label: 'Alterar Senha', sub: 'Atualizar sua senha de login', action: () => { setPwCur(''); setPwNew(''); setPwMsg(''); setPwErr(''); setPwModal(true) } },
+          { icon: icons.creditCard, label: 'Cobrança e Plano', sub: `${planName} · Ativo`, action: () => {} },
+          { icon: icons.globe, label: 'Contas Conectadas', sub: 'Instagram, LinkedIn, Twitter', action: () => {} },
         ].map(item => (
           <button key={item.label} className="btn-ghost" style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 12, padding: '11px 20px', borderRadius: 0, textAlign: 'left' }} onClick={item.action}>
             <div style={{ width: 32, height: 32, borderRadius: 8, background: 'rgba(255,255,255,0.04)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
@@ -1298,14 +2051,14 @@ function UserPanel({ open, onClose }: { open: boolean; onClose: () => void }) {
           </button>
         ))}
 
-        {/* Notifications */}
+        {/* Notificações */}
         <div style={{ padding: '16px 20px 4px' }}>
-          <span style={{ fontSize: '0.625rem', fontWeight: 700, color: '#52525b', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Notifications</span>
+          <span style={{ fontSize: '0.625rem', fontWeight: 700, color: '#52525b', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Notificações</span>
         </div>
         {[
-          { label: 'Email Notifications', sub: 'Publish confirmations & reports', value: emailNotifs, set: setEmailNotifs },
-          { label: 'Push Alerts', sub: 'Pending approvals & errors', value: pushNotifs, set: setPushNotifs },
-          { label: 'AI Suggestions', sub: 'Weekly content ideas', value: aiSuggestions, set: setAiSuggestions },
+          { label: 'Notificações por E-mail', sub: 'Confirmações de publicação e relatórios', value: emailNotifs, set: setEmailNotifs },
+          { label: 'Alertas Push', sub: 'Aprovações pendentes e erros', value: pushNotifs, set: setPushNotifs },
+          { label: 'Sugestões IA', sub: 'Ideias de conteúdo semanais', value: aiSuggestions, set: setAiSuggestions },
         ].map(item => (
           <div key={item.label} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '11px 20px' }}>
             <div style={{ flex: 1 }}>
@@ -1320,22 +2073,22 @@ function UserPanel({ open, onClose }: { open: boolean; onClose: () => void }) {
         <div style={{ padding: '16px 20px 8px', borderTop: '1px solid rgba(255,255,255,0.05)', marginTop: 8 }}>
           <button className="btn-ghost" style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '10px 0', color: '#ef4444' }} onClick={handleLogout}>
             <Icon d={icons.logout} size={15} />
-            <span style={{ fontSize: '0.8125rem', fontWeight: 600 }}>Sign Out</span>
+            <span style={{ fontSize: '0.8125rem', fontWeight: 600 }}>Sair</span>
           </button>
         </div>
       </div>
 
-      {/* Change Password Modal */}
+      {/* Modal Alterar Senha */}
       {pwModal && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 300, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, background: 'rgba(0,0,0,0.72)', backdropFilter: 'blur(8px)' }} onClick={() => setPwModal(false)}>
           <div className="glass-card animate-fade-in" style={{ width: '100%', maxWidth: 380, padding: 24 }} onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-              <h3 style={{ margin: 0, fontSize: '0.9375rem', fontWeight: 600, color: '#fafafa' }}>Change Password</h3>
+              <h3 style={{ margin: 0, fontSize: '0.9375rem', fontWeight: 600, color: '#fafafa' }}>Alterar Senha</h3>
               <button className="btn-ghost" style={{ padding: '5px 6px' }} onClick={() => setPwModal(false)}><Icon d={icons.close} size={15} /></button>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               <div>
-                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#a1a1aa', marginBottom: 6 }}>Current Password</label>
+                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#a1a1aa', marginBottom: 6 }}>Senha Atual</label>
                 <input className="input-field" type="password" value={pwCur} onChange={e => setPwCur(e.target.value)} placeholder="••••••••" style={{ width: '100%' }} />
               </div>
               <div>
@@ -1367,7 +2120,7 @@ function UserPanel({ open, onClose }: { open: boolean; onClose: () => void }) {
                   }
                 }}
               >
-                {pwSaving ? 'Salvando…' : <><Icon d={icons.key} size={13} /> Update Password</>}
+                {pwSaving ? 'Salvando…' : <><Icon d={icons.key} size={13} /> Atualizar Senha</>}
               </button>
             </div>
           </div>
@@ -1436,10 +2189,10 @@ function SettingsPanel({ open, onClose }: { open: boolean; onClose: () => void }
   const [watermark, setWatermark] = useState(false)
 
   const settingsTabs = [
-    { key: 'integrations', label: 'Integrations' },
-    { key: 'apikey', label: 'API Key' },
-    { key: 'defaults', label: 'Defaults' },
-    { key: 'danger', label: 'Danger Zone' },
+    { key: 'integrations', label: 'Integrações' },
+    { key: 'apikey', label: 'Chave API' },
+    { key: 'defaults', label: 'Padrões' },
+    { key: 'danger', label: 'Zona de Perigo' },
   ] as const
 
   return (
@@ -1451,7 +2204,7 @@ function SettingsPanel({ open, onClose }: { open: boolean; onClose: () => void }
             <div style={{ width: 30, height: 30, borderRadius: 8, background: 'rgba(139,92,246,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#8b5cf6' }}>
               <Icon d={icons.settings} size={14} />
             </div>
-            <h2 style={{ margin: 0, fontSize: '0.9375rem', fontWeight: 600, color: '#fafafa' }}>Settings</h2>
+            <h2 style={{ margin: 0, fontSize: '0.9375rem', fontWeight: 600, color: '#fafafa' }}>Configurações</h2>
           </div>
           <button className="btn-ghost" style={{ padding: '5px 6px' }} onClick={onClose}><Icon d={icons.close} size={15} /></button>
         </div>
@@ -1470,9 +2223,9 @@ function SettingsPanel({ open, onClose }: { open: boolean; onClose: () => void }
         {tab === 'integrations' && (
           <>
             {[
-              { name: 'Instagram', icon: icons.instagram, color: '#e1306c', status: 'Connected', account: '@arxfactory' },
-              { name: 'LinkedIn', icon: icons.linkedin, color: '#0a66c2', status: 'Connected', account: 'Arx Factory' },
-              { name: 'Twitter / X', icon: icons.twitter, color: '#1da1f2', status: 'Connected', account: '@arxfactory' },
+              { name: 'Instagram', icon: icons.instagram, color: '#e1306c', status: 'Conectado', account: '@arxfactory' },
+              { name: 'LinkedIn', icon: icons.linkedin, color: '#0a66c2', status: 'Conectado', account: 'Arx Factory' },
+              { name: 'Twitter / X', icon: icons.twitter, color: '#1da1f2', status: 'Conectado', account: '@arxfactory' },
             ].map(soc => (
               <div key={soc.name} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 12 }}>
                 <div style={{ width: 36, height: 36, borderRadius: 9, background: `${soc.color}15`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: soc.color, flexShrink: 0 }}>
@@ -1483,20 +2236,20 @@ function SettingsPanel({ open, onClose }: { open: boolean; onClose: () => void }
                   <div style={{ fontSize: '0.6875rem', color: '#52525b', fontFamily: 'JetBrains Mono, monospace' }}>{soc.account}</div>
                 </div>
                 <span style={{ fontSize: '0.625rem', fontWeight: 700, color: '#22c55e', background: 'rgba(34,197,94,0.1)', padding: '3px 9px', borderRadius: 9999 }}>{soc.status}</span>
-                <button className="btn-ghost" style={{ padding: '5px 8px', fontSize: '0.6875rem', color: '#71717a' }}>Disconnect</button>
+                <button className="btn-ghost" style={{ padding: '5px 8px', fontSize: '0.6875rem', color: '#71717a' }}>Desconectar</button>
               </div>
             ))}
 
             <div style={{ borderRadius: 12, border: '1px dashed rgba(255,255,255,0.1)', padding: '16px', textAlign: 'center' }}>
               <button className="btn-secondary" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: '0.8125rem' }}>
-                <Icon d={icons.plus} size={13} /> Connect Another Account
+                <Icon d={icons.plus} size={13} /> Conectar Outra Conta
               </button>
             </div>
 
             <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: 14 }}>
               <div style={{ fontSize: '0.75rem', fontWeight: 600, color: '#a1a1aa', marginBottom: 10 }}>Webhook / n8n</div>
               <input className="input-field" placeholder="https://n8n.arxsolutions.cloud/webhook/…" style={{ marginBottom: 8 }} value={webhookUrl} onChange={e => setWebhookUrl(e.target.value)} />
-              <button className="btn-secondary" style={{ width: '100%', padding: '9px 0', fontSize: '0.8125rem' }} onClick={() => saveSettings({ n8n_webhook_base: webhookUrl })}>Save Webhook URL</button>
+              <button className="btn-secondary" style={{ width: '100%', padding: '9px 0', fontSize: '0.8125rem' }} onClick={() => saveSettings({ n8n_webhook_base: webhookUrl })}>Salvar Webhook URL</button>
               {saveMsg && <div style={{ fontSize: '0.75rem', color: '#22c55e', marginTop: 8, textAlign: 'center' }}>{saveMsg}</div>}
             </div>
           </>
@@ -1506,7 +2259,7 @@ function SettingsPanel({ open, onClose }: { open: boolean; onClose: () => void }
         {tab === 'apikey' && (
           <>
             <div style={{ background: 'rgba(139,92,246,0.06)', border: '1px solid rgba(139,92,246,0.2)', borderRadius: 12, padding: 16 }}>
-              <div style={{ fontSize: '0.75rem', fontWeight: 600, color: '#a78bfa', marginBottom: 8 }}>Your API Key</div>
+              <div style={{ fontSize: '0.75rem', fontWeight: 600, color: '#a78bfa', marginBottom: 8 }}>Sua Chave API</div>
               <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                 <code style={{ flex: 1, fontSize: '0.75rem', color: '#fafafa', fontFamily: 'JetBrains Mono, monospace', background: 'rgba(0,0,0,0.3)', padding: '8px 12px', borderRadius: 8, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {apiKeyVisible ? apiKey : '•'.repeat(apiKey.length)}
@@ -1521,16 +2274,16 @@ function SettingsPanel({ open, onClose }: { open: boolean; onClose: () => void }
             </div>
 
             <button className="btn-secondary" style={{ width: '100%', padding: '10px 0', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, fontSize: '0.8125rem' }} onClick={regenerateKey}>
-              <Icon d={icons.key} size={13} /> Regenerate Key
+              <Icon d={icons.key} size={13} /> Regenerar Chave
             </button>
 
             <div>
               <div style={{ fontSize: '0.75rem', fontWeight: 600, color: '#a1a1aa', marginBottom: 10 }}>Endpoints</div>
               {[
-                { method: 'GET', path: '/v1/posts', desc: 'List all posts' },
-                { method: 'POST', path: '/v1/posts', desc: 'Create a post' },
-                { method: 'GET', path: '/v1/templates', desc: 'List templates' },
-                { method: 'POST', path: '/v1/render/video', desc: 'Trigger video render' },
+                { method: 'GET', path: '/v1/posts', desc: 'Listar todos os posts' },
+                { method: 'POST', path: '/v1/posts', desc: 'Criar um post' },
+                { method: 'GET', path: '/v1/templates', desc: 'Listar modelos' },
+                { method: 'POST', path: '/v1/render/video', desc: 'Iniciar renderização de vídeo' },
               ].map(ep => (
                 <div key={ep.method + ep.path} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: 9, marginBottom: 6 }}>
                   <span style={{ fontSize: '0.5625rem', fontWeight: 700, color: ep.method === 'GET' ? '#22c55e' : '#8b5cf6', background: ep.method === 'GET' ? 'rgba(34,197,94,0.1)' : 'rgba(139,92,246,0.12)', padding: '2px 6px', borderRadius: 4, fontFamily: 'JetBrains Mono, monospace', flexShrink: 0 }}>{ep.method}</span>
@@ -1546,7 +2299,7 @@ function SettingsPanel({ open, onClose }: { open: boolean; onClose: () => void }
         {tab === 'defaults' && (
           <>
             <div>
-              <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#a1a1aa', marginBottom: 6 }}>Default Template</label>
+              <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#a1a1aa', marginBottom: 6 }}>Modelo Padrão</label>
               <select className="input-field" style={{ appearance: 'none', cursor: 'pointer' }} value={defaultTemplate} onChange={e => setDefaultTemplate(e.target.value)}>
                 <option value="">Selecionar template padrão…</option>
                 {templates.map(t => <option key={t.id} value={t.name}>{t.name}</option>)}
@@ -1554,7 +2307,7 @@ function SettingsPanel({ open, onClose }: { open: boolean; onClose: () => void }
             </div>
 
             <div>
-              <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#a1a1aa', marginBottom: 6 }}>Instagram Business ID</label>
+              <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#a1a1aa', marginBottom: 6 }}>ID do Instagram Business</label>
               <input className="input-field" placeholder="Ex: 17841400000000000" value={igBusinessId} onChange={e => setIgBusinessId(e.target.value)} />
             </div>
 
@@ -1565,9 +2318,9 @@ function SettingsPanel({ open, onClose }: { open: boolean; onClose: () => void }
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12, borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: 14 }}>
               {[
-                { label: 'Auto-publish approved posts', sub: 'No manual confirmation required', value: autoPublish, set: setAutoPublish },
-                { label: 'AI caption generation', sub: 'Suggest captions for new posts', value: aiCaption, set: setAiCaption },
-                { label: 'Add watermark to videos', sub: 'Arx branding overlay', value: watermark, set: setWatermark },
+                { label: 'Publicar posts aprovados automaticamente', sub: 'Sem confirmação manual necessária', value: autoPublish, set: setAutoPublish },
+                { label: 'Geração de legenda por IA', sub: 'Sugerir legendas para novos posts', value: aiCaption, set: setAiCaption },
+                { label: 'Adicionar marca d\'água nos vídeos', sub: 'Sobreposição da marca Arx', value: watermark, set: setWatermark },
               ].map(item => (
                 <div key={item.label} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                   <div style={{ flex: 1 }}>
@@ -1585,23 +2338,23 @@ function SettingsPanel({ open, onClose }: { open: boolean; onClose: () => void }
               auto_publish: String(autoPublish),
               ai_caption: String(aiCaption),
               watermark: String(watermark),
-            })}>Save Defaults</button>
+            })}>Salvar Padrões</button>
             {saveMsg && <div style={{ fontSize: '0.75rem', color: '#22c55e', textAlign: 'center' }}>{saveMsg}</div>}
           </>
         )}
 
-        {/* ── Danger Zone ── */}
+        {/* ── Zona de Perigo ── */}
         {tab === 'danger' && (
           <>
             <div style={{ background: 'rgba(239,68,68,0.05)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 12, padding: 16 }}>
-              <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#ef4444', marginBottom: 4 }}>⚠ Danger Zone</div>
-              <p style={{ margin: 0, fontSize: '0.75rem', color: '#71717a', lineHeight: 1.5 }}>These actions are irreversible. Please be absolutely sure before proceeding.</p>
+              <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#ef4444', marginBottom: 4 }}>⚠ Zona de Perigo</div>
+              <p style={{ margin: 0, fontSize: '0.75rem', color: '#71717a', lineHeight: 1.5 }}>Estas ações são irreversíveis. Tenha absoluta certeza antes de prosseguir.</p>
             </div>
             {[
-              { label: 'Export All Data', desc: 'Download a JSON archive of all posts, templates, and analytics', btn: 'Export', btnColor: '#3b82f6' },
-              { label: 'Delete All Drafts', desc: 'Permanently remove all unpublished draft posts', btn: 'Delete Drafts', btnColor: '#f59e0b' },
-              { label: 'Reset API Key', desc: 'Invalidates the current key. All integrations will break.', btn: 'Reset Key', btnColor: '#ef4444' },
-              { label: 'Delete Account', desc: 'Permanently delete your account and all associated data', btn: 'Delete Account', btnColor: '#ef4444' },
+              { label: 'Exportar Todos os Dados', desc: 'Baixar arquivo JSON com todos os posts, modelos e análises', btn: 'Exportar', btnColor: '#3b82f6' },
+              { label: 'Excluir Todos os Rascunhos', desc: 'Remover permanentemente todos os posts não publicados', btn: 'Excluir Rascunhos', btnColor: '#f59e0b' },
+              { label: 'Resetar Chave API', desc: 'Invalida a chave atual. Todas as integrações pararão de funcionar.', btn: 'Resetar Chave', btnColor: '#ef4444' },
+              { label: 'Excluir Conta', desc: 'Excluir permanentemente sua conta e todos os dados associados', btn: 'Excluir Conta', btnColor: '#ef4444' },
             ].map(item => (
               <div key={item.label} style={{ padding: '14px 16px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 12, display: 'flex', alignItems: 'center', gap: 12 }}>
                 <div style={{ flex: 1 }}>
@@ -1630,18 +2383,18 @@ interface ChatMessage {
 }
 
 const seedMessages: ChatMessage[] = [
-  { id: 1, role: 'ai', text: "Hi! I'm your Arx AI assistant. I can help you write carousel scripts, video hooks, captions, hashtag sets, and content strategies. What would you like to create today?", time: '10:02 AM' },
-  { id: 2, role: 'user', text: 'Write me a 6-slide carousel script about growing a SaaS to $10k MRR', time: '10:03 AM' },
-  { id: 3, role: 'ai', text: "Here's a 6-slide carousel script:\n\n**Slide 1 — Hook**\n\"We hit $10k MRR in 9 months. Here's exactly what worked.\"\n\n**Slide 2 — The Problem**\nMost founders chase features. We chased conversations. 47 customer calls in month 1.\n\n**Slide 3 — Insight**\nThe product didn't sell itself — the story did. One positioning change doubled our trial-to-paid rate.\n\n**Slide 4 — Turning Point**\nMonth 6: launched an affiliate program. 30% of new MRR came from partners, not ads.\n\n**Slide 5 — What We'd Do Different**\nStart pricing experiments on day 1. We left $3k/mo on the table for 4 months.\n\n**Slide 6 — CTA**\n\"Save this for your SaaS journey. Follow for weekly growth breakdowns.\"", time: '10:03 AM' },
+  { id: 1, role: 'ai', text: "Olá! Sou seu assistente IA da Arx. Posso te ajudar a criar roteiros de carrossel, ganchos de vídeo, legendas, hashtags e estratégias de conteúdo. O que você quer criar hoje?", time: '10:02' },
+  { id: 2, role: 'user', text: 'Crie um roteiro de carrossel com 6 slides sobre como crescer um SaaS até $10k MRR', time: '10:03' },
+  { id: 3, role: 'ai', text: "Aqui está um roteiro de carrossel com 6 slides:\n\n**Slide 1 — Gancho**\n\"Chegamos a $10k MRR em 9 meses. Eis exatamente o que funcionou.\"\n\n**Slide 2 — O Problema**\nA maioria dos fundadores corre atrás de features. Nós corremos atrás de conversas. 47 ligações com clientes no mês 1.\n\n**Slide 3 — Insight**\nO produto não se vendeu sozinho — a história vendeu. Uma mudança de posicionamento dobrou nossa taxa trial→pago.\n\n**Slide 4 — Ponto de Virada**\nMês 6: lançamos um programa de afiliados. 30% do novo MRR veio de parceiros, não de anúncios.\n\n**Slide 5 — O Que Faríamos Diferente**\nComeçar experimentos de preço no dia 1. Deixamos $3k/mês na mesa por 4 meses.\n\n**Slide 6 — CTA**\n\"Salve este post para sua jornada SaaS. Siga para mais análises semanais de crescimento.\"", time: '10:03' },
 ]
 
 const aiResponses = [
-  "Great idea! Here's a hook for that: \"Most people get this completely wrong — and it's costing them thousands.\" Opening with a bold claim drives 3× more saves on carousels.",
-  "For a video script on that topic, I'd open with a pattern interrupt: show the end result first, then rewind. Viewers are 40% more likely to watch to the end when they know the payoff upfront.",
-  "Here are 10 hashtags optimized for reach on that niche: #SaaSGrowth #FounderLife #StartupTips #ProductLed #B2BSaaS #GrowthHacking #MRR #SaaSMarketing #TechFounder #BootstrappedSaaS",
-  "Suggested caption: \"The thing nobody tells you about scaling to 10k users → it's not about the product. It's about the story you tell. Here's the framework we used 👇\" — Want me to continue with the full thread?",
-  "For your carousel CTA slide, try: \"If this helped, save it for later — you'll need it. And follow for a new growth breakdown every week.\" Saves signal the algorithm more than likes.",
-  "Content strategy suggestion: post 3 carousels and 1 video per week. Peak engagement windows for your niche (B2B SaaS) are Tuesday–Thursday, 9–11 AM and 6–8 PM in your audience's timezone.",
+  "Ótima pergunta! Para um carrossel sobre esse tema, eu abriria com um gancho forte: o resultado final primeiro, depois o caminho. Engajamento sobe quando a promessa é clara no slide 1.",
+  "Para um roteiro de vídeo sobre esse tópico, eu abriria com uma quebra de padrão: mostre o resultado final primeiro, depois volte no tempo. Espectadores têm 40% mais chance de assistir até o fim quando sabem o payoff de antemão.",
+  "Aqui estão 10 hashtags otimizadas para alcance nesse nicho: #SaaSGrowth #VidaDeFounder #DicasStartup #ProductLed #B2BSaaS #GrowthHacking #MRR #SaaSMarketing #TechFounder #SaaSBootstrapped",
+  "Legenda sugerida: \"O que ninguém te conta sobre escalar até 10 mil usuários → não é sobre o produto. É sobre a história que você conta. Aqui está a estrutura que usamos 👇\" — Quer que eu continue com o restante do fio?",
+  "Para o slide de CTA do seu carrossel, tente: \"Se isso te ajudou, salve para depois — você vai precisar. E siga para uma nova análise de crescimento toda semana.\" Saves sinalizam para o algoritmo mais do que curtidas.",
+  "Sugestão de estratégia de conteúdo: publique 3 carrosséis e 1 vídeo por semana. Janelas de pico de engajamento para seu nicho (SaaS B2B) são terça a quinta, das 9h às 11h e das 18h às 20h no fuso do seu público.",
 ]
 
 function ChatPanel({ open, onClose }: { open: boolean; onClose: () => void }) {
@@ -1671,7 +2424,7 @@ function ChatPanel({ open, onClose }: { open: boolean; onClose: () => void }) {
     }
   }
 
-  const suggestions = ['Write a carousel hook', 'Generate hashtags', 'Video script intro', 'Caption for LinkedIn']
+  const suggestions = ['Escrever gancho de carrossel', 'Gerar hashtags', 'Introdução de roteiro de vídeo', 'Legenda para LinkedIn']
 
   return (
     <SlidePanel open={open} onClose={onClose} width={440}>
@@ -1686,12 +2439,12 @@ function ChatPanel({ open, onClose }: { open: boolean; onClose: () => void }) {
               <h2 style={{ margin: 0, fontSize: '0.9375rem', fontWeight: 600, color: '#fafafa' }}>Arx AI</h2>
               <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
                 <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#22c55e', display: 'inline-block' }} />
-                <span style={{ fontSize: '0.6875rem', color: '#52525b' }}>Online · GPT-4o powered</span>
+                <span style={{ fontSize: '0.6875rem', color: '#52525b' }}>Online · com IA</span>
               </div>
             </div>
           </div>
           <div style={{ display: 'flex', gap: 6 }}>
-            <button className="btn-ghost" style={{ padding: '5px 8px', fontSize: '0.6875rem', color: '#52525b' }} onClick={() => setMessages(seedMessages)}>Clear</button>
+            <button className="btn-ghost" style={{ padding: '5px 8px', fontSize: '0.6875rem', color: '#52525b' }} onClick={() => setMessages(seedMessages)}>Limpar</button>
             <button className="btn-ghost" style={{ padding: '5px 6px' }} onClick={onClose}><Icon d={icons.close} size={15} /></button>
           </div>
         </div>
@@ -1760,7 +2513,7 @@ function ChatPanel({ open, onClose }: { open: boolean; onClose: () => void }) {
             value={input}
             onChange={e => setInput(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send() } }}
-            placeholder="Ask Arx AI to write a script, caption, hooks…"
+            placeholder="Peça para a IA Arx escrever um roteiro, legenda, ganchos…"
             rows={1}
             style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', resize: 'none', color: '#fafafa', fontSize: '0.8125rem', fontFamily: 'Inter, sans-serif', lineHeight: 1.5, maxHeight: 120, overflowY: 'auto' }}
           />
@@ -1772,7 +2525,7 @@ function ChatPanel({ open, onClose }: { open: boolean; onClose: () => void }) {
             <Icon d={icons.play} size={13} />
           </button>
         </div>
-        <p style={{ margin: '6px 0 0', fontSize: '0.5625rem', color: '#3f3f46', textAlign: 'center' }}>Press Enter to send · Shift+Enter for new line</p>
+        <p style={{ margin: '6px 0 0', fontSize: '0.5625rem', color: '#3f3f46', textAlign: 'center' }}>Enter envia · Shift+Enter para nova linha</p>
       </div>
     </SlidePanel>
   )
@@ -2079,7 +2832,7 @@ function LoginView({ onLogin }: { onLogin: (token: string, user: any) => void })
 
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           <div>
-            <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#a1a1aa', marginBottom: 6 }}>Email</label>
+            <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#a1a1aa', marginBottom: 6 }}>E-mail</label>
             <input className="input-field" type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="seu@email.com" required style={{ width: '100%' }} />
           </div>
           <div>
@@ -2195,20 +2948,20 @@ export default function App() {
   const isAdmin = user?.role === 'admin'
 
   const navItems: { key: Page; label: string; icon: string }[] = [
-    { key: 'dashboard', label: 'Dashboard', icon: icons.dashboard },
-    { key: 'content', label: 'Content', icon: icons.content },
-    { key: 'templates', label: 'Templates', icon: icons.templates },
-    { key: 'schedule', label: 'Schedule', icon: icons.schedule },
-    { key: 'analytics', label: 'Analytics', icon: icons.analytics },
+    { key: 'dashboard', label: 'Painel', icon: icons.dashboard },
+    { key: 'content', label: 'Conteúdo', icon: icons.content },
+    { key: 'templates', label: 'Modelos', icon: icons.templates },
+    { key: 'schedule', label: 'Agenda', icon: icons.schedule },
+    { key: 'analytics', label: 'Análises', icon: icons.analytics },
     ...(isAdmin ? [{ key: 'admin' as Page, label: 'Admin', icon: icons.shield }] : []),
   ]
 
   const pageTitles: Record<Page, string> = {
-    dashboard: 'Dashboard',
-    content: 'Content',
-    templates: 'Templates',
-    schedule: 'Schedule',
-    analytics: 'Analytics',
+    dashboard: 'Painel',
+    content: 'Conteúdo',
+    templates: 'Modelos',
+    schedule: 'Agenda',
+    analytics: 'Análises',
     admin: 'Admin',
   }
 
@@ -2241,12 +2994,12 @@ export default function App() {
         <div style={{ padding: '12px 0', borderTop: '1px solid rgba(255,255,255,0.06)', marginTop: 8 }}>
           <button className={`sidebar-item ${chatOpen ? 'active' : ''}`} style={{ border: 'none', width: '100%', textAlign: 'left', marginBottom: 2 }} onClick={() => { closeAll(); setChatOpen(true) }}>
             <Icon d={icons.spark} size={16} />
-            <span>AI Assistant</span>
+            <span>Assistente IA</span>
             <span style={{ marginLeft: 'auto', fontSize: '0.5rem', fontWeight: 700, color: '#8b5cf6', background: 'rgba(139,92,246,0.15)', padding: '2px 6px', borderRadius: 9999 }}>AI</span>
           </button>
           <button className="sidebar-item" style={{ border: 'none', width: '100%', textAlign: 'left' }} onClick={() => { closeAll(); setSettingsOpen(true) }}>
             <Icon d={icons.settings} size={16} />
-            <span>Settings</span>
+            <span>Configurações</span>
           </button>
           <button className="sidebar-item" style={{ border: 'none', width: '100%', textAlign: 'left', color: '#ef4444' }} onClick={handleLogout}>
             <Icon d={icons.logout} size={16} />
@@ -2256,7 +3009,7 @@ export default function App() {
             <div style={{ width: 30, height: 30, borderRadius: '50%', background: 'linear-gradient(135deg, #8b5cf6, #3b82f6)', border: '2px solid rgba(139,92,246,0.5)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.625rem', fontWeight: 700, color: '#fff' }}>{initials || 'A'}</div>
             <div style={{ minWidth: 0, textAlign: 'left' }}>
               <div style={{ fontSize: '0.75rem', fontWeight: 600, color: '#fafafa', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{userName}</div>
-              <div style={{ fontSize: '0.625rem', color: '#52525b' }}>{planName} Plan</div>
+              <div style={{ fontSize: '0.625rem', color: '#52525b' }}>Plano {planName}</div>
             </div>
           </button>
         </div>
@@ -2269,7 +3022,7 @@ export default function App() {
           <h1 style={{ margin: 0, fontSize: '0.9375rem', fontWeight: 600, color: '#fafafa' }}>{pageTitles[page]}</h1>
           <div style={{ flex: 1 }} />
           <button className="btn-primary" onClick={() => { setSelectedTemplate(null); setNewPostModal(true) }} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <Icon d={icons.plus} size={14} /> New Post
+            <Icon d={icons.plus} size={14} /> Novo Post
           </button>
           <button className="btn-ghost" style={{ padding: '6px 8px', position: 'relative' }} onClick={() => { setNotifOpen(true); setUserOpen(false); setSettingsOpen(false); setChatOpen(false) }}>
             <Icon d={icons.bell} size={17} />
