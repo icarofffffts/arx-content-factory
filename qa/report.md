@@ -1,4 +1,4 @@
-# QA Report — 2026-08-02T11:21:15.949128
+# QA Report — 2026-08-05T20:00:22.865604
 
 **Base:** https://conteudos.icarodev.cloud
 
@@ -10,6 +10,7 @@
 |-------|--------|
 | backend | PASS |
 | build | PASS |
+| rls | PASS |
 | e2e | SKIP-MANUAL |
 
 ## E2E (manual)

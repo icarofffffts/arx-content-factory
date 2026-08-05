@@ -28,7 +28,9 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 def run_script(path, args):
     cmd = [sys.executable, path] + args
     print(f"\n{'='*60}\n>>> {os.path.basename(path)} {(' '.join(args))}\n{'='*60}")
-    r = subprocess.run(cmd, capture_output=True, text=True, timeout=400)
+    env = dict(os.environ)
+    env["PYTHONIOENCODING"] = "utf-8"
+    r = subprocess.run(cmd, capture_output=True, text=True, timeout=400, env=env)
     print(r.stdout)
     if r.stderr.strip() and r.returncode != 0:
         print("STDERR:\n", r.stderr[-1000:])
@@ -38,7 +40,7 @@ def run_script(path, args):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--base", default="https://conteudos.icarodev.cloud")
-    parser.add_argument("--email", default="admin")
+    parser.add_argument("--email", default="admin@arx.dev")
     parser.add_argument("--password", default="arx_secret_2026!")
     parser.add_argument("--skip-e2e", action="store_true")
     parser.add_argument("--token", default=None)
@@ -51,6 +53,7 @@ def main():
     results = {}
     results["backend"], _ = run_script(os.path.join(HERE, "backend_smoke.py"), common)
     results["build"], _ = run_script(os.path.join(HERE, "build_check.py"), [])
+    results["rls"], _ = run_script(os.path.join(HERE, "rls_check.py"), [])
 
     e2e_status = None
     if not args.skip_e2e:
@@ -82,13 +85,14 @@ def main():
         "results": {
             "backend": "PASS" if results["backend"] else "FAIL",
             "build": "PASS" if results["build"] else "FAIL",
+            "rls": "PASS" if results["rls"] else "FAIL",
             "e2e": "PASS" if e2e_status is True else ("SKIP-MANUAL" if e2e_status is None else "FAIL"),
         },
         "overall": "PASS" if all_pass else "FAIL",
     }
 
-    with open(os.path.join(HERE, "report.json"), "w") as f:
-        json.dump(report, f, indent=2)
+    with open(os.path.join(HERE, "report.json"), "w", encoding="utf-8") as f:
+        json.dump(report, f, indent=2, ensure_ascii=False)
 
     md = f"# QA Report — {report['timestamp']}\n\n"
     md += f"**Base:** {args.base}\n\n"
@@ -100,7 +104,7 @@ def main():
     md += "\n## E2E (manual)\n"
     md += "- Executado via Hermes browser (Playwright sync indisponível em Python 3.14 / greenlet).\n"
     md += "- Detalhes: `qa/e2e_manual_report.json`\n"
-    with open(os.path.join(HERE, "report.md"), "w") as f:
+    with open(os.path.join(HERE, "report.md"), "w", encoding="utf-8") as f:
         f.write(md)
 
     print(f"\n{'='*60}")
