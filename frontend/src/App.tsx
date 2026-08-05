@@ -10,8 +10,8 @@ const Signup = lazy(() => import('./imports/Signup'))
 
 // ─── Icons ───────────────────────────────────────────────────────────────────
 
-const Icon = ({ d, size = 16, className = '' }: { d: string; size?: number; className?: string }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className={className}>
+const Icon = ({ d, size = 16, className = '', color }: { d: string; size?: number; className?: string; color?: string }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color || 'currentColor'} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className={className}>
     <path d={d} />
   </svg>
 )
@@ -116,15 +116,15 @@ const posts: Post[] = [
 ]
 
 const templates: Template[] = [
-  { id: 't1', name: 'Tech Startup Growth', category: 'Business', type: 'carousel', slides: 8, color: '#0f0f1a', accent: '#8b5cf6', rating: 4.9, uses: 1240, tags: ['SaaS', 'Growth', 'B2B'], preview: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=400&h=260&fit=crop&auto=format' },
+  { id: 't1', name: 'Tech Startup Growth', category: 'Business', type: 'carousel', slides: 8, color: '#0f0f1a', accent: '#10b981', rating: 4.9, uses: 1240, tags: ['SaaS', 'Growth', 'B2B'], preview: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=400&h=260&fit=crop&auto=format' },
   { id: 't2', name: 'Cinematic Brand Story', category: 'Video', type: 'video', duration: '0:45', color: '#0a0f1a', accent: '#3b82f6', rating: 4.8, uses: 876, tags: ['Brand', 'Story', 'Premium'], preview: 'https://images.unsplash.com/photo-1492691527719-9d1e07e534b4?w=400&h=260&fit=crop&auto=format' },
   { id: 't3', name: 'Product Launch Sequence', category: 'Marketing', type: 'carousel', slides: 10, color: '#0f1a0f', accent: '#22c55e', rating: 4.7, uses: 2103, tags: ['Product', 'Launch', 'E-commerce'], preview: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=400&h=260&fit=crop&auto=format' },
   { id: 't4', name: 'Finance Data Breakdown', category: 'Finance', type: 'carousel', slides: 6, color: '#1a0f0f', accent: '#f59e0b', rating: 4.6, uses: 654, tags: ['Finance', 'Data', 'Charts'], preview: 'https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=400&h=260&fit=crop&auto=format' },
   { id: 't5', name: 'Thought Leadership Reel', category: 'Personal Brand', type: 'video', duration: '0:30', color: '#0f0f0f', accent: '#ec4899', rating: 4.9, uses: 3210, tags: ['Personal', 'Thought', 'Expert'], preview: 'https://images.unsplash.com/photo-1557804506-669a67965ba0?w=400&h=260&fit=crop&auto=format' },
-  { id: 't6', name: 'Agency Portfolio Swipe', category: 'Creative', type: 'carousel', slides: 12, color: '#0a0a0f', accent: '#a78bfa', rating: 4.8, uses: 1567, tags: ['Agency', 'Portfolio', 'Creative'], preview: 'https://images.unsplash.com/photo-1558655146-d09347e92766?w=400&h=260&fit=crop&auto=format' },
+  { id: 't6', name: 'Agency Portfolio Swipe', category: 'Creative', type: 'carousel', slides: 12, color: '#0a0a0f', accent: '#34d399', rating: 4.8, uses: 1567, tags: ['Agency', 'Portfolio', 'Creative'], preview: 'https://images.unsplash.com/photo-1558655146-d09347e92766?w=400&h=260&fit=crop&auto=format' },
   { id: 't7', name: 'Wellness & Lifestyle', category: 'Lifestyle', type: 'carousel', slides: 7, color: '#0f1a18', accent: '#14b8a6', rating: 4.5, uses: 892, tags: ['Wellness', 'Lifestyle', 'Health'], preview: 'https://images.unsplash.com/photo-1490645935967-10de6ba17061?w=400&h=260&fit=crop&auto=format' },
   { id: 't8', name: 'Event Highlight Reel', category: 'Events', type: 'video', duration: '1:00', color: '#1a0a0a', accent: '#ef4444', rating: 4.7, uses: 432, tags: ['Events', 'Recap', 'Promo'], preview: 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=400&h=260&fit=crop&auto=format' },
-  { id: 't9', name: 'Minimal Dark Intro', category: 'Personal Brand', type: 'carousel', slides: 5, color: '#050505', accent: '#6366f1', rating: 4.9, uses: 2890, tags: ['Minimal', 'Dark', 'Premium'], preview: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=400&h=260&fit=crop&auto=format' },
+  { id: 't9', name: 'Minimal Dark Intro', category: 'Personal Brand', type: 'carousel', slides: 5, color: '#050505', accent: '#14b8a6', rating: 4.9, uses: 2890, tags: ['Minimal', 'Dark', 'Premium'], preview: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=400&h=260&fit=crop&auto=format' },
 ]
 
 const chartData = [
@@ -254,7 +254,7 @@ function useTemplates() {
           slides: t.slides,
           duration: t.duration,
           color: t.color || '#0f0f1a',
-          accent: t.accent || '#8b5cf6',
+          accent: t.accent || '#10b981',
           rating: t.rating || 4.5,
           uses: t.uses || 0,
           tags: t.tags || [],
@@ -291,7 +291,7 @@ function WaBadge({ status }: { status?: string | null }) {
   if (!status) return null
   const map: Record<string, { label: string; bg: string; color: string }> = {
     sent:     { label: 'WhatsApp enviado',  bg: 'rgba(34,197,94,0.15)',  color: '#22c55e' },
-    approved: { label: 'Aprovado no zap',   bg: 'rgba(139,92,246,0.15)', color: '#8b5cf6' },
+    approved: { label: 'Aprovado no zap',   bg: 'rgba(16,185,129,0.15)', color: '#10b981' },
     rejected: { label: 'Rejeitado no zap',  bg: 'rgba(239,68,68,0.15)',  color: '#ef4444' },
   }
   const s = map[status]
@@ -308,7 +308,7 @@ function WaBadge({ status }: { status?: string | null }) {
 
 function TypeIcon({ type }: { type: ContentType }) {
   const map: Record<ContentType, { icon: string; color: string }> = {
-    carousel: { icon: icons.layers, color: '#8b5cf6' },
+    carousel: { icon: icons.layers, color: '#10b981' },
     video:    { icon: icons.video,  color: '#3b82f6' },
     image:    { icon: icons.image,  color: '#14b8a6' },
   }
@@ -326,7 +326,7 @@ function ChannelTag({ channel }: { channel: string }) {
     twitter:   { icon: icons.twitter,   color: '#1da1f2' },
     linkedin:  { icon: icons.linkedin,  color: '#0a66c2' },
   }
-  const c = map[channel] || { icon: icons.bell, color: '#8b5cf6' }
+  const c = map[channel] || { icon: icons.bell, color: '#10b981' }
   return (
     <span style={{ display: 'flex', alignItems: 'center', gap: 3, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 6, padding: '2px 7px', color: c.color }}>
       <Icon d={c.icon} size={11} />
@@ -475,7 +475,7 @@ function PostPreviewModal({
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {slides.map((s: any, i: number) => (
                   <div key={i} style={{ padding: '10px 12px', background: 'rgba(255,255,255,0.03)', borderRadius: 8, border: '1px solid rgba(255,255,255,0.05)' }}>
-                    <div style={{ fontSize: '0.6875rem', fontWeight: 700, color: '#a78bfa', marginBottom: 4 }}>
+                    <div style={{ fontSize: '0.6875rem', fontWeight: 700, color: '#34d399', marginBottom: 4 }}>
                       {s.slide_number ? `#${s.slide_number}` : `#${i + 1}`} {s.title || ''}
                     </div>
                     {s.body && <div style={{ fontSize: '0.75rem', color: '#a1a1aa', lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>{s.body}</div>}
@@ -559,8 +559,8 @@ function PostPreviewModal({
               style={{
                 padding: '8px 16px', borderRadius: 8, fontSize: '0.75rem', fontWeight: 600,
                 cursor: loading ? 'wait' : 'pointer',
-                border: '1px solid rgba(139,92,246,0.4)', background: 'rgba(139,92,246,0.12)',
-                color: '#a78bfa', display: 'flex', alignItems: 'center', gap: 6,
+                border: '1px solid rgba(16,185,129,0.4)', background: 'rgba(16,185,129,0.12)',
+                color: '#34d399', display: 'flex', alignItems: 'center', gap: 6,
               }}
             >
               {loading === 'edit' ? '⏳...' : '✏️ Editar'}
@@ -767,7 +767,7 @@ function PostEditModal({
             style={{
               padding: '8px 20px', borderRadius: 8, fontSize: '0.75rem', fontWeight: 600,
               cursor: saving ? 'wait' : 'pointer',
-              border: 'none', background: '#8b5cf6', color: '#fff',
+              border: 'none', background: '#10b981', color: '#fff',
               opacity: saving || !title.trim() ? 0.5 : 1,
               display: 'flex', alignItems: 'center', gap: 6,
             }}
@@ -947,10 +947,10 @@ function Dashboard() {
   }
 
   const stats = [
-    { label: 'Posts Publicados', value: metrics ? String(metrics.published ?? metrics.total ?? 0) : '—', delta: '+12%', color: '#8b5cf6' },
-    { label: 'Agendados', value: metrics ? String(metrics.scheduled ?? 0) : '—', delta: '+3', color: '#3b82f6' },
-    { label: 'Rascunhos', value: metrics ? String(metrics.draft ?? 0) : '—', delta: 'aguardando', color: '#f59e0b' },
-    { label: 'Processando', value: metrics ? String(metrics.processing ?? 0) : '—', delta: 'na fila', color: '#22c55e' },
+    { label: 'Posts Publicados', value: metrics ? String(metrics.published ?? metrics.total ?? 0) : '—', delta: '+12%', color: '#10b981', icon: icons.check },
+    { label: 'Agendados', value: metrics ? String(metrics.scheduled ?? 0) : '—', delta: '+3', color: '#38bdf8', icon: icons.calendar },
+    { label: 'Rascunhos', value: metrics ? String(metrics.draft ?? 0) : '—', delta: 'aguardando', color: '#f59e0b', icon: icons.layers },
+    { label: 'Processando', value: metrics ? String(metrics.processing ?? 0) : '—', delta: 'na fila', color: '#10b981', icon: icons.spark },
   ]
 
   const chartData2 = analytics?.by_day?.length
@@ -967,11 +967,16 @@ function Dashboard() {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
         {stats.map((s) => (
           <div key={s.label} className="glass-card" style={{ padding: 20 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
+              <div style={{ width: 32, height: 32, borderRadius: 8, background: `${s.color}14`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <Icon d={s.icon} size={16} color={s.color} />
+              </div>
               <span style={{ fontSize: '0.6875rem', fontWeight: 500, color: '#71717a', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{s.label}</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+              <div style={{ fontSize: '1.875rem', fontWeight: 700, color: '#fafafa', letterSpacing: '-0.02em', fontVariantNumeric: 'tabular-nums' }}>{s.value}</div>
               <span style={{ fontSize: '0.625rem', fontWeight: 600, color: s.color, background: `${s.color}20`, padding: '2px 8px', borderRadius: 9999 }}>{s.delta}</span>
             </div>
-            <div style={{ fontSize: '1.875rem', fontWeight: 700, color: '#fafafa', letterSpacing: '-0.02em' }}>{s.value}</div>
           </div>
         ))}
       </div>
@@ -994,7 +999,7 @@ function Dashboard() {
                   style={{
                     width: '100%',
                     height: `${(d.posts / maxP) * 100}%`,
-                    background: i === chartData2.length - 1 ? '#8b5cf6' : 'rgba(139,92,246,0.3)',
+                    background: i === chartData2.length - 1 ? '#10b981' : 'rgba(16,185,129,0.3)',
                     borderRadius: '4px 4px 2px 2px',
                     transition: 'height 0.3s ease',
                     position: 'relative',
@@ -1017,7 +1022,7 @@ function Dashboard() {
                 key={p.id}
                 onClick={() => setPreviewPost(p)}
                 style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', background: 'rgba(255,255,255,0.03)', borderRadius: 10, border: '1px solid rgba(255,255,255,0.05)', cursor: 'pointer', transition: 'background 0.15s, border-color 0.15s' }}
-                onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; e.currentTarget.style.borderColor = 'rgba(139,92,246,0.3)' }}
+                onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; e.currentTarget.style.borderColor = 'rgba(16,185,129,0.3)' }}
                 onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.03)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.05)' }}
               >
                 <img src={p.thumbnail} alt={p.title} style={{ width: 36, height: 36, borderRadius: 8, objectFit: 'cover', flexShrink: 0 }} />
@@ -1079,7 +1084,7 @@ function Dashboard() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
           {realPosts.slice(0, 5).map((p, i) => (
             <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 0', borderBottom: i < 4 ? '1px solid rgba(255,255,255,0.04)' : 'none' }}>
-              <div style={{ width: 30, height: 30, borderRadius: 8, background: `${p.status === 'published' ? '#22c55e' : '#8b5cf6'}15`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color: p.status === 'published' ? '#22c55e' : '#8b5cf6' }}>
+              <div style={{ width: 30, height: 30, borderRadius: 8, background: `${p.status === 'published' ? '#22c55e' : '#10b981'}15`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color: p.status === 'published' ? '#22c55e' : '#10b981' }}>
                 <Icon d={p.status === 'published' ? icons.check : icons.spark} size={14} />
               </div>
               <span style={{ flex: 1, fontSize: '0.8125rem', color: '#a1a1aa', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>"{p.title}" · <span style={{ textTransform: 'capitalize' }}>{{ 'draft': 'Rascunho', 'scheduled': 'Agendado', 'published': 'Publicado', 'processing': 'Processando', 'pending': 'Pendente', 'paused': 'Pausado' }[p.status] || p.status }</span></span>
@@ -1217,7 +1222,7 @@ function ContentPage() {
       {generateOpen && (
         <div className="glass-card" style={{ padding: 20, animation: 'fadeIn 0.2s ease-out' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
-            <span style={{ color: '#8b5cf6' }}><Icon d={icons.spark} size={18} /></span>
+            <span style={{ color: '#10b981' }}><Icon d={icons.spark} size={18} /></span>
             <h3 style={{ margin: 0, fontSize: '0.875rem', fontWeight: 600, color: '#fafafa' }}>Gerar Conteúdo com IA</h3>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -1376,7 +1381,7 @@ function PostCard({ post, onPreview, onPause, onPublishNow, onReschedule, onDele
   return (
     <div
       className="glass-card animate-fade-in"
-      style={{ overflow: 'hidden', cursor: 'pointer', transition: 'border-color 0.2s, box-shadow 0.2s', borderColor: hovered ? 'rgba(139,92,246,0.25)' : 'rgba(255,255,255,0.06)', boxShadow: hovered ? '0 0 24px rgba(139,92,246,0.12)' : 'none' }}
+      style={{ overflow: 'hidden', cursor: 'pointer', transition: 'border-color 0.2s, box-shadow 0.2s', borderColor: hovered ? 'rgba(16,185,129,0.25)' : 'rgba(255,255,255,0.06)', boxShadow: hovered ? '0 0 24px rgba(16,185,129,0.12)' : 'none' }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       onClick={onPreview}
@@ -1420,7 +1425,7 @@ function PostCard({ post, onPreview, onPause, onPublishNow, onReschedule, onDele
         <div style={{ display: 'flex', gap: 6 }} onClick={e => e.stopPropagation()}>
           {/* Play button for carousel posts (generate video) */}
           {post.type === 'carousel' && post.status !== 'published' && post.status !== 'processing' && (
-            <button className="btn-ghost" style={{ padding: '7px 10px', color: '#8b5cf6', background: 'rgba(139,92,246,0.08)', border: '1px solid rgba(139,92,246,0.2)' }} title="Gerar Vídeo" onClick={() => window.dispatchEvent(new CustomEvent('arx-video', { detail: post.id }))}>
+            <button className="btn-ghost" style={{ padding: '7px 10px', color: '#10b981', background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.2)' }} title="Gerar Vídeo" onClick={() => window.dispatchEvent(new CustomEvent('arx-video', { detail: post.id }))}>
               <Icon d={icons.play} size={13} />
             </button>
           )}
@@ -1508,7 +1513,7 @@ function TemplatesPage({ onUseTemplate }: { onUseTemplate: (t: Template) => void
         <input className="input-field" placeholder="Buscar modelos…" value={search} onChange={e => setSearch(e.target.value)} style={{ maxWidth: 260 }} />
         <div style={{ display: 'flex', gap: 6 }}>
           {(['all', 'carousel', 'video'] as const).map(type => (
-            <button key={type} onClick={() => setTypeFilter(type)} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 12px', borderRadius: 8, fontSize: '0.75rem', fontWeight: 500, cursor: 'pointer', border: '1px solid', transition: 'all 0.15s', background: typeFilter === type ? 'rgba(139,92,246,0.15)' : 'transparent', borderColor: typeFilter === type ? 'rgba(139,92,246,0.4)' : 'rgba(255,255,255,0.08)', color: typeFilter === type ? '#a78bfa' : '#71717a' }}>
+            <button key={type} onClick={() => setTypeFilter(type)} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 12px', borderRadius: 8, fontSize: '0.75rem', fontWeight: 500, cursor: 'pointer', border: '1px solid', transition: 'all 0.15s', background: typeFilter === type ? 'rgba(16,185,129,0.15)' : 'transparent', borderColor: typeFilter === type ? 'rgba(16,185,129,0.4)' : 'rgba(255,255,255,0.08)', color: typeFilter === type ? '#34d399' : '#71717a' }}>
               {type === 'carousel' && <Icon d={icons.layers} size={12} />}
               {type === 'video' && <Icon d={icons.video} size={12} />}
               {type === 'all' && <Icon d={icons.grid} size={12} />}
@@ -1523,7 +1528,7 @@ function TemplatesPage({ onUseTemplate }: { onUseTemplate: (t: Template) => void
       {/* Categories */}
       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
         {categories.map(cat => (
-          <button key={cat} onClick={() => setCatFilter(cat)} style={{ padding: '5px 12px', borderRadius: 9999, fontSize: '0.6875rem', fontWeight: 600, cursor: 'pointer', border: '1px solid', transition: 'all 0.15s', background: catFilter === cat ? '#8b5cf6' : 'transparent', borderColor: catFilter === cat ? '#8b5cf6' : 'rgba(255,255,255,0.1)', color: catFilter === cat ? '#fff' : '#71717a' }}>
+          <button key={cat} onClick={() => setCatFilter(cat)} style={{ padding: '5px 12px', borderRadius: 9999, fontSize: '0.6875rem', fontWeight: 600, cursor: 'pointer', border: '1px solid', transition: 'all 0.15s', background: catFilter === cat ? '#10b981' : 'transparent', borderColor: catFilter === cat ? '#10b981' : 'rgba(255,255,255,0.1)', color: catFilter === cat ? '#fff' : '#71717a' }}>
             {cat}
           </button>
         ))}
@@ -1684,7 +1689,7 @@ function SchedulePage() {
           {days.map((d, i) => (
             <div key={d} style={{ padding: '10px 8px', textAlign: 'center', borderLeft: '1px solid rgba(255,255,255,0.04)' }}>
               <div style={{ fontSize: '0.6875rem', fontWeight: 500, color: '#71717a' }}>{d}</div>
-              <div style={{ fontSize: '1rem', fontWeight: 700, color: i === 0 ? '#8b5cf6' : '#fafafa', marginTop: 2 }}>{i + 4}</div>
+              <div style={{ fontSize: '1rem', fontWeight: 700, color: i === 0 ? '#10b981' : '#fafafa', marginTop: 2 }}>{i + 4}</div>
             </div>
           ))}
         </div>
@@ -1698,10 +1703,10 @@ function SchedulePage() {
               return (
                 <div key={di} style={{ borderLeft: '1px solid rgba(255,255,255,0.04)', padding: 4, minHeight: 56, position: 'relative' }}>
                   {item && (
-                    <div style={{ background: 'rgba(139,92,246,0.12)', border: '1px solid rgba(139,92,246,0.25)', borderRadius: 8, padding: '6px 8px', cursor: 'pointer', transition: 'background 0.15s' }}>
+                    <div style={{ background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.25)', borderRadius: 8, padding: '6px 8px', cursor: 'pointer', transition: 'background 0.15s' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 2 }}>
                         <TypeIcon type={item.type} />
-                        <span style={{ fontSize: '0.5625rem', fontWeight: 600, color: '#a78bfa', textTransform: 'capitalize' }}>{item.type}</span>
+                        <span style={{ fontSize: '0.5625rem', fontWeight: 600, color: '#34d399', textTransform: 'capitalize' }}>{item.type}</span>
                       </div>
                       <div style={{ fontSize: '0.625rem', fontWeight: 600, color: '#fafafa', lineHeight: 1.3 }}>{item.title}</div>
                       <div style={{ fontSize: '0.5rem', color: '#71717a', marginTop: 2, textTransform: 'capitalize' }}>{item.channel}</div>
@@ -1733,7 +1738,7 @@ function AnalyticsPage() {
   const processing = byStatus['processing'] ?? realPosts.filter(p => p.status === 'processing').length
 
   const metrics = [
-    { label: 'Total de Posts', value: String(totalPosts), delta: 'acumulado', color: '#8b5cf6' },
+    { label: 'Total de Posts', value: String(totalPosts), delta: 'acumulado', color: '#10b981' },
     { label: 'Publicados', value: String(published), delta: 'ao vivo', color: '#22c55e' },
     { label: 'Agendado', value: String(scheduled), delta: 'na fila', color: '#3b82f6' },
     { label: 'Rascunho', value: String(drafts), delta: processing ? `${processing} renderizando` : 'aguardando', color: '#f59e0b' },
@@ -1743,7 +1748,7 @@ function AnalyticsPage() {
     name: String(c.channel || c.name || 'all').charAt(0).toUpperCase() + String(c.channel || c.name || 'all').slice(1),
     reach: Number(c.total ?? c.count ?? c.posts ?? 0),
     engagement: Number(c.total ?? c.count ?? c.posts ?? 0),
-    color: c.channel === 'instagram' ? '#e1306c' : c.channel === 'linkedin' ? '#0a66c2' : c.channel === 'twitter' ? '#1da1f2' : '#8b5cf6',
+    color: c.channel === 'instagram' ? '#e1306c' : c.channel === 'linkedin' ? '#0a66c2' : c.channel === 'twitter' ? '#1da1f2' : '#10b981',
   }))
 
   const channelData = byChannel.length ? byChannel : []
@@ -1798,7 +1803,7 @@ function AnalyticsPage() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {topPosts.map((p, i) => (
               <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px', background: 'rgba(255,255,255,0.03)', borderRadius: 10, border: '1px solid rgba(255,255,255,0.05)' }}>
-                <span style={{ width: 22, height: 22, borderRadius: '50%', background: i === 0 ? 'rgba(139,92,246,0.2)' : 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.625rem', fontWeight: 700, color: i === 0 ? '#8b5cf6' : '#52525b', flexShrink: 0 }}>{i + 1}</span>
+                <span style={{ width: 22, height: 22, borderRadius: '50%', background: i === 0 ? 'rgba(16,185,129,0.2)' : 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.625rem', fontWeight: 700, color: i === 0 ? '#10b981' : '#52525b', flexShrink: 0 }}>{i + 1}</span>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: '0.75rem', fontWeight: 600, color: '#fafafa', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.title}</div>
                   <div style={{ fontSize: '0.6rem', color: '#52525b', textTransform: 'capitalize', marginTop: 1 }}>{p.type} · publicado</div>
@@ -1858,12 +1863,12 @@ function NewPostModal({ template, onClose }: { template: Template | null; onClos
         <div style={{ padding: '20px 24px', borderBottom: '1px solid rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div>
             <h2 style={{ margin: 0, fontSize: '1rem', fontWeight: 600, color: '#fafafa' }}>Criar Novo Post</h2>
-            {template && <p style={{ margin: '2px 0 0', fontSize: '0.75rem', color: '#8b5cf6' }}>Usando o modelo "{template.name}"</p>}
+            {template && <p style={{ margin: '2px 0 0', fontSize: '0.75rem', color: '#10b981' }}>Usando o modelo "{template.name}"</p>}
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <div style={{ display: 'flex', gap: 4 }}>
               {[1, 2].map(s => (
-                <div key={s} style={{ width: 24, height: 3, borderRadius: 9999, background: step >= s ? '#8b5cf6' : 'rgba(255,255,255,0.08)', transition: 'background 0.3s' }} />
+                <div key={s} style={{ width: 24, height: 3, borderRadius: 9999, background: step >= s ? '#10b981' : 'rgba(255,255,255,0.08)', transition: 'background 0.3s' }} />
               ))}
             </div>
             <button className="btn-ghost" onClick={onClose} style={{ padding: '5px 6px' }}><Icon d={icons.close} size={16} /></button>
@@ -1881,8 +1886,8 @@ function NewPostModal({ template, onClose }: { template: Template | null; onClos
                 <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#a1a1aa', marginBottom: 8 }}>Tipo de Conteúdo</label>
                 <div style={{ display: 'flex', gap: 8 }}>
                   {(['carousel', 'video', 'image'] as ContentType[]).map(type => (
-                    <button key={type} onClick={() => setPostType(type)} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, padding: '14px 10px', borderRadius: 12, border: '1px solid', cursor: 'pointer', transition: 'all 0.15s', background: postType === type ? 'rgba(139,92,246,0.12)' : 'rgba(255,255,255,0.02)', borderColor: postType === type ? 'rgba(139,92,246,0.4)' : 'rgba(255,255,255,0.08)' }}>
-                      <span style={{ color: postType === type ? '#8b5cf6' : '#52525b', transition: 'color 0.15s' }}>
+                    <button key={type} onClick={() => setPostType(type)} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, padding: '14px 10px', borderRadius: 12, border: '1px solid', cursor: 'pointer', transition: 'all 0.15s', background: postType === type ? 'rgba(16,185,129,0.12)' : 'rgba(255,255,255,0.02)', borderColor: postType === type ? 'rgba(16,185,129,0.4)' : 'rgba(255,255,255,0.08)' }}>
+                      <span style={{ color: postType === type ? '#10b981' : '#52525b', transition: 'color 0.15s' }}>
                         <Icon d={type === 'carousel' ? icons.layers : type === 'video' ? icons.video : icons.image} size={20} />
                       </span>
                       <span style={{ fontSize: '0.75rem', fontWeight: 600, color: postType === type ? '#fafafa' : '#71717a', textTransform: 'capitalize' }}>{type}</span>
@@ -1894,14 +1899,14 @@ function NewPostModal({ template, onClose }: { template: Template | null; onClos
                 <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#a1a1aa', marginBottom: 8 }}>Canais</label>
                 <div style={{ display: 'flex', gap: 8 }}>
                   {(['instagram', 'twitter', 'linkedin'] as const).map(c => (
-                    <button key={c} onClick={() => toggleChannel(c)} style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '9px 10px', borderRadius: 10, border: '1px solid', cursor: 'pointer', transition: 'all 0.15s', background: channels.includes(c) ? 'rgba(139,92,246,0.1)' : 'rgba(255,255,255,0.02)', borderColor: channels.includes(c) ? 'rgba(139,92,246,0.35)' : 'rgba(255,255,255,0.08)' }}>
+                    <button key={c} onClick={() => toggleChannel(c)} style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '9px 10px', borderRadius: 10, border: '1px solid', cursor: 'pointer', transition: 'all 0.15s', background: channels.includes(c) ? 'rgba(16,185,129,0.1)' : 'rgba(255,255,255,0.02)', borderColor: channels.includes(c) ? 'rgba(16,185,129,0.35)' : 'rgba(255,255,255,0.08)' }}>
                       <ChannelTag channel={c} />
                     </button>
                   ))}
                 </div>
               </div>
-              <div style={{ padding: '12px 14px', background: 'rgba(139,92,246,0.06)', border: '1px solid rgba(139,92,246,0.15)', borderRadius: 10 }}>
-                <div style={{ fontSize: '0.75rem', color: '#a78bfa', fontWeight: 500, display: 'flex', alignItems: 'center', gap: 6 }}>
+              <div style={{ padding: '12px 14px', background: 'rgba(16,185,129,0.06)', border: '1px solid rgba(16,185,129,0.15)', borderRadius: 10 }}>
+                <div style={{ fontSize: '0.75rem', color: '#34d399', fontWeight: 500, display: 'flex', alignItems: 'center', gap: 6 }}>
                   <Icon d={icons.spark} size={13} /> A IA vai gerar slides, legenda e hashtags automaticamente sobre o tema acima.
                 </div>
               </div>
@@ -1921,7 +1926,7 @@ function NewPostModal({ template, onClose }: { template: Template | null; onClos
                 {[{ icon: icons.layers, label: postType, detail: postType === 'carousel' ? '8 slides' : '0:30 video' },
                   { icon: icons.calendar, label: 'Agendado', detail: '8 Ago às 10:00' }].map(item => (
                   <div key={item.label} style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 10, padding: '12px 14px', display: 'flex', gap: 10, alignItems: 'center' }}>
-                    <span style={{ color: '#8b5cf6' }}><Icon d={item.icon} size={16} /></span>
+                    <span style={{ color: '#10b981' }}><Icon d={item.icon} size={16} /></span>
                     <div>
                       <div style={{ fontSize: '0.6875rem', fontWeight: 600, color: '#fafafa', textTransform: 'capitalize' }}>{item.label}</div>
                       <div style={{ fontSize: '0.625rem', color: '#52525b' }}>{item.detail}</div>
@@ -2011,12 +2016,12 @@ function NotificationsPanel({ open, onClose }: { open: boolean; onClose: () => v
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <h2 style={{ margin: 0, fontSize: '0.9375rem', fontWeight: 600, color: '#fafafa' }}>Notificações</h2>
             {unreadCount > 0 && (
-              <span style={{ fontSize: '0.625rem', fontWeight: 700, color: '#fff', background: '#8b5cf6', padding: '2px 7px', borderRadius: 9999 }}>{unreadCount}</span>
+              <span style={{ fontSize: '0.625rem', fontWeight: 700, color: '#fff', background: '#10b981', padding: '2px 7px', borderRadius: 9999 }}>{unreadCount}</span>
             )}
           </div>
           <div style={{ display: 'flex', gap: 6 }}>
             {unreadCount > 0 && (
-              <button className="btn-ghost" style={{ fontSize: '0.6875rem', padding: '4px 10px', color: '#8b5cf6' }} onClick={markAll}>Marcar tudo como lido</button>
+              <button className="btn-ghost" style={{ fontSize: '0.6875rem', padding: '4px 10px', color: '#10b981' }} onClick={markAll}>Marcar tudo como lido</button>
             )}
             <button className="btn-ghost" style={{ padding: '5px 6px' }} onClick={onClose}><Icon d={icons.close} size={15} /></button>
           </div>
@@ -2031,7 +2036,7 @@ function NotificationsPanel({ open, onClose }: { open: boolean; onClose: () => v
             key={n.id}
             style={{
               display: 'flex', gap: 12, padding: '14px 20px',
-              background: n.unread ? 'rgba(139,92,246,0.04)' : 'transparent',
+              background: n.unread ? 'rgba(16,185,129,0.04)' : 'transparent',
               borderBottom: i < items.length - 1 ? '1px solid rgba(255,255,255,0.04)' : 'none',
               transition: 'background 0.15s',
             }}
@@ -2042,7 +2047,7 @@ function NotificationsPanel({ open, onClose }: { open: boolean; onClose: () => v
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8, marginBottom: 2 }}>
                 <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: '#fafafa', lineHeight: 1.3 }}>{n.title}</span>
-                {n.unread && <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#8b5cf6', flexShrink: 0, marginTop: 3 }} />}
+                {n.unread && <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#10b981', flexShrink: 0, marginTop: 3 }} />}
               </div>
               <p style={{ margin: '0 0 6px', fontSize: '0.75rem', color: '#71717a', lineHeight: 1.4 }}>{n.body}</p>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -2107,7 +2112,7 @@ function UserPanel({ open, onClose }: { open: boolean; onClose: () => void }) {
       onClick={() => onChange(!value)}
       style={{
         width: 36, height: 20, borderRadius: 9999, border: 'none', cursor: 'pointer',
-        background: value ? '#8b5cf6' : 'rgba(255,255,255,0.1)',
+        background: value ? '#10b981' : 'rgba(255,255,255,0.1)',
         position: 'relative', transition: 'background 0.2s', flexShrink: 0,
       }}
     >
@@ -2122,9 +2127,9 @@ function UserPanel({ open, onClose }: { open: boolean; onClose: () => void }) {
   return (
     <SlidePanel open={open} onClose={onClose} width={360}>
       {/* Profile hero */}
-      <div style={{ padding: '28px 24px 20px', borderBottom: '1px solid rgba(255,255,255,0.06)', background: 'linear-gradient(180deg, rgba(139,92,246,0.07) 0%, transparent 100%)', flexShrink: 0 }}>
+      <div style={{ padding: '28px 24px 20px', borderBottom: '1px solid rgba(255,255,255,0.06)', background: 'linear-gradient(180deg, rgba(16,185,129,0.07) 0%, transparent 100%)', flexShrink: 0 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
-          <div style={{ width: 56, height: 56, borderRadius: '50%', background: 'linear-gradient(135deg, #8b5cf6, #3b82f6)', border: '2.5px solid rgba(139,92,246,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.25rem', color: '#fff', fontWeight: 700, flexShrink: 0 }}>
+          <div style={{ width: 56, height: 56, borderRadius: '50%', background: 'linear-gradient(135deg, #10b981, #3b82f6)', border: '2.5px solid rgba(16,185,129,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.25rem', color: '#fff', fontWeight: 700, flexShrink: 0 }}>
             {displayName.split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase() || 'U'}
           </div>
           <button className="btn-ghost" style={{ padding: '5px 6px' }} onClick={onClose}><Icon d={icons.close} size={15} /></button>
@@ -2161,7 +2166,7 @@ function UserPanel({ open, onClose }: { open: boolean; onClose: () => void }) {
         )}
         <p style={{ margin: '0 0 10px', fontSize: '0.75rem', color: '#71717a' }}>{userEmail || '—'}</p>
         <div style={{ display: 'flex', gap: 8 }}>
-          <span style={{ fontSize: '0.625rem', fontWeight: 700, color: '#8b5cf6', background: 'rgba(139,92,246,0.15)', padding: '3px 10px', borderRadius: 9999, border: '1px solid rgba(139,92,246,0.25)' }}>{planName.toUpperCase()} PLANO</span>
+          <span style={{ fontSize: '0.625rem', fontWeight: 700, color: '#10b981', background: 'rgba(16,185,129,0.15)', padding: '3px 10px', borderRadius: 9999, border: '1px solid rgba(16,185,129,0.25)' }}>{planName.toUpperCase()} PLANO</span>
           <span style={{ fontSize: '0.625rem', fontWeight: 600, color: '#22c55e', background: 'rgba(34,197,94,0.1)', padding: '3px 10px', borderRadius: 9999 }}>● Ativo</span>
         </div>
       </div>
@@ -2328,7 +2333,7 @@ function SettingsPanel({ open, onClose }: { open: boolean; onClose: () => void }
   }
 
   const Toggle = ({ value, onChange }: { value: boolean; onChange: (v: boolean) => void }) => (
-    <button onClick={() => onChange(!value)} style={{ width: 36, height: 20, borderRadius: 9999, border: 'none', cursor: 'pointer', background: value ? '#8b5cf6' : 'rgba(255,255,255,0.1)', position: 'relative', transition: 'background 0.2s', flexShrink: 0 }}>
+    <button onClick={() => onChange(!value)} style={{ width: 36, height: 20, borderRadius: 9999, border: 'none', cursor: 'pointer', background: value ? '#10b981' : 'rgba(255,255,255,0.1)', position: 'relative', transition: 'background 0.2s', flexShrink: 0 }}>
       <span style={{ position: 'absolute', top: 3, left: value ? 18 : 3, width: 14, height: 14, borderRadius: '50%', background: '#fff', transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.4)' }} />
     </button>
   )
@@ -2350,7 +2355,7 @@ function SettingsPanel({ open, onClose }: { open: boolean; onClose: () => void }
       <div style={{ padding: '20px 20px 0', borderBottom: '1px solid rgba(255,255,255,0.06)', flexShrink: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div style={{ width: 30, height: 30, borderRadius: 8, background: 'rgba(139,92,246,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#8b5cf6' }}>
+            <div style={{ width: 30, height: 30, borderRadius: 8, background: 'rgba(16,185,129,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#10b981' }}>
               <Icon d={icons.settings} size={14} />
             </div>
             <h2 style={{ margin: 0, fontSize: '0.9375rem', fontWeight: 600, color: '#fafafa' }}>Configurações</h2>
@@ -2407,8 +2412,8 @@ function SettingsPanel({ open, onClose }: { open: boolean; onClose: () => void }
         {/* ── API Key ── */}
         {tab === 'apikey' && (
           <>
-            <div style={{ background: 'rgba(139,92,246,0.06)', border: '1px solid rgba(139,92,246,0.2)', borderRadius: 12, padding: 16 }}>
-              <div style={{ fontSize: '0.75rem', fontWeight: 600, color: '#a78bfa', marginBottom: 8 }}>Sua Chave API</div>
+            <div style={{ background: 'rgba(16,185,129,0.06)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: 12, padding: 16 }}>
+              <div style={{ fontSize: '0.75rem', fontWeight: 600, color: '#34d399', marginBottom: 8 }}>Sua Chave API</div>
               <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                 <code style={{ flex: 1, fontSize: '0.75rem', color: '#fafafa', fontFamily: 'JetBrains Mono, monospace', background: 'rgba(0,0,0,0.3)', padding: '8px 12px', borderRadius: 8, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {apiKeyVisible ? apiKey : '•'.repeat(apiKey.length)}
@@ -2435,7 +2440,7 @@ function SettingsPanel({ open, onClose }: { open: boolean; onClose: () => void }
                 { method: 'POST', path: '/v1/render/video', desc: 'Iniciar renderização de vídeo' },
               ].map(ep => (
                 <div key={ep.method + ep.path} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: 9, marginBottom: 6 }}>
-                  <span style={{ fontSize: '0.5625rem', fontWeight: 700, color: ep.method === 'GET' ? '#22c55e' : '#8b5cf6', background: ep.method === 'GET' ? 'rgba(34,197,94,0.1)' : 'rgba(139,92,246,0.12)', padding: '2px 6px', borderRadius: 4, fontFamily: 'JetBrains Mono, monospace', flexShrink: 0 }}>{ep.method}</span>
+                  <span style={{ fontSize: '0.5625rem', fontWeight: 700, color: ep.method === 'GET' ? '#22c55e' : '#10b981', background: ep.method === 'GET' ? 'rgba(34,197,94,0.1)' : 'rgba(16,185,129,0.12)', padding: '2px 6px', borderRadius: 4, fontFamily: 'JetBrains Mono, monospace', flexShrink: 0 }}>{ep.method}</span>
                   <code style={{ flex: 1, fontSize: '0.75rem', color: '#a1a1aa', fontFamily: 'JetBrains Mono, monospace' }}>{ep.path}</code>
                   <span style={{ fontSize: '0.6875rem', color: '#52525b' }}>{ep.desc}</span>
                 </div>
@@ -2581,7 +2586,7 @@ function ChatPanel({ open, onClose }: { open: boolean; onClose: () => void }) {
       <div style={{ padding: '18px 20px 14px', borderBottom: '1px solid rgba(255,255,255,0.06)', flexShrink: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div style={{ width: 34, height: 34, borderRadius: 10, background: 'linear-gradient(135deg, #8b5cf6, #6366f1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }} className="animate-pulse-glow">
+            <div style={{ width: 34, height: 34, borderRadius: 10, background: 'linear-gradient(135deg, #10b981, #14b8a6)', display: 'flex', alignItems: 'center', justifyContent: 'center' }} className="animate-pulse-glow">
               <Icon d={icons.spark} size={16} />
             </div>
             <div>
@@ -2605,7 +2610,7 @@ function ChatPanel({ open, onClose }: { open: boolean; onClose: () => void }) {
           <div key={msg.id} style={{ display: 'flex', flexDirection: 'column', alignItems: msg.role === 'user' ? 'flex-end' : 'flex-start', gap: 4 }}>
             {msg.role === 'ai' && (
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
-                <div style={{ width: 20, height: 20, borderRadius: 6, background: 'linear-gradient(135deg, #8b5cf6, #6366f1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div style={{ width: 20, height: 20, borderRadius: 6, background: 'linear-gradient(135deg, #10b981, #14b8a6)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <Icon d={icons.spark} size={10} />
                 </div>
                 <span style={{ fontSize: '0.625rem', fontWeight: 600, color: '#71717a' }}>Arx AI</span>
@@ -2615,7 +2620,7 @@ function ChatPanel({ open, onClose }: { open: boolean; onClose: () => void }) {
               maxWidth: '88%',
               padding: '10px 14px',
               borderRadius: msg.role === 'user' ? '16px 16px 4px 16px' : '4px 16px 16px 16px',
-              background: msg.role === 'user' ? '#8b5cf6' : 'rgba(255,255,255,0.05)',
+              background: msg.role === 'user' ? '#10b981' : 'rgba(255,255,255,0.05)',
               border: msg.role === 'user' ? 'none' : '1px solid rgba(255,255,255,0.08)',
               fontSize: '0.8125rem',
               color: '#fafafa',
@@ -2631,14 +2636,14 @@ function ChatPanel({ open, onClose }: { open: boolean; onClose: () => void }) {
         {typing && (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 4 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
-              <div style={{ width: 20, height: 20, borderRadius: 6, background: 'linear-gradient(135deg, #8b5cf6, #6366f1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <div style={{ width: 20, height: 20, borderRadius: 6, background: 'linear-gradient(135deg, #10b981, #14b8a6)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <Icon d={icons.spark} size={10} />
               </div>
               <span style={{ fontSize: '0.625rem', fontWeight: 600, color: '#71717a' }}>Arx AI</span>
             </div>
             <div style={{ padding: '12px 16px', borderRadius: '4px 16px 16px 16px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', display: 'flex', gap: 5, alignItems: 'center' }}>
               {[0, 1, 2].map(i => (
-                <span key={i} style={{ width: 6, height: 6, borderRadius: '50%', background: '#8b5cf6', display: 'inline-block', animation: `pulse-glow 1.2s ease-in-out ${i * 0.2}s infinite` }} />
+                <span key={i} style={{ width: 6, height: 6, borderRadius: '50%', background: '#10b981', display: 'inline-block', animation: `pulse-glow 1.2s ease-in-out ${i * 0.2}s infinite` }} />
               ))}
             </div>
           </div>
@@ -2649,7 +2654,7 @@ function ChatPanel({ open, onClose }: { open: boolean; onClose: () => void }) {
       {/* Quick suggestions */}
       <div style={{ padding: '8px 16px 0', display: 'flex', gap: 6, flexWrap: 'wrap', flexShrink: 0 }}>
         {suggestions.map(s => (
-          <button key={s} onClick={() => setInput(s)} style={{ fontSize: '0.6875rem', fontWeight: 500, color: '#a78bfa', background: 'rgba(139,92,246,0.08)', border: '1px solid rgba(139,92,246,0.2)', borderRadius: 9999, padding: '4px 11px', cursor: 'pointer', transition: 'background 0.15s', whiteSpace: 'nowrap' }}>
+          <button key={s} onClick={() => setInput(s)} style={{ fontSize: '0.6875rem', fontWeight: 500, color: '#34d399', background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: 9999, padding: '4px 11px', cursor: 'pointer', transition: 'background 0.15s', whiteSpace: 'nowrap' }}>
             {s}
           </button>
         ))}
@@ -2669,7 +2674,7 @@ function ChatPanel({ open, onClose }: { open: boolean; onClose: () => void }) {
           <button
             onClick={send}
             disabled={!input.trim() || typing}
-            style={{ width: 34, height: 34, borderRadius: 9, background: input.trim() && !typing ? '#8b5cf6' : 'rgba(255,255,255,0.06)', border: 'none', cursor: input.trim() && !typing ? 'pointer' : 'default', display: 'flex', alignItems: 'center', justifyContent: 'center', color: input.trim() && !typing ? '#fff' : '#3f3f46', transition: 'background 0.15s, color 0.15s', flexShrink: 0 }}
+            style={{ width: 34, height: 34, borderRadius: 9, background: input.trim() && !typing ? '#10b981' : 'rgba(255,255,255,0.06)', border: 'none', cursor: input.trim() && !typing ? 'pointer' : 'default', display: 'flex', alignItems: 'center', justifyContent: 'center', color: input.trim() && !typing ? '#fff' : '#3f3f46', transition: 'background 0.15s, color 0.15s', flexShrink: 0 }}
           >
             <Icon d={icons.play} size={13} />
           </button>
@@ -2732,7 +2737,7 @@ function AdminPage() {
       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
         <h3 style={{ margin: 0, fontSize: '0.9375rem', fontWeight: 600, color: '#fafafa' }}>Painel de Administração</h3>
         <div style={{ flex: 1 }} />
-        <span style={{ fontSize: '0.6875rem', color: '#8b5cf6', background: 'rgba(139,92,246,0.15)', padding: '4px 10px', borderRadius: 9999, fontWeight: 600 }}>ADMIN</span>
+        <span style={{ fontSize: '0.6875rem', color: '#10b981', background: 'rgba(16,185,129,0.15)', padding: '4px 10px', borderRadius: 9999, fontWeight: 600 }}>ADMIN</span>
       </div>
 
       {/* Tabs */}
@@ -2749,7 +2754,7 @@ function AdminPage() {
         <>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
             {[
-              { label: 'Usuários', value: stats?.total_users ?? '—', color: '#8b5cf6' },
+              { label: 'Usuários', value: stats?.total_users ?? '—', color: '#10b981' },
               { label: 'Posts no sistema', value: stats?.total_posts ?? '—', color: '#3b82f6' },
               { label: 'Planos', value: stats?.total_plans ?? '—', color: '#22c55e' },
               { label: 'Sessões ativas', value: stats?.active_sessions ?? '—', color: '#f59e0b' },
@@ -2766,7 +2771,7 @@ function AdminPage() {
               <h3 style={{ margin: '0 0 16px', fontSize: '0.9375rem', fontWeight: 600, color: '#fafafa' }}>Usuários por role</h3>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                 {[
-                  { label: 'Administradores', value: stats?.total_admins ?? 0, color: '#8b5cf6' },
+                  { label: 'Administradores', value: stats?.total_admins ?? 0, color: '#10b981' },
                   { label: 'Clientes (users)', value: stats?.total_clients ?? 0, color: '#3b82f6' },
                   { label: 'Clientes (tabela clientes)', value: stats?.total_clientes_table ?? 0, color: '#22c55e' },
                 ].map(r => (
@@ -2808,7 +2813,7 @@ function AdminPage() {
           <div style={{ display: 'flex', flexDirection: 'column' }}>
             {users.map((u, i) => (
               <div key={u.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 20px', borderBottom: i < users.length - 1 ? '1px solid rgba(255,255,255,0.04)' : 'none' }}>
-                <div style={{ width: 32, height: 32, borderRadius: '50%', background: u.role === 'admin' ? 'linear-gradient(135deg, #8b5cf6, #3b82f6)' : 'rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.625rem', fontWeight: 700, color: '#fff', flexShrink: 0 }}>
+                <div style={{ width: 32, height: 32, borderRadius: '50%', background: u.role === 'admin' ? 'linear-gradient(135deg, #10b981, #3b82f6)' : 'rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.625rem', fontWeight: 700, color: '#fff', flexShrink: 0 }}>
                   {(u.full_name || u.email || '?')[0].toUpperCase()}
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
@@ -2816,7 +2821,7 @@ function AdminPage() {
                   <div style={{ fontSize: '0.6875rem', color: '#52525b' }}>{u.email}</div>
                 </div>
                 <div style={{ textAlign: 'right' }}>
-                  <span style={{ fontSize: '0.625rem', fontWeight: 700, color: u.role === 'admin' ? '#8b5cf6' : '#3b82f6', background: u.role === 'admin' ? 'rgba(139,92,246,0.15)' : 'rgba(59,130,246,0.12)', padding: '3px 9px', borderRadius: 9999, textTransform: 'capitalize' }}>{u.role}</span>
+                  <span style={{ fontSize: '0.625rem', fontWeight: 700, color: u.role === 'admin' ? '#10b981' : '#3b82f6', background: u.role === 'admin' ? 'rgba(16,185,129,0.15)' : 'rgba(59,130,246,0.12)', padding: '3px 9px', borderRadius: 9999, textTransform: 'capitalize' }}>{u.role}</span>
                   <div style={{ fontSize: '0.625rem', color: '#52525b', marginTop: 3 }}>{u.plan_name || 'Sem plano'} · {fmtDate(u.created_at)}</div>
                 </div>
               </div>
@@ -2835,7 +2840,7 @@ function AdminPage() {
           <div style={{ display: 'flex', flexDirection: 'column' }}>
             {clientes.map((c, i) => (
               <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 20px', borderBottom: i < clientes.length - 1 ? '1px solid rgba(255,255,255,0.04)' : 'none' }}>
-                <div style={{ width: 32, height: 32, borderRadius: 8, background: 'rgba(139,92,246,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.625rem', fontWeight: 700, color: '#8b5cf6', flexShrink: 0 }}>
+                <div style={{ width: 32, height: 32, borderRadius: 8, background: 'rgba(16,185,129,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.625rem', fontWeight: 700, color: '#10b981', flexShrink: 0 }}>
                   {(c.nome || '?')[0].toUpperCase()}
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
@@ -2865,7 +2870,7 @@ function AdminPage() {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
           {plans.map(p => (
             <div key={p.id} className="glass-card" style={{ padding: 20 }}>
-              <div style={{ fontSize: '0.6875rem', fontWeight: 600, color: '#8b5cf6', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>{p.name}</div>
+              <div style={{ fontSize: '0.6875rem', fontWeight: 600, color: '#10b981', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>{p.name}</div>
               <div style={{ fontSize: '1.5rem', fontWeight: 700, color: '#fafafa', marginBottom: 12 }}>
                 R$ {Number(p.price_monthly).toFixed(2).replace('.', ',')}
                 <span style={{ fontSize: '0.6875rem', color: '#52525b', fontWeight: 500 }}>/mês</span>
@@ -2966,7 +2971,7 @@ function LoginView({ onLogin }: { onLogin: (token: string, user: any) => void })
     <div className="aurora-bg" style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, fontFamily: 'Inter, system-ui, sans-serif' }}>
       <div className="glass-card animate-fade-in" style={{ width: '100%', maxWidth: 380, padding: 32 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 24 }}>
-          <div style={{ width: 36, height: 36, borderRadius: 10, background: '#8b5cf6', display: 'flex', alignItems: 'center', justifyContent: 'center' }} className="animate-pulse-glow">
+          <div style={{ width: 36, height: 36, borderRadius: 10, background: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center' }} className="animate-pulse-glow">
             <Icon d={icons.spark} size={17} />
           </div>
           <div>
@@ -3049,9 +3054,9 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
               onClick={this.handleReload}
               style={{
                 padding: '10px 24px', borderRadius: 10, fontSize: '0.8125rem', fontWeight: 600,
-                background: 'linear-gradient(135deg, #8b5cf6, #6366f1)', color: '#fff',
+                background: 'linear-gradient(135deg, #10b981, #14b8a6)', color: '#fff',
                 border: 'none', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 8,
-                boxShadow: '0 4px 14px rgba(139,92,246,0.3)',
+                boxShadow: '0 4px 14px rgba(16,185,129,0.3)',
               }}
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -3180,7 +3185,7 @@ const onboardingSteps = [
     icon: icons.spark,
     title: 'Bem-vindo ao Arx!',
     description: 'Sua Content Factory está pronta para automatizar a criação e publicação de conteúdo em todas as suas redes sociais.',
-    color: '#8b5cf6',
+    color: '#10b981',
   },
   {
     icon: icons.plus,
@@ -3496,7 +3501,7 @@ export default function App() {
     return (
       <Suspense fallback={
         <div className="aurora-bg" style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div style={{ width: 36, height: 36, border: '2px solid rgba(139,92,246,0.3)', borderTop: '2px solid #8b5cf6', borderRadius: '50%' }} className="animate-spin-slow" />
+          <div style={{ width: 36, height: 36, border: '2px solid rgba(16,185,129,0.3)', borderTop: '2px solid #10b981', borderRadius: '50%' }} className="animate-spin-slow" />
         </div>
       }>
         {(() => {
@@ -3517,7 +3522,7 @@ export default function App() {
   if (authed === null) {
     return (
       <div className="aurora-bg" style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div style={{ width: 36, height: 36, border: '2px solid rgba(139,92,246,0.3)', borderTop: '2px solid #8b5cf6', borderRadius: '50%' }} className="animate-spin-slow" />
+        <div style={{ width: 36, height: 36, border: '2px solid rgba(16,185,129,0.3)', borderTop: '2px solid #10b981', borderRadius: '50%' }} className="animate-spin-slow" />
       </div>
     )
   }
@@ -3553,10 +3558,10 @@ export default function App() {
   return (
     <div className="aurora-bg" style={{ display: 'flex', height: '100vh', overflow: 'hidden', fontFamily: 'Inter, system-ui, sans-serif' }}>
       {/* Sidebar */}
-      <aside style={{ width: 220, flexShrink: 0, background: '#0f0f0f', borderRight: '1px solid rgba(255,255,255,0.06)', display: 'flex', flexDirection: 'column', padding: '0 12px' }}>
+      <aside style={{ width: 240, flexShrink: 0, background: '#101012', borderRight: '1px solid rgba(255,255,255,0.08)', display: 'flex', flexDirection: 'column', padding: '0 12px' }}>
         {/* Logo */}
-        <div style={{ padding: '16px 8px', borderBottom: '1px solid rgba(255,255,255,0.06)', marginBottom: 8 }}>
-          <ArxLogo size={34} glow />
+        <div style={{ padding: '16px 8px', borderBottom: '1px solid rgba(255,255,255,0.08)', marginBottom: 8 }}>
+          <ArxLogo size={34} />
         </div>
 
         {/* Nav */}
@@ -3574,7 +3579,7 @@ export default function App() {
           <button className={`sidebar-item ${chatOpen ? 'active' : ''}`} style={{ border: 'none', width: '100%', textAlign: 'left', marginBottom: 2 }} onClick={() => { closeAll(); setChatOpen(true) }}>
             <Icon d={icons.spark} size={16} />
             <span>Assistente IA</span>
-            <span style={{ marginLeft: 'auto', fontSize: '0.5rem', fontWeight: 700, color: '#8b5cf6', background: 'rgba(139,92,246,0.15)', padding: '2px 6px', borderRadius: 9999 }}>AI</span>
+            <span style={{ marginLeft: 'auto', fontSize: '0.5rem', fontWeight: 700, color: '#10b981', background: 'rgba(16,185,129,0.15)', padding: '2px 6px', borderRadius: 9999 }}>AI</span>
           </button>
           <button className="sidebar-item" style={{ border: 'none', width: '100%', textAlign: 'left' }} onClick={() => { closeAll(); setSettingsOpen(true) }}>
             <Icon d={icons.settings} size={16} />
@@ -3585,7 +3590,7 @@ export default function App() {
             <span>Sair</span>
           </button>
           <button onClick={() => { closeAll(); setUserOpen(true) }} style={{ width: '100%', background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', gap: 10, marginTop: 6 }}>
-            <div style={{ width: 30, height: 30, borderRadius: '50%', background: 'linear-gradient(135deg, #8b5cf6, #3b82f6)', border: '2px solid rgba(139,92,246,0.5)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.625rem', fontWeight: 700, color: '#fff' }}>{initials || 'A'}</div>
+            <div style={{ width: 30, height: 30, borderRadius: '50%', background: 'linear-gradient(135deg, #10b981, #14b8a6)', border: '2px solid rgba(16,185,129,0.4)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.625rem', fontWeight: 700, color: '#fff' }}>{initials || 'A'}</div>
             <div style={{ minWidth: 0, textAlign: 'left' }}>
               <div style={{ fontSize: '0.75rem', fontWeight: 600, color: '#fafafa', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{userName}</div>
               <div style={{ fontSize: '0.625rem', color: '#52525b' }}>Plano {planName}</div>
@@ -3597,7 +3602,7 @@ export default function App() {
       {/* Main */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         {/* Header */}
-        <header style={{ height: 56, flexShrink: 0, background: 'rgba(10,10,10,0.95)', borderBottom: '1px solid rgba(255,255,255,0.06)', backdropFilter: 'blur(12px)', display: 'flex', alignItems: 'center', padding: '0 24px', gap: 16, position: 'sticky', top: 0, zIndex: 10 }}>
+        <header style={{ height: 56, flexShrink: 0, background: '#0a0a0b', borderBottom: '1px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', padding: '0 24px', gap: 16, position: 'sticky', top: 0, zIndex: 10 }}>
           <h1 style={{ margin: 0, fontSize: '0.9375rem', fontWeight: 600, color: '#fafafa' }}>{pageTitles[page]}</h1>
           <div style={{ flex: 1 }} />
           <button className="btn-primary" onClick={() => { setSelectedTemplate(null); setNewPostModal(true) }} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -3605,9 +3610,9 @@ export default function App() {
           </button>
           <button className="btn-ghost" style={{ padding: '6px 8px', position: 'relative' }} onClick={() => { setNotifOpen(true); setUserOpen(false); setSettingsOpen(false); setChatOpen(false) }}>
             <Icon d={icons.bell} size={17} />
-            {unreadNotifs > 0 && <span style={{ position: 'absolute', top: 4, right: 4, width: 16, height: 16, borderRadius: '50%', background: '#8b5cf6', fontSize: '0.5rem', fontWeight: 700, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{unreadNotifs}</span>}
+            {unreadNotifs > 0 && <span style={{ position: 'absolute', top: 4, right: 4, width: 16, height: 16, borderRadius: '50%', background: '#10b981', fontSize: '0.5rem', fontWeight: 700, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{unreadNotifs}</span>}
           </button>
-          <button onClick={() => { setUserOpen(true); setNotifOpen(false); setSettingsOpen(false); setChatOpen(false) }} style={{ width: 32, height: 32, borderRadius: '50%', background: 'linear-gradient(135deg, #8b5cf6, #3b82f6)', border: '2px solid rgba(139,92,246,0.5)', cursor: 'pointer', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '0.625rem', fontWeight: 700 }}>
+          <button onClick={() => { setUserOpen(true); setNotifOpen(false); setSettingsOpen(false); setChatOpen(false) }} style={{ width: 32, height: 32, borderRadius: '50%', background: 'linear-gradient(135deg, #10b981, #14b8a6)', border: '2px solid rgba(16,185,129,0.4)', cursor: 'pointer', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '0.625rem', fontWeight: 700 }}>
             {initials || 'A'}
           </button>
         </header>

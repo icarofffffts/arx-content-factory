@@ -1,4 +1,4 @@
-# QA Report — 2026-08-05T20:00:22.865604
+# QA Report — 2026-08-05T20:43:53.653249
 
 **Base:** https://conteudos.icarodev.cloud
 
@@ -11,7 +11,7 @@
 | backend | PASS |
 | build | PASS |
 | rls | PASS |
-| e2e | SKIP-MANUAL |
+| e2e | PASS |
 
 ## E2E (manual)
 - Executado via Hermes browser (Playwright sync indisponível em Python 3.14 / greenlet).

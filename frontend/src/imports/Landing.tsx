@@ -48,9 +48,9 @@ function AuroraBackground() {
         const x = current.current.x * 100
         const y = current.current.y * 100
         ref.current.style.background = `
-          radial-gradient(ellipse at ${x}% ${y}%, rgba(139,92,246,0.18) 0%, transparent 55%),
+          radial-gradient(ellipse at ${x}% ${y}%, rgba(16,185,129,0.18) 0%, transparent 55%),
           radial-gradient(ellipse at ${100 - x}% ${100 - y}%, rgba(59,130,246,0.10) 0%, transparent 50%),
-          radial-gradient(ellipse at ${x * 0.4}% ${y * 0.6 + 40}%, rgba(139,92,246,0.07) 0%, transparent 45%),
+          radial-gradient(ellipse at ${x * 0.4}% ${y * 0.6 + 40}%, rgba(16,185,129,0.07) 0%, transparent 45%),
           #0a0a0a
         `
       }
@@ -120,7 +120,7 @@ function ParticleField() {
         const alpha = dToMouse < 200 ? 0.5 : 0.15
         ctx.beginPath()
         ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2)
-        ctx.fillStyle = `rgba(139,92,246,${alpha})`
+        ctx.fillStyle = `rgba(16,185,129,${alpha})`
         ctx.fill()
       }
 
@@ -133,7 +133,7 @@ function ParticleField() {
             ctx.beginPath()
             ctx.moveTo(pts[i].x, pts[i].y)
             ctx.lineTo(pts[j].x, pts[j].y)
-            ctx.strokeStyle = `rgba(139,92,246,${0.08 * (1 - d / 100)})`
+            ctx.strokeStyle = `rgba(16,185,129,${0.08 * (1 - d / 100)})`
             ctx.lineWidth = 0.5
             ctx.stroke()
           }
@@ -182,7 +182,7 @@ function MagneticBtn({ children, onClick, primary = false, large = false }: { ch
       style={{
         transform: `translate(${pos.x}px, ${pos.y}px)`,
         transition: hovered ? 'transform 0.1s ease' : 'transform 0.4s cubic-bezier(0.23,1,0.32,1)',
-        background: primary ? 'linear-gradient(135deg, #8b5cf6, #7c3aed)' : 'rgba(255,255,255,0.05)',
+        background: primary ? 'linear-gradient(135deg, #10b981, #059669)' : 'rgba(255,255,255,0.05)',
         color: primary ? '#fff' : '#a1a1aa',
         border: primary ? 'none' : '1px solid rgba(255,255,255,0.12)',
         borderRadius: 12,
@@ -190,7 +190,7 @@ function MagneticBtn({ children, onClick, primary = false, large = false }: { ch
         fontSize: fs,
         fontWeight: 700,
         cursor: 'pointer',
-        boxShadow: primary ? `0 0 ${hovered ? 32 : 16}px rgba(139,92,246,${hovered ? 0.6 : 0.35})` : 'none',
+        boxShadow: primary ? `0 0 ${hovered ? 32 : 16}px rgba(16,185,129,${hovered ? 0.6 : 0.35})` : 'none',
         fontFamily: 'Inter, sans-serif',
         display: 'inline-flex',
         alignItems: 'center',
@@ -205,7 +205,7 @@ function MagneticBtn({ children, onClick, primary = false, large = false }: { ch
 
 // ─── 3D tilt card ─────────────────────────────────────────────────────────────
 
-function TiltCard({ children, accent = '#8b5cf6', style: extraStyle }: { children: React.ReactNode; accent?: string; style?: React.CSSProperties }) {
+function TiltCard({ children, accent = '#10b981', style: extraStyle }: { children: React.ReactNode; accent?: string; style?: React.CSSProperties }) {
   const ref = useRef<HTMLDivElement>(null)
   const [tilt, setTilt] = useState({ x: 0, y: 0 })
   const [shine, setShine] = useState({ x: 50, y: 50 })
@@ -277,9 +277,9 @@ function Typewriter({ words }: { words: string[] }) {
   }, [text, deleting, pause, wi, words])
 
   return (
-    <span style={{ background: 'linear-gradient(135deg, #a78bfa, #8b5cf6, #6366f1)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
+    <span style={{ background: 'linear-gradient(135deg, #34d399, #10b981, #14b8a6)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
       {text}
-      <span style={{ WebkitTextFillColor: '#8b5cf6', animation: 'blink 0.9s step-end infinite' }}>|</span>
+      <span style={{ WebkitTextFillColor: '#10b981', animation: 'blink 0.9s step-end infinite' }}>|</span>
     </span>
   )
 }
@@ -298,7 +298,7 @@ function ScrollBar() {
   }, [])
   return (
     <div style={{ position: 'fixed', top: 0, left: 0, right: 0, height: 2, zIndex: 200, background: 'rgba(255,255,255,0.06)' }}>
-      <div style={{ height: '100%', width: `${pct}%`, background: 'linear-gradient(90deg, #8b5cf6, #a78bfa)', transition: 'width 0.1s linear', boxShadow: '0 0 8px rgba(139,92,246,0.8)' }} />
+      <div style={{ height: '100%', width: `${pct}%`, background: 'linear-gradient(90deg, #10b981, #34d399)', transition: 'width 0.1s linear', boxShadow: '0 0 8px rgba(16,185,129,0.8)' }} />
     </div>
   )
 }
@@ -373,7 +373,7 @@ function LiveMockup() {
       body: (
         <div style={{ padding: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 6 }}>
-            {[{ l: 'Posts', v: '142', c: '#8b5cf6' }, { l: 'Agendados', v: '28', c: '#3b82f6' }, { l: 'Engajamento', v: '6.4k', c: '#22c55e' }, { l: 'Templates', v: '9', c: '#f59e0b' }].map(s => (
+            {[{ l: 'Posts', v: '142', c: '#10b981' }, { l: 'Agendados', v: '28', c: '#3b82f6' }, { l: 'Engajamento', v: '6.4k', c: '#22c55e' }, { l: 'Templates', v: '9', c: '#f59e0b' }].map(s => (
               <div key={s.l} style={{ background: 'rgba(255,255,255,0.04)', borderRadius: 8, padding: '7px 9px', border: `1px solid ${s.c}20` }}>
                 <div style={{ fontSize: 7.5, color: '#71717a', marginBottom: 3 }}>{s.l}</div>
                 <div style={{ fontSize: 13, fontWeight: 800, color: s.c }}>{s.v}</div>
@@ -384,7 +384,7 @@ function LiveMockup() {
             <div style={{ fontSize: 8, color: '#71717a', marginBottom: 6 }}>Produção — 14 dias</div>
             <div style={{ display: 'flex', alignItems: 'flex-end', gap: 3, height: 44 }}>
               {[3,5,2,7,4,6,8,3,9,5,11,7,13,9].map((h, i) => (
-                <div key={i} style={{ flex: 1, height: `${(h/13)*100}%`, background: i === 13 ? '#8b5cf6' : `rgba(139,92,246,${0.15 + (h/13)*0.5})`, borderRadius: '2px 2px 0 0', transition: 'height 0.4s ease' }} />
+                <div key={i} style={{ flex: 1, height: `${(h/13)*100}%`, background: i === 13 ? '#10b981' : `rgba(16,185,129,${0.15 + (h/13)*0.5})`, borderRadius: '2px 2px 0 0', transition: 'height 0.4s ease' }} />
               ))}
             </div>
           </div>
@@ -401,7 +401,7 @@ function LiveMockup() {
             { title: 'Como Escalamos 10k Users', s: 'Publicado', c: '#22c55e' },
             { title: 'Meet the Team: Design', s: 'Rascunho', c: '#71717a' },
           ].map((p, i) => (
-            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, background: hovered === i ? 'rgba(139,92,246,0.08)' : 'rgba(255,255,255,0.03)', borderRadius: 8, padding: '7px 9px', border: `1px solid ${hovered === i ? 'rgba(139,92,246,0.2)' : 'rgba(255,255,255,0.05)'}`, transition: 'all 0.2s', cursor: 'default' }} onMouseEnter={() => setHovered(i)} onMouseLeave={() => setHovered(null)}>
+            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, background: hovered === i ? 'rgba(16,185,129,0.08)' : 'rgba(255,255,255,0.03)', borderRadius: 8, padding: '7px 9px', border: `1px solid ${hovered === i ? 'rgba(16,185,129,0.2)' : 'rgba(255,255,255,0.05)'}`, transition: 'all 0.2s', cursor: 'default' }} onMouseEnter={() => setHovered(i)} onMouseLeave={() => setHovered(null)}>
               <div style={{ width: 26, height: 26, borderRadius: 6, background: `${p.c}18`, flexShrink: 0 }} />
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: 9, fontWeight: 600, color: '#fafafa', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.title}</div>
@@ -417,7 +417,7 @@ function LiveMockup() {
       body: (
         <div style={{ padding: 12, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
           {[
-            { name: 'Tech Growth', c: '#8b5cf6', img: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=100&h=68&fit=crop&auto=format' },
+            { name: 'Tech Growth', c: '#10b981', img: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=100&h=68&fit=crop&auto=format' },
             { name: 'Brand Story', c: '#3b82f6', img: 'https://images.unsplash.com/photo-1492691527719-9d1e07e534b4?w=100&h=68&fit=crop&auto=format' },
             { name: 'Product Launch', c: '#22c55e', img: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=100&h=68&fit=crop&auto=format' },
             { name: 'Finance Data', c: '#f59e0b', img: 'https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=100&h=68&fit=crop&auto=format' },
@@ -440,10 +440,10 @@ function LiveMockup() {
   return (
     <div style={{ position: 'relative', width: '100%', maxWidth: 520 }}>
       {/* Glow */}
-      <div style={{ position: 'absolute', inset: -60, background: 'radial-gradient(ellipse at center, rgba(139,92,246,0.2) 0%, transparent 70%)', pointerEvents: 'none' }} />
+      <div style={{ position: 'absolute', inset: -60, background: 'radial-gradient(ellipse at center, rgba(16,185,129,0.2) 0%, transparent 70%)', pointerEvents: 'none' }} />
 
       {/* Browser frame */}
-      <div style={{ position: 'relative', zIndex: 1, background: '#0c0c0c', borderRadius: 16, border: '1px solid rgba(255,255,255,0.1)', overflow: 'hidden', boxShadow: '0 48px 96px rgba(0,0,0,0.65), 0 0 0 1px rgba(139,92,246,0.12)' }}>
+      <div style={{ position: 'relative', zIndex: 1, background: '#0c0c0c', borderRadius: 16, border: '1px solid rgba(255,255,255,0.1)', overflow: 'hidden', boxShadow: '0 48px 96px rgba(0,0,0,0.65), 0 0 0 1px rgba(16,185,129,0.12)' }}>
         {/* Titlebar */}
         <div style={{ height: 36, background: '#080808', borderBottom: '1px solid rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', padding: '0 12px', gap: 6 }}>
           {['#ef4444', '#f59e0b', '#22c55e'].map((c, i) => <div key={i} style={{ width: 10, height: 10, borderRadius: '50%', background: c, opacity: 0.7 }} />)}
@@ -455,9 +455,9 @@ function LiveMockup() {
         <div style={{ display: 'flex', height: 210 }}>
           {/* Sidebar mini */}
           <div style={{ width: 42, background: '#080808', borderRight: '1px solid rgba(255,255,255,0.05)', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '10px 0', gap: 8 }}>
-            <div style={{ width: 22, height: 22, borderRadius: 6, background: '#8b5cf6', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 800, boxShadow: '0 0 10px rgba(139,92,246,0.5)' }}>A</div>
+            <div style={{ width: 22, height: 22, borderRadius: 6, background: '#10b981', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 800, boxShadow: '0 0 10px rgba(16,185,129,0.5)' }}>A</div>
             {['⊞', '☰', '▣', '◷'].map((icon, i) => (
-              <div key={i} onClick={() => setSlide(Math.min(i, 2))} style={{ width: 28, height: 28, borderRadius: 7, background: i === slide ? 'rgba(139,92,246,0.2)' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, color: i === slide ? '#a78bfa' : '#3f3f46', cursor: 'pointer', transition: 'all 0.2s' }}>
+              <div key={i} onClick={() => setSlide(Math.min(i, 2))} style={{ width: 28, height: 28, borderRadius: 7, background: i === slide ? 'rgba(16,185,129,0.2)' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, color: i === slide ? '#34d399' : '#3f3f46', cursor: 'pointer', transition: 'all 0.2s' }}>
                 {icon}
               </div>
             ))}
@@ -468,7 +468,7 @@ function LiveMockup() {
             <div style={{ height: 30, borderBottom: '1px solid rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', padding: '0 12px', background: 'rgba(8,8,8,0.9)' }}>
               <span style={{ fontSize: 9, fontWeight: 600, color: '#fafafa' }}>{screens[slide].label}</span>
               <div style={{ flex: 1 }} />
-              <div style={{ width: 16, height: 16, borderRadius: '50%', background: 'linear-gradient(135deg,#8b5cf6,#3b82f6)' }} />
+              <div style={{ width: 16, height: 16, borderRadius: '50%', background: 'linear-gradient(135deg,#10b981,#3b82f6)' }} />
             </div>
             <div style={{ position: 'relative', height: 180 }}>
               {screens.map((sc, i) => (
@@ -482,14 +482,14 @@ function LiveMockup() {
       </div>
 
       {/* Floating badge */}
-      <div style={{ position: 'absolute', top: -14, right: -16, background: 'linear-gradient(135deg, #8b5cf6, #6366f1)', borderRadius: 10, padding: '6px 13px', fontSize: 11, fontWeight: 700, color: '#fff', boxShadow: '0 4px 24px rgba(139,92,246,0.55)', zIndex: 2, animation: 'float 3s ease-in-out infinite' }}>
+      <div style={{ position: 'absolute', top: -14, right: -16, background: 'linear-gradient(135deg, #10b981, #14b8a6)', borderRadius: 10, padding: '6px 13px', fontSize: 11, fontWeight: 700, color: '#fff', boxShadow: '0 4px 24px rgba(16,185,129,0.55)', zIndex: 2, animation: 'float 3s ease-in-out infinite' }}>
         ✦ AI Powered
       </div>
 
       {/* Dots */}
       <div style={{ display: 'flex', justifyContent: 'center', gap: 6, marginTop: 14 }}>
         {screens.map((_, i) => (
-          <button key={i} onClick={() => setSlide(i)} style={{ width: i === slide ? 22 : 6, height: 6, borderRadius: 9999, background: i === slide ? '#8b5cf6' : 'rgba(255,255,255,0.15)', border: 'none', cursor: 'pointer', transition: 'all 0.35s', padding: 0 }} />
+          <button key={i} onClick={() => setSlide(i)} style={{ width: i === slide ? 22 : 6, height: 6, borderRadius: 9999, background: i === slide ? '#10b981' : 'rgba(255,255,255,0.15)', border: 'none', cursor: 'pointer', transition: 'all 0.35s', padding: 0 }} />
         ))}
       </div>
     </div>
@@ -563,7 +563,7 @@ function WAChat() {
 // ─── Feature section ──────────────────────────────────────────────────────────
 
 const FEATURES = [
-  { icon: '🧠', title: 'Geração com IA', desc: 'DeepSeek analisa feeds ao vivo e cria scripts, slides e legendas contextualizados em segundos.', accent: '#8b5cf6' },
+  { icon: '🧠', title: 'Geração com IA', desc: 'DeepSeek analisa feeds ao vivo e cria scripts, slides e legendas contextualizados em segundos.', accent: '#10b981' },
   { icon: '📱', title: 'Aprovação no WhatsApp', desc: 'Cada post chega no seu celular com preview visual. Toque para aprovar ou rejeitar — sem abrir o dashboard.', accent: '#25d366' },
   { icon: '🗓️', title: 'Calendário Inteligente', desc: 'O sistema detecta os melhores horários de postagem para cada plataforma e agenda automaticamente.', accent: '#3b82f6' },
   { icon: '📊', title: 'Analytics em Tempo Real', desc: 'Impressões, engajamento e leads capturados dos comentários. Tudo em um painel unificado.', accent: '#f59e0b' },
@@ -611,7 +611,7 @@ export default function Landing({ onNavigate, user, initialPricing }: { onNaviga
         <div style={{ maxWidth: 1160, margin: '0 auto', padding: '0 24px', height: 58, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <ArxLogo size={32} glow />
-            <span style={{ fontSize: '0.5625rem', fontWeight: 700, color: '#8b5cf6', background: 'rgba(139,92,246,0.12)', padding: '2px 8px', borderRadius: 9999, border: '1px solid rgba(139,92,246,0.25)' }}>BETA</span>
+            <span style={{ fontSize: '0.5625rem', fontWeight: 700, color: '#10b981', background: 'rgba(16,185,129,0.12)', padding: '2px 8px', borderRadius: 9999, border: '1px solid rgba(16,185,129,0.25)' }}>BETA</span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
             <NavLink onClick={() => setShowPricing(!showPricing)}>Preços</NavLink>
@@ -631,7 +631,7 @@ export default function Landing({ onNavigate, user, initialPricing }: { onNaviga
       <section style={{ position: 'relative', zIndex: 1, padding: '132px 24px 80px', minHeight: '100vh', display: 'flex', alignItems: 'center' }}>
         <div style={{ maxWidth: 1160, margin: '0 auto', width: '100%', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 64, alignItems: 'center' }}>
           <div>
-            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'rgba(139,92,246,0.1)', border: '1px solid rgba(139,92,246,0.22)', borderRadius: 9999, padding: '7px 16px', fontSize: '0.75rem', color: '#a78bfa', fontWeight: 600, marginBottom: 28, animation: 'fadeInDown 0.6s ease both' }}>
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.22)', borderRadius: 9999, padding: '7px 16px', fontSize: '0.75rem', color: '#34d399', fontWeight: 600, marginBottom: 28, animation: 'fadeInDown 0.6s ease both' }}>
               <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#22c55e', animation: 'blink 1.5s ease-in-out infinite' }} />
               840+ criadores automatizando conteúdo agora
             </div>
@@ -674,7 +674,7 @@ export default function Landing({ onNavigate, user, initialPricing }: { onNaviga
             { value: metrics.total_users || 0, suffix: '+', label: 'usuários ativos' },
             { value: 3.2, suffix: 'h', label: 'economizados por dia' },
           ] : STATS).map((s, i) => (
-            <div key={i} style={{ padding: '32px 20px', textAlign: 'center', borderRight: i < 3 ? '1px solid rgba(255,255,255,0.06)' : 'none', transition: 'background 0.2s' }} onMouseEnter={e => ((e.currentTarget as HTMLDivElement).style.background = 'rgba(139,92,246,0.05)')} onMouseLeave={e => ((e.currentTarget as HTMLDivElement).style.background = 'transparent')}>
+            <div key={i} style={{ padding: '32px 20px', textAlign: 'center', borderRight: i < 3 ? '1px solid rgba(255,255,255,0.06)' : 'none', transition: 'background 0.2s' }} onMouseEnter={e => ((e.currentTarget as HTMLDivElement).style.background = 'rgba(16,185,129,0.05)')} onMouseLeave={e => ((e.currentTarget as HTMLDivElement).style.background = 'transparent')}>
               <div style={{ fontSize: '2.5rem', fontWeight: 900, letterSpacing: '-0.04em', background: 'linear-gradient(135deg,#fafafa,#a1a1aa)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
                 <Counter target={s.value} suffix={s.suffix} />
               </div>
@@ -704,7 +704,7 @@ export default function Landing({ onNavigate, user, initialPricing }: { onNaviga
                 ['✦', 'Agendamento automático no melhor horário'],
               ].map(([dot, text]) => (
                 <div key={text} style={{ display: 'flex', gap: 10, alignItems: 'flex-start', fontSize: '0.9375rem', color: '#a1a1aa' }}>
-                  <span style={{ color: '#8b5cf6', flexShrink: 0, marginTop: 2 }}>{dot}</span>
+                  <span style={{ color: '#10b981', flexShrink: 0, marginTop: 2 }}>{dot}</span>
                   <span>{text}</span>
                 </div>
               ))}
@@ -723,7 +723,7 @@ export default function Landing({ onNavigate, user, initialPricing }: { onNaviga
       <section style={{ position: 'relative', zIndex: 1, padding: '80px 24px', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
         <div style={{ maxWidth: 1160, margin: '0 auto' }}>
           <div style={{ textAlign: 'center', marginBottom: 56 }}>
-            <span style={{ fontSize: '0.6875rem', fontWeight: 700, color: '#8b5cf6', textTransform: 'uppercase', letterSpacing: '0.1em', display: 'block', marginBottom: 14 }}>Recursos</span>
+            <span style={{ fontSize: '0.6875rem', fontWeight: 700, color: '#10b981', textTransform: 'uppercase', letterSpacing: '0.1em', display: 'block', marginBottom: 14 }}>Recursos</span>
             <h2 style={{ margin: '0 0 12px', fontSize: 'clamp(1.75rem,3vw,2.5rem)', fontWeight: 900, letterSpacing: '-0.03em' }}>Construído para escala</h2>
             <p style={{ margin: 0, color: '#71717a', fontSize: '1rem' }}>Tudo que você precisa para publicar em volume sem perder qualidade</p>
           </div>
@@ -755,7 +755,7 @@ export default function Landing({ onNavigate, user, initialPricing }: { onNaviga
             { url: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=420&h=268&fit=crop&auto=format', label: 'Calendário' },
             { url: 'https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=420&h=268&fit=crop&auto=format', label: 'Performance' },
           ].map((img, i) => (
-            <div key={i} style={{ flexShrink: 0, width: 360, borderRadius: 16, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.08)', position: 'relative', transition: 'transform 0.3s, border-color 0.3s' }} onMouseEnter={e => { const d = e.currentTarget as HTMLDivElement; d.style.transform = 'scale(1.03)'; d.style.borderColor = 'rgba(139,92,246,0.35)' }} onMouseLeave={e => { const d = e.currentTarget as HTMLDivElement; d.style.transform = 'none'; d.style.borderColor = 'rgba(255,255,255,0.08)' }}>
+            <div key={i} style={{ flexShrink: 0, width: 360, borderRadius: 16, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.08)', position: 'relative', transition: 'transform 0.3s, border-color 0.3s' }} onMouseEnter={e => { const d = e.currentTarget as HTMLDivElement; d.style.transform = 'scale(1.03)'; d.style.borderColor = 'rgba(16,185,129,0.35)' }} onMouseLeave={e => { const d = e.currentTarget as HTMLDivElement; d.style.transform = 'none'; d.style.borderColor = 'rgba(255,255,255,0.08)' }}>
               <img src={img.url} alt={img.label} style={{ width: '100%', height: 230, objectFit: 'cover', display: 'block', filter: 'brightness(0.65) saturate(0.8)' }} />
               <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, transparent 50%, rgba(0,0,0,0.75))' }} />
               <div style={{ position: 'absolute', bottom: 14, left: 16, fontSize: '0.8125rem', fontWeight: 700, color: '#fafafa' }}>{img.label}</div>
@@ -783,13 +783,13 @@ export default function Landing({ onNavigate, user, initialPricing }: { onNaviga
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 16 }}>
             {TESTIMONIALS.map((t, i) => (
-              <TiltCard key={i} accent="#8b5cf6" style={{ padding: 28 }}>
+              <TiltCard key={i} accent="#10b981" style={{ padding: 28 }}>
                 <div style={{ display: 'flex', gap: 2, marginBottom: 16 }}>
                   {Array.from({ length: t.stars }).map((_, j) => <span key={j} style={{ color: '#f59e0b', fontSize: 14 }}>★</span>)}
                 </div>
                 <p style={{ margin: '0 0 22px', color: '#a1a1aa', lineHeight: 1.72, fontSize: '0.9375rem' }}>"{t.text}"</p>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <div style={{ width: 38, height: 38, borderRadius: '50%', background: 'linear-gradient(135deg,#8b5cf6,#3b82f6)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 12, color: '#fff', border: '2px solid rgba(139,92,246,0.4)' }}>{t.av}</div>
+                  <div style={{ width: 38, height: 38, borderRadius: '50%', background: 'linear-gradient(135deg,#10b981,#3b82f6)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 12, color: '#fff', border: '2px solid rgba(16,185,129,0.4)' }}>{t.av}</div>
                   <div>
                     <div style={{ fontSize: '0.875rem', fontWeight: 700, color: '#fafafa' }}>{t.name}</div>
                     <div style={{ fontSize: '0.75rem', color: '#52525b' }}>{t.role}</div>
@@ -804,8 +804,8 @@ export default function Landing({ onNavigate, user, initialPricing }: { onNaviga
       {/* ── CTA ── */}
       <section style={{ position: 'relative', zIndex: 1, padding: '80px 24px 110px' }}>
         <div style={{ maxWidth: 680, margin: '0 auto' }}>
-          <TiltCard accent="#8b5cf6" style={{ padding: '60px 48px', textAlign: 'center' }}>
-            <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse at 50% 0%, rgba(139,92,246,0.12) 0%, transparent 60%)', pointerEvents: 'none', borderRadius: 20 }} />
+          <TiltCard accent="#10b981" style={{ padding: '60px 48px', textAlign: 'center' }}>
+            <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse at 50% 0%, rgba(16,185,129,0.12) 0%, transparent 60%)', pointerEvents: 'none', borderRadius: 20 }} />
             <h2 style={{ margin: '0 0 14px', fontSize: 'clamp(1.75rem,3vw,2.75rem)', fontWeight: 900, letterSpacing: '-0.03em' }}>
               Pronto para publicar<br />no piloto automático?
             </h2>
@@ -839,7 +839,7 @@ export default function Landing({ onNavigate, user, initialPricing }: { onNaviga
                   { label: 'Twitter', icon: 'M23 3a10.9 10.9 0 01-3.14 1.53 4.48 4.48 0 00-7.86 3v1A10.66 10.66 0 013 4s-4 9 5 13a11.64 11.64 0 01-7 2c9 5 20 0 20-11.5a4.5 4.5 0 00-.08-.83A7.72 7.72 0 0023 3z' },
                 ].map(s => (
                   <a key={s.label} href="#" aria-label={s.label} style={{ width: 34, height: 34, borderRadius: 10, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#71717a', transition: 'all 0.2s' }}
-                     onMouseEnter={e => { const d = e.currentTarget; d.style.color = '#8b5cf6'; d.style.borderColor = 'rgba(139,92,246,0.4)'; d.style.background = 'rgba(139,92,246,0.1)' }}
+                     onMouseEnter={e => { const d = e.currentTarget; d.style.color = '#10b981'; d.style.borderColor = 'rgba(16,185,129,0.4)'; d.style.background = 'rgba(16,185,129,0.1)' }}
                      onMouseLeave={e => { const d = e.currentTarget; d.style.color = '#71717a'; d.style.borderColor = 'rgba(255,255,255,0.08)'; d.style.background = 'rgba(255,255,255,0.05)' }}>
                     <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><path d={s.icon} /></svg>
                   </a>

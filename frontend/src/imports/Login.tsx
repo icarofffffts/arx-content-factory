@@ -50,7 +50,7 @@ export default function Login({ onLogin, onNavigate }: {
       {/* Left — form */}
       <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px 24px', position: 'relative', zIndex: 1 }}>
         {/* Aurora */}
-        <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse at 30% 40%, rgba(139,92,246,0.12) 0%, transparent 60%)', pointerEvents: 'none' }} />
+        <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse at 30% 40%, rgba(16,185,129,0.12) 0%, transparent 60%)', pointerEvents: 'none' }} />
 
         <div style={{ width: '100%', maxWidth: 380 }}>
           {/* Logo */}
@@ -74,7 +74,7 @@ export default function Login({ onLogin, onNavigate }: {
                 type="email" value={email} onChange={e => setEmail(e.target.value)}
                 placeholder="seu@email.com" required
                 style={{ width: '100%', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, padding: '11px 14px', color: '#fafafa', fontSize: '0.9375rem', fontFamily: 'Inter, sans-serif', outline: 'none', transition: 'border-color 0.15s', boxSizing: 'border-box' }}
-                onFocus={e => (e.target.style.borderColor = '#8b5cf6')}
+                onFocus={e => (e.target.style.borderColor = '#10b981')}
                 onBlur={e => (e.target.style.borderColor = 'rgba(255,255,255,0.1)')}
               />
             </div>
@@ -85,14 +85,14 @@ export default function Login({ onLogin, onNavigate }: {
                 type="password" value={password} onChange={e => setPassword(e.target.value)}
                 placeholder="••••••••" required
                 style={{ width: '100%', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, padding: '11px 14px', color: '#fafafa', fontSize: '0.9375rem', fontFamily: 'Inter, sans-serif', outline: 'none', transition: 'border-color 0.15s', boxSizing: 'border-box' }}
-                onFocus={e => (e.target.style.borderColor = '#8b5cf6')}
+                onFocus={e => (e.target.style.borderColor = '#10b981')}
                 onBlur={e => (e.target.style.borderColor = 'rgba(255,255,255,0.1)')}
               />
             </div>
 
             <button
               type="submit" disabled={loading}
-              style={{ background: loading ? 'rgba(139,92,246,0.5)' : 'linear-gradient(135deg,#8b5cf6,#7c3aed)', color: '#fff', border: 'none', borderRadius: 10, padding: '13px 0', fontSize: '0.9375rem', fontWeight: 700, cursor: loading ? 'default' : 'pointer', boxShadow: '0 4px 20px rgba(139,92,246,0.4)', transition: 'opacity 0.2s', fontFamily: 'Inter, sans-serif', marginTop: 4 }}
+              style={{ background: loading ? 'rgba(16,185,129,0.5)' : 'linear-gradient(135deg,#10b981,#059669)', color: '#fff', border: 'none', borderRadius: 10, padding: '13px 0', fontSize: '0.9375rem', fontWeight: 700, cursor: loading ? 'default' : 'pointer', boxShadow: '0 4px 20px rgba(16,185,129,0.4)', transition: 'opacity 0.2s', fontFamily: 'Inter, sans-serif', marginTop: 4 }}
             >
               {loading ? 'Entrando…' : 'Entrar →'}
             </button>
@@ -100,7 +100,7 @@ export default function Login({ onLogin, onNavigate }: {
 
           <p style={{ textAlign: 'center', marginTop: 20, fontSize: '0.875rem', color: '#71717a' }}>
             Não tem conta?{' '}
-            <button onClick={() => onNavigate('signup')} style={{ background: 'none', border: 'none', color: '#a78bfa', fontWeight: 600, cursor: 'pointer', fontFamily: 'Inter, sans-serif', fontSize: '0.875rem' }}>
+            <button onClick={() => onNavigate('signup')} style={{ background: 'none', border: 'none', color: '#34d399', fontWeight: 600, cursor: 'pointer', fontFamily: 'Inter, sans-serif', fontSize: '0.875rem' }}>
               Criar conta grátis
             </button>
           </p>
@@ -134,7 +134,7 @@ export default function Login({ onLogin, onNavigate }: {
       {/* Right — visual panel */}
       <div style={{ width: '48%', background: 'rgba(15,15,15,0.95)', borderLeft: '1px solid rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 48, position: 'relative', overflow: 'hidden' }}>
         {/* BG glow */}
-        <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse at 60% 40%, rgba(139,92,246,0.18) 0%, transparent 65%)', pointerEvents: 'none' }} />
+        <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse at 60% 40%, rgba(16,185,129,0.18) 0%, transparent 65%)', pointerEvents: 'none' }} />
         <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '40%', background: 'radial-gradient(ellipse at 40% 100%, rgba(59,130,246,0.08) 0%, transparent 60%)', pointerEvents: 'none' }} />
         {/* Grid */}
         <div style={{ position: 'absolute', inset: 0, backgroundImage: 'linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px)', backgroundSize: '40px 40px', pointerEvents: 'none' }} />
@@ -143,7 +143,7 @@ export default function Login({ onLogin, onNavigate }: {
           {/* Stats floating cards */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 32 }}>
             {[
-              { icon: '⚡', label: 'Posts publicados hoje', value: '142', color: '#8b5cf6' },
+              { icon: '⚡', label: 'Posts publicados hoje', value: '142', color: '#10b981' },
               { icon: '✅', label: 'Aprovados via WhatsApp', value: '98%', color: '#22c55e' },
               { icon: '📈', label: 'Engajamento médio', value: '6.4k', color: '#3b82f6' },
             ].map((s, i) => (

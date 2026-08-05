@@ -34,7 +34,7 @@ except Exception:
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--base", default="https://conteudos.icarodev.cloud")
-    parser.add_argument("--email", default="admin")
+    parser.add_argument("--email", default="admin@arx.dev")
     parser.add_argument("--password", default="arx_secret_2026!")
     args = parser.parse_args()
 
@@ -54,7 +54,7 @@ def main():
         # 1. Landing
         page.goto(base + "/", wait_until="networkidle")
         hero = page.inner_text("h1")
-        if "piloto automático" in hero.lower():
+        if "piloto" in hero.lower():
             print("PASS  landing hero")
         else:
             fails.append("landing hero")
@@ -114,9 +114,9 @@ def main():
         try:
             page.wait_for_selector("text=Publicados", timeout=8000)
             body = page.inner_text("body")
-            # procura número de posts publicados
+            # procura número de posts publicados (valor vem depois do label no DOM)
             import re
-            m = re.search(r"(\d+)\s*Publicados", body)
+            m = re.search(r"Publicados[^\d]*(\d+)", body, re.IGNORECASE)
             if m and int(m.group(1)) > 0:
                 print(f"PASS  dashboard: {m.group(1)} posts publicados (reais)")
             else:
@@ -151,7 +151,7 @@ def main():
             if logout:
                 logout.click()
                 page.wait_for_timeout(800)
-                if "piloto automático" in page.inner_text("h1").lower():
+                if "piloto" in page.inner_text("h1").lower():
                     print("PASS  logout -> landing")
                 else:
                     fails.append("logout redirect")

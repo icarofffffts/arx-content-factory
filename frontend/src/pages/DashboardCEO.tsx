@@ -79,7 +79,7 @@ export default function DashboardCEO({ user, plan, onLogout, onNavigate }: {
   const [apiKeyInfo, setApiKeyInfo] = useState<any>(null)
   const [newClient, setNewClient] = useState({ email: '', password: '', full_name: '', plan_slug: 'pro', niche: '' })
   const [clientMsg, setClientMsg] = useState<{ ok: boolean; text: string } | null>(null)
-  const [newTemplate, setNewTemplate] = useState({ name: '', slug: '', description: '', accent_color: '#8b5cf6', badge: 'Novo' })
+  const [newTemplate, setNewTemplate] = useState({ name: '', slug: '', description: '', accent_color: '#10b981', badge: 'Novo' })
   const [templateMsg, setTemplateMsg] = useState<{ ok: boolean; text: string } | null>(null)
   const [connectOpen, setConnectOpen] = useState(false)
   const [demoOpen, setDemoOpen] = useState(false)
@@ -305,7 +305,7 @@ export default function DashboardCEO({ user, plan, onLogout, onNavigate }: {
     try {
       const r = await api.saveTemplate(newTemplate)
       setTemplateMsg({ ok: true, text: r.message || 'Template salvo!' })
-      setNewTemplate({ name: '', slug: '', description: '', accent_color: '#8b5cf6', badge: 'Novo' })
+      setNewTemplate({ name: '', slug: '', description: '', accent_color: '#10b981', badge: 'Novo' })
       loadMarketTemplates()
     } catch (e: any) {
       setTemplateMsg({ ok: false, text: e.message || 'Erro ao salvar template' })

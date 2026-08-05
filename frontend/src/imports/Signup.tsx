@@ -39,7 +39,7 @@ function PasswordStrength({ password }: { password: string }) {
     return s
   })()
   if (!password) return null
-  const colors = ['#ef4444', '#f97316', '#eab308', '#22c55e', '#8b5cf6']
+  const colors = ['#ef4444', '#f97316', '#eab308', '#22c55e', '#10b981']
   const labels = ['Muito fraca', 'Fraca', 'Média', 'Boa', 'Forte']
   return (
     <div style={{ marginTop: 8 }}>
@@ -56,7 +56,7 @@ function PasswordStrength({ password }: { password: string }) {
 function OrbField() {
   return (
     <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', pointerEvents: 'none' }}>
-      <div style={{ position: 'absolute', width: 420, height: 420, borderRadius: '50%', background: 'radial-gradient(circle, rgba(139,92,246,0.18) 0%, transparent 70%)', top: '-80px', right: '-80px', animation: 'orb1 12s ease-in-out infinite' }} />
+      <div style={{ position: 'absolute', width: 420, height: 420, borderRadius: '50%', background: 'radial-gradient(circle, rgba(16,185,129,0.18) 0%, transparent 70%)', top: '-80px', right: '-80px', animation: 'orb1 12s ease-in-out infinite' }} />
       <div style={{ position: 'absolute', width: 320, height: 320, borderRadius: '50%', background: 'radial-gradient(circle, rgba(99,102,241,0.14) 0%, transparent 70%)', bottom: '60px', left: '-60px', animation: 'orb2 15s ease-in-out infinite' }} />
       <div style={{ position: 'absolute', width: 240, height: 240, borderRadius: '50%', background: 'radial-gradient(circle, rgba(167,139,250,0.1) 0%, transparent 70%)', top: '50%', left: '40%', animation: 'orb3 9s ease-in-out infinite' }} />
     </div>
@@ -69,7 +69,7 @@ function PlatformBadge({ logo, name, metric }: { logo: React.ReactNode, name: st
     <div
       onMouseEnter={() => setHov(true)}
       onMouseLeave={() => setHov(false)}
-      style={{ display: 'flex', alignItems: 'center', gap: 10, background: hov ? 'rgba(139,92,246,0.12)' : 'rgba(255,255,255,0.04)', border: `1px solid ${hov ? 'rgba(139,92,246,0.3)' : 'rgba(255,255,255,0.07)'}`, borderRadius: 12, padding: '10px 14px', cursor: 'default', transition: 'all 0.25s' }}>
+      style={{ display: 'flex', alignItems: 'center', gap: 10, background: hov ? 'rgba(16,185,129,0.12)' : 'rgba(255,255,255,0.04)', border: `1px solid ${hov ? 'rgba(16,185,129,0.3)' : 'rgba(255,255,255,0.07)'}`, borderRadius: 12, padding: '10px 14px', cursor: 'default', transition: 'all 0.25s' }}>
       {logo}
       <div>
         <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#fafafa' }}>{name}</div>
@@ -150,11 +150,11 @@ export default function Signup({ onLogin, onNavigate }: {
       style={{ minHeight: '100vh', background: '#0a0a0a', display: 'flex', fontFamily: 'Inter, system-ui, sans-serif', overflow: 'hidden', position: 'relative' }}
     >
       {/* Mouse-tracking glow */}
-      <div style={{ position: 'fixed', width: 600, height: 600, borderRadius: '50%', background: 'radial-gradient(circle, rgba(139,92,246,0.06) 0%, transparent 70%)', pointerEvents: 'none', zIndex: 0, transform: `translate(${mousePos.x - 300}px, ${mousePos.y - 300}px)`, transition: 'transform 0.4s ease-out' }} />
+      <div style={{ position: 'fixed', width: 600, height: 600, borderRadius: '50%', background: 'radial-gradient(circle, rgba(16,185,129,0.06) 0%, transparent 70%)', pointerEvents: 'none', zIndex: 0, transform: `translate(${mousePos.x - 300}px, ${mousePos.y - 300}px)`, transition: 'transform 0.4s ease-out' }} />
 
       {/* ─── LEFT: Form ──────────────────────────────────────────── */}
       <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px 24px', position: 'relative', zIndex: 1 }}>
-        <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse at 20% 50%, rgba(139,92,246,0.1) 0%, transparent 55%)', pointerEvents: 'none' }} />
+        <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse at 20% 50%, rgba(16,185,129,0.1) 0%, transparent 55%)', pointerEvents: 'none' }} />
 
         {step === 'success' ? (
           <div style={{ textAlign: 'center', animation: 'fadeInUp 0.5s ease forwards' }}>
@@ -188,7 +188,7 @@ export default function Signup({ onLogin, onNavigate }: {
                   type="text" value={name} onChange={e => setName(e.target.value)}
                   placeholder="Seu nome" required
                   style={{ width: '100%', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, padding: '11px 14px', color: '#fafafa', fontSize: '0.9375rem', fontFamily: 'Inter, sans-serif', outline: 'none', boxSizing: 'border-box', transition: 'border-color 0.15s, box-shadow 0.15s' }}
-                  onFocus={e => { e.target.style.borderColor = '#8b5cf6'; e.target.style.boxShadow = '0 0 0 3px rgba(139,92,246,0.12)' }}
+                  onFocus={e => { e.target.style.borderColor = '#10b981'; e.target.style.boxShadow = '0 0 0 3px rgba(16,185,129,0.12)' }}
                   onBlur={e => { e.target.style.borderColor = 'rgba(255,255,255,0.1)'; e.target.style.boxShadow = 'none' }}
                 />
               </div>
@@ -200,7 +200,7 @@ export default function Signup({ onLogin, onNavigate }: {
                   type="email" value={email} onChange={e => setEmail(e.target.value)}
                   placeholder="seu@email.com" required
                   style={{ width: '100%', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, padding: '11px 14px', color: '#fafafa', fontSize: '0.9375rem', fontFamily: 'Inter, sans-serif', outline: 'none', boxSizing: 'border-box', transition: 'border-color 0.15s, box-shadow 0.15s' }}
-                  onFocus={e => { e.target.style.borderColor = '#8b5cf6'; e.target.style.boxShadow = '0 0 0 3px rgba(139,92,246,0.12)' }}
+                  onFocus={e => { e.target.style.borderColor = '#10b981'; e.target.style.boxShadow = '0 0 0 3px rgba(16,185,129,0.12)' }}
                   onBlur={e => { e.target.style.borderColor = 'rgba(255,255,255,0.1)'; e.target.style.boxShadow = 'none' }}
                 />
               </div>
@@ -212,7 +212,7 @@ export default function Signup({ onLogin, onNavigate }: {
                   type="password" value={password} onChange={e => setPassword(e.target.value)}
                   placeholder="Mínimo 6 caracteres" required minLength={6}
                   style={{ width: '100%', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, padding: '11px 14px', color: '#fafafa', fontSize: '0.9375rem', fontFamily: 'Inter, sans-serif', outline: 'none', boxSizing: 'border-box', transition: 'border-color 0.15s, box-shadow 0.15s' }}
-                  onFocus={e => { e.target.style.borderColor = '#8b5cf6'; e.target.style.boxShadow = '0 0 0 3px rgba(139,92,246,0.12)' }}
+                  onFocus={e => { e.target.style.borderColor = '#10b981'; e.target.style.boxShadow = '0 0 0 3px rgba(16,185,129,0.12)' }}
                   onBlur={e => { e.target.style.borderColor = 'rgba(255,255,255,0.1)'; e.target.style.boxShadow = 'none' }}
                 />
                 <PasswordStrength password={password} />
@@ -222,24 +222,24 @@ export default function Signup({ onLogin, onNavigate }: {
               <label style={{ display: 'flex', alignItems: 'flex-start', gap: 10, cursor: 'pointer', userSelect: 'none' }}>
                 <div
                   onClick={() => setAgreed(a => !a)}
-                  style={{ width: 18, height: 18, borderRadius: 5, border: `2px solid ${agreed ? '#8b5cf6' : 'rgba(255,255,255,0.2)'}`, background: agreed ? '#8b5cf6' : 'transparent', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s', marginTop: 1 }}
+                  style={{ width: 18, height: 18, borderRadius: 5, border: `2px solid ${agreed ? '#10b981' : 'rgba(255,255,255,0.2)'}`, background: agreed ? '#10b981' : 'transparent', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s', marginTop: 1 }}
                 >
                   {agreed && <svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4l3 3 5-6" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>}
                 </div>
                 <span style={{ fontSize: '0.8125rem', color: '#71717a', lineHeight: 1.5 }}>
                   Concordo com os{' '}
-                  <span style={{ color: '#a78bfa', cursor: 'pointer' }}>Termos de Serviço</span>
+                  <span style={{ color: '#34d399', cursor: 'pointer' }}>Termos de Serviço</span>
                   {' '}e a{' '}
-                  <span style={{ color: '#a78bfa', cursor: 'pointer' }}>Política de Privacidade</span>
+                  <span style={{ color: '#34d399', cursor: 'pointer' }}>Política de Privacidade</span>
                 </span>
               </label>
 
               {/* Submit */}
               <button
                 type="submit" disabled={loading}
-                style={{ width: '100%', padding: '13px', background: loading ? 'rgba(139,92,246,0.5)' : 'linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%)', border: 'none', borderRadius: 11, color: '#fff', fontSize: '0.9375rem', fontWeight: 700, fontFamily: 'Inter, sans-serif', cursor: loading ? 'not-allowed' : 'pointer', transition: 'all 0.2s', boxShadow: loading ? 'none' : '0 4px 20px rgba(139,92,246,0.4)', marginTop: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
-                onMouseEnter={e => { if (!loading) { (e.currentTarget as HTMLButtonElement).style.transform = 'translateY(-1px)'; (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 8px 28px rgba(139,92,246,0.55)' } }}
-                onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.transform = 'translateY(0)'; (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 4px 20px rgba(139,92,246,0.4)' }}
+                style={{ width: '100%', padding: '13px', background: loading ? 'rgba(16,185,129,0.5)' : 'linear-gradient(135deg, #10b981 0%, #14b8a6 100%)', border: 'none', borderRadius: 11, color: '#fff', fontSize: '0.9375rem', fontWeight: 700, fontFamily: 'Inter, sans-serif', cursor: loading ? 'not-allowed' : 'pointer', transition: 'all 0.2s', boxShadow: loading ? 'none' : '0 4px 20px rgba(16,185,129,0.4)', marginTop: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+                onMouseEnter={e => { if (!loading) { (e.currentTarget as HTMLButtonElement).style.transform = 'translateY(-1px)'; (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 8px 28px rgba(16,185,129,0.55)' } }}
+                onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.transform = 'translateY(0)'; (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 4px 20px rgba(16,185,129,0.4)' }}
               >
                 {loading ? (
                   <>
@@ -251,7 +251,7 @@ export default function Signup({ onLogin, onNavigate }: {
 
               <p style={{ textAlign: 'center', fontSize: '0.8125rem', color: '#52525b', margin: '4px 0 0' }}>
                 Já tem uma conta?{' '}
-                <button type="button" onClick={() => onNavigate('login')} style={{ background: 'none', border: 'none', color: '#a78bfa', fontWeight: 600, cursor: 'pointer', fontSize: '0.8125rem', fontFamily: 'Inter, sans-serif', padding: 0 }}>
+                <button type="button" onClick={() => onNavigate('login')} style={{ background: 'none', border: 'none', color: '#34d399', fontWeight: 600, cursor: 'pointer', fontSize: '0.8125rem', fontFamily: 'Inter, sans-serif', padding: 0 }}>
                   Entrar
                 </button>
               </p>
@@ -267,7 +267,7 @@ export default function Signup({ onLogin, onNavigate }: {
         <div style={{ position: 'relative', zIndex: 1 }}>
           {/* Headline */}
           <div style={{ marginBottom: 36 }}>
-            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'rgba(139,92,246,0.15)', border: '1px solid rgba(139,92,246,0.25)', borderRadius: 20, padding: '5px 12px', fontSize: '0.75rem', fontWeight: 700, color: '#a78bfa', letterSpacing: '0.04em', marginBottom: 16, textTransform: 'uppercase' }}>
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'rgba(16,185,129,0.15)', border: '1px solid rgba(16,185,129,0.25)', borderRadius: 20, padding: '5px 12px', fontSize: '0.75rem', fontWeight: 700, color: '#34d399', letterSpacing: '0.04em', marginBottom: 16, textTransform: 'uppercase' }}>
               ✦ Plano gratuito
             </div>
             <h2 style={{ margin: '0 0 10px', fontSize: '1.625rem', fontWeight: 900, color: '#fafafa', letterSpacing: '-0.03em', lineHeight: 1.2 }}>
@@ -293,7 +293,7 @@ export default function Signup({ onLogin, onNavigate }: {
               { n: 3200000, s: '', label: 'posts publicados' },
             ].map((st, i) => (
               <div key={i} style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 12, padding: '14px 12px', textAlign: 'center' }}>
-                <div style={{ fontSize: '1.25rem', fontWeight: 900, color: '#a78bfa', letterSpacing: '-0.02em' }}>
+                <div style={{ fontSize: '1.25rem', fontWeight: 900, color: '#34d399', letterSpacing: '-0.02em' }}>
                   <AnimatedCounter target={st.n} suffix={st.s} />
                 </div>
                 <div style={{ fontSize: '0.6875rem', color: '#52525b', marginTop: 3, fontWeight: 500 }}>{st.label}</div>
@@ -315,7 +315,7 @@ export default function Signup({ onLogin, onNavigate }: {
           {/* Trust line */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <div style={{ display: 'flex' }}>
-              {['#f59e0b','#22c55e','#8b5cf6','#3b82f6','#ec4899'].map((c, i) => (
+              {['#f59e0b','#22c55e','#10b981','#3b82f6','#ec4899'].map((c, i) => (
                 <div key={i} style={{ width: 24, height: 24, borderRadius: '50%', background: c, border: '2px solid #0a0a0a', marginLeft: i === 0 ? 0 : -8, fontSize: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 700 }}>{String.fromCharCode(65+i)}</div>
               ))}
             </div>
@@ -339,7 +339,7 @@ function FeatureRow({ icon, title, desc, delay }: { icon: string, title: string,
       ref={ref}
       style={{ display: 'flex', alignItems: 'flex-start', gap: 12, opacity: vis ? 1 : 0, transform: vis ? 'translateX(0)' : 'translateX(16px)', transition: 'opacity 0.45s ease, transform 0.45s ease' }}
     >
-      <div style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(139,92,246,0.12)', border: '1px solid rgba(139,92,246,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 17, flexShrink: 0 }}>{icon}</div>
+      <div style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 17, flexShrink: 0 }}>{icon}</div>
       <div>
         <div style={{ fontSize: '0.875rem', fontWeight: 700, color: '#fafafa', marginBottom: 2 }}>{title}</div>
         <div style={{ fontSize: '0.8125rem', color: '#71717a', lineHeight: 1.5 }}>{desc}</div>

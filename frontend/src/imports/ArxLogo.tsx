@@ -36,7 +36,7 @@ export default function ArxLogo({
           flexShrink: 0,
           display: 'block',
           filter: glow
-            ? 'drop-shadow(0 0 6px rgba(139,92,246,0.8)) drop-shadow(0 0 14px rgba(139,92,246,0.4))'
+            ? 'drop-shadow(0 0 6px rgba(16,185,129,0.8)) drop-shadow(0 0 14px rgba(16,185,129,0.4))'
             : 'none',
         }}
       >
@@ -44,7 +44,7 @@ export default function ArxLogo({
           {/* Violet gradient — top-left light to bottom-right deep */}
           <linearGradient id={`ap-g-${uid}`} x1="0" y1="0" x2="108" y2="100" gradientUnits="userSpaceOnUse">
             <stop offset="0%" stopColor="#c4b5fd" />
-            <stop offset="55%" stopColor="#8b5cf6" />
+            <stop offset="55%" stopColor="#10b981" />
             <stop offset="100%" stopColor="#5b21b6" />
           </linearGradient>
         </defs>

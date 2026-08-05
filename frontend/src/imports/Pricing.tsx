@@ -106,7 +106,7 @@ function PricingSwitch({ onSwitch }: { onSwitch: (value: string) => void }) {
           {selected === '0' && (
             <motion.span
               layoutId="pricing-switch"
-              style={{ position: 'absolute', top: 0, left: 0, height: 44, width: '100%', borderRadius: 9999, background: 'linear-gradient(135deg, #8b5cf6, #7c3aed)', boxShadow: '0 4px 16px rgba(139,92,246,0.4)' }}
+              style={{ position: 'absolute', top: 0, left: 0, height: 44, width: '100%', borderRadius: 9999, background: 'linear-gradient(135deg, #10b981, #059669)', boxShadow: '0 4px 16px rgba(16,185,129,0.4)' }}
               transition={{ type: 'spring', stiffness: 500, damping: 30 }}
             />
           )}
@@ -123,13 +123,13 @@ function PricingSwitch({ onSwitch }: { onSwitch: (value: string) => void }) {
           {selected === '1' && (
             <motion.span
               layoutId="pricing-switch"
-              style={{ position: 'absolute', top: 0, left: 0, height: 44, width: '100%', borderRadius: 9999, background: 'linear-gradient(135deg, #8b5cf6, #7c3aed)', boxShadow: '0 4px 16px rgba(139,92,246,0.4)' }}
+              style={{ position: 'absolute', top: 0, left: 0, height: 44, width: '100%', borderRadius: 9999, background: 'linear-gradient(135deg, #10b981, #059669)', boxShadow: '0 4px 16px rgba(16,185,129,0.4)' }}
               transition={{ type: 'spring', stiffness: 500, damping: 30 }}
             />
           )}
           <span style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: 8 }}>
             Anual
-            <span style={{ borderRadius: 9999, background: 'rgba(139,92,246,0.15)', padding: '2px 8px', fontSize: '0.6875rem', fontWeight: 600, color: '#a78bfa' }}>
+            <span style={{ borderRadius: 9999, background: 'rgba(16,185,129,0.15)', padding: '2px 8px', fontSize: '0.6875rem', fontWeight: 600, color: '#34d399' }}>
               Economize 20%
             </span>
           </span>
@@ -212,7 +212,7 @@ export default function Pricing({ onNavigate, user, plan }: { onNavigate?: (p: s
       {/* Glow de fundo */}
       <div style={{
         position: 'absolute', top: 0, left: '10%', right: '10%', width: '80%', height: '100%', zIndex: 0,
-        backgroundImage: 'radial-gradient(circle at center, rgba(139,92,246,0.12) 0%, transparent 70%)',
+        backgroundImage: 'radial-gradient(circle at center, rgba(16,185,129,0.12) 0%, transparent 70%)',
         pointerEvents: 'none',
       }} />
 
@@ -220,7 +220,7 @@ export default function Pricing({ onNavigate, user, plan }: { onNavigate?: (p: s
       <div style={{ textAlign: 'center', marginBottom: 24, maxWidth: 768, margin: '0 auto 24px', position: 'relative', zIndex: 1 }}>
         <h2 style={{ margin: '0 0 16px', fontSize: 'clamp(2rem, 4vw, 3.5rem)', fontWeight: 600, color: '#fafafa', letterSpacing: '-0.02em' }}>
           Planos que funcionam para o seu{' '}
-          <span style={{ border: '1px dashed rgba(139,92,246,0.6)', padding: '2px 10px', borderRadius: 12, background: 'rgba(139,92,246,0.1)', color: '#a78bfa', display: 'inline-block' }}>
+          <span style={{ border: '1px dashed rgba(16,185,129,0.6)', padding: '2px 10px', borderRadius: 12, background: 'rgba(16,185,129,0.1)', color: '#34d399', display: 'inline-block' }}>
             negócio
           </span>
         </h2>
@@ -249,16 +249,16 @@ export default function Pricing({ onNavigate, user, plan }: { onNavigate?: (p: s
                 className="glass-card"
                 style={{
                   position: 'relative', height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden',
-                  border: plan.highlighted ? '1px solid rgba(139,92,246,0.45)' : '1px solid rgba(255,255,255,0.06)',
-                  background: plan.highlighted ? 'rgba(139,92,246,0.05)' : undefined,
-                  boxShadow: plan.highlighted ? '0 0 40px rgba(139,92,246,0.12)' : undefined,
+                  border: plan.highlighted ? '1px solid rgba(16,185,129,0.45)' : '1px solid rgba(255,255,255,0.06)',
+                  background: plan.highlighted ? 'rgba(16,185,129,0.05)' : undefined,
+                  boxShadow: plan.highlighted ? '0 0 40px rgba(16,185,129,0.12)' : undefined,
                 }}
               >
                 <div style={{ padding: '24px 24px 0' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
                     <h3 style={{ margin: 0, fontSize: '1.5rem', fontWeight: 600, color: '#fafafa' }}>{plan.name}</h3>
                     {plan.highlighted && (
-                      <span style={{ background: '#8b5cf6', color: '#fff', padding: '4px 12px', borderRadius: 9999, fontSize: '0.75rem', fontWeight: 500, whiteSpace: 'nowrap' }}>
+                      <span style={{ background: '#10b981', color: '#fff', padding: '4px 12px', borderRadius: 9999, fontSize: '0.75rem', fontWeight: 500, whiteSpace: 'nowrap' }}>
                         {plan.badge || 'Popular'}
                       </span>
                     )}
@@ -277,8 +277,8 @@ export default function Pricing({ onNavigate, user, plan }: { onNavigate?: (p: s
                     style={{
                       width: '100%', marginBottom: 24, padding: 16, borderRadius: 12, border: 'none', cursor: 'pointer',
                       fontFamily: 'Inter, sans-serif', fontSize: '1rem', fontWeight: 600, color: '#fff',
-                      background: plan.highlighted ? 'linear-gradient(135deg, #8b5cf6, #7c3aed)' : 'linear-gradient(135deg, #27272a, #3f3f46)',
-                      boxShadow: plan.highlighted ? '0 8px 24px rgba(139,92,246,0.35)' : 'none',
+                      background: plan.highlighted ? 'linear-gradient(135deg, #10b981, #059669)' : 'linear-gradient(135deg, #27272a, #3f3f46)',
+                      boxShadow: plan.highlighted ? '0 8px 24px rgba(16,185,129,0.35)' : 'none',
                       transition: 'transform 0.15s, box-shadow 0.15s',
                     }}
                     onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-1px)' }}
@@ -292,7 +292,7 @@ export default function Pricing({ onNavigate, user, plan }: { onNavigate?: (p: s
                   <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 10 }}>
                     {(plan.features || []).map((f: any, fi: number) => (
                       <li key={fi} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                        <span style={{ color: '#8b5cf6', display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+                        <span style={{ color: '#10b981', display: 'flex', alignItems: 'center', flexShrink: 0 }}>
                           {typeof f.icon === 'string' ? (PLAN_ICONS[f.icon] || PLAN_ICONS.layers) : f.icon}
                         </span>
                         <span style={{ fontSize: '0.8125rem', color: '#a1a1aa' }}>{f.text}</span>
