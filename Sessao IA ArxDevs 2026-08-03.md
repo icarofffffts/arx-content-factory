@@ -143,3 +143,40 @@ nano /etc/systemd/system/content-dashboard.service.d/ia-arxdevs.conf
 - Modelo de raciocínio + function calling = sempre forçar resposta final após N rodadas de tools,
   senão ele investiga até esgotar o loop e cai no fallback. Monitorar `journalctl | grep ia-arxdevs`
   (respostas de 49 chars = loop de novo).
+
+---
+
+## 🚀 Sessão final: 26 melhorias + deploy (2026-08-03 ~22h-00h30)
+
+> Detalhe completo em [[Melhorias-Implementadas-2026-08-03]]
+
+### Implementado (21/26 itens)
+| Área | Itens |
+|------|-------|
+| Frontend | #1 Preview real dos posts · #2 Gerar com tema · #4 Pricing standalone · #5 Landing dados reais · #6 Busca/filtro · #7 Bulk actions · #8 Preview mobile · #17 Mobile responsivo · #18 Dark/light · #19 Animações · #20 Onboarding · #21 Identidade · #22 Bundle split · #23 SEO (OG, sitemap, favicon) |
+| IA ArxDevs | #13 Botões inline ✅/❌ · #14 Publicação direta · #15 Memória longa (summarização) · Troca de modelos DeepSeek (`/modelo`) · Fallback automático |
+| Infra | #24 CDN headers · Worker de publicação agendada · Endpoints bulk + agendamento recorrente |
+
+### Commits
+- `4bbcfa5` fix: roteamento por URL
+- `0667545` feat(ia-arxdevs): troca de modelos DeepSeek
+- `d7c3ee1` feat: melhorias massivas (bundle split, SEO, preview, memoria IA, mobile, onboarding)
+- `2675194` docs: handoff completo
+
+### ⚠️ Incidente pós-deploy (corrigido)
+- **Sintoma**: site em tela branca após deploy.
+- **Causa**: subagente de CDN adicionou `location /assets/` no nginx apontando pro diretório errado
+  (`/usr/share/nginx/html` = `/opt/content_factory/media`), mas o build está em
+  `/opt/content_factory/frontend/dist/assets/` → todo asset 404 → React não monta.
+- **Fix**: restaurado `/opt/content_factory/nginx-default.conf` do backup (proxy → Express) +
+  `nginx -s reload`. Cache de 1 ano movido pro Express (`express.static maxAge '1y'` + setHeaders
+  para `/assets/|/images/|/uploads/`).
+- **Verificado**: `/` 200, `/assets/index-*.js` 200, `/pricing`, `/login`, `/dashboard` renderizando com títulos dinâmicos.
+
+### Pendente (5 itens)
+#3 Multi-canal num clique · #9 Calendário drag-and-drop · #10 Geração de vídeo · #11 Templates customizáveis · #16 Geração de imagem · #25 Worker publicação real (depende review Meta) · #26 Analytics real (depende review Meta)
+
+### Deploy final
+- Frontend: `dist/` com bundle split (5 chunks) → `/opt/content_factory/frontend/dist/`
+- Backend: `server.js` + `assistant.js` → `/opt/content_factory/dashboard/`
+- Serviço: `systemctl restart content-dashboard` ✅ ativo
