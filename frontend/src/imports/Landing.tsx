@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import Pricing from './Pricing'
 import ArxLogo from './ArxLogo'
 import { api } from '../lib/api'
+import { useGsapLanding } from './GsapLanding'
 
 // ─── Real SVG logos ───────────────────────────────────────────────────────────
 
@@ -341,12 +342,11 @@ function Ticker() {
     { label: 'YouTube',    logo: <SvgYouTube size={18} /> },
   ]
   const all = [...items, ...items]
-  const [paused, setPaused] = useState(false)
   return (
-    <div style={{ overflow: 'hidden', borderTop: '1px solid rgba(255,255,255,0.06)', borderBottom: '1px solid rgba(255,255,255,0.06)', padding: '18px 0', position: 'relative', cursor: 'default' }} onMouseEnter={() => setPaused(true)} onMouseLeave={() => setPaused(false)}>
+    <div style={{ overflow: 'hidden', borderTop: '1px solid rgba(255,255,255,0.06)', borderBottom: '1px solid rgba(255,255,255,0.06)', padding: '18px 0', position: 'relative', cursor: 'default' }}>
       <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 100, background: 'linear-gradient(90deg, #0a0a0a, transparent)', zIndex: 1 }} />
       <div style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: 100, background: 'linear-gradient(-90deg, #0a0a0a, transparent)', zIndex: 1 }} />
-      <div style={{ display: 'flex', gap: 48, width: 'max-content', animation: paused ? 'none' : 'ticker 22s linear infinite' }}>
+      <div className="ticker-track" style={{ display: 'flex', gap: 48, width: 'max-content' }}>
         {all.map((item, i) => (
           <span key={i} style={{ display: 'flex', alignItems: 'center', gap: 9, fontSize: '0.9375rem', color: '#3f3f46', fontWeight: 600, whiteSpace: 'nowrap', transition: 'color 0.2s', opacity: 0.6 }} onMouseEnter={e => { (e.currentTarget as HTMLSpanElement).style.opacity = '1'; (e.currentTarget as HTMLSpanElement).style.color = '#fafafa' }} onMouseLeave={e => { (e.currentTarget as HTMLSpanElement).style.opacity = '0.6'; (e.currentTarget as HTMLSpanElement).style.color = '#3f3f46' }}>
             {item.logo} {item.label}
@@ -589,6 +589,9 @@ const TESTIMONIALS = [
 export default function Landing({ onNavigate, user, initialPricing }: { onNavigate: (p: string) => void; user: any; initialPricing?: boolean }) {
   const [showPricing, setShowPricing] = useState(!!initialPricing)
   const [metrics, setMetrics] = useState<any>(null)
+  const rootRef = useRef<HTMLDivElement>(null)
+
+  useGsapLanding(rootRef)
 
   useEffect(() => {
     api.metrics()
@@ -601,13 +604,13 @@ export default function Landing({ onNavigate, user, initialPricing }: { onNaviga
   }, [])
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#0a0a0a', color: '#fafafa', fontFamily: 'Inter, system-ui, sans-serif', overflowX: 'hidden' }}>
+    <div ref={rootRef} style={{ minHeight: '100vh', backgroundColor: '#0a0a0a', color: '#fafafa', fontFamily: 'Inter, system-ui, sans-serif', overflowX: 'hidden' }}>
       <AuroraBackground />
       <ParticleField />
       <ScrollBar />
 
       {/* ── NAV ── */}
-      <nav style={{ position: 'fixed', top: 2, width: '100%', zIndex: 100, background: 'rgba(10,10,10,0.8)', backdropFilter: 'blur(20px)', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+      <nav className="gs-nav" style={{ position: 'fixed', top: 2, width: '100%', zIndex: 100, background: 'rgba(10,10,10,0.8)', backdropFilter: 'blur(20px)', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
         <div style={{ maxWidth: 1160, margin: '0 auto', padding: '0 24px', height: 58, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <ArxLogo size={32} glow />
@@ -631,33 +634,39 @@ export default function Landing({ onNavigate, user, initialPricing }: { onNaviga
       <section style={{ position: 'relative', zIndex: 1, padding: '132px 24px 80px', minHeight: '100vh', display: 'flex', alignItems: 'center' }}>
         <div style={{ maxWidth: 1160, margin: '0 auto', width: '100%', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 64, alignItems: 'center' }}>
           <div>
-            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.22)', borderRadius: 9999, padding: '7px 16px', fontSize: '0.75rem', color: '#34d399', fontWeight: 600, marginBottom: 28, animation: 'fadeInDown 0.6s ease both' }}>
+            <div className="gs-badge" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.22)', borderRadius: 9999, padding: '7px 16px', fontSize: '0.75rem', color: '#34d399', fontWeight: 600, marginBottom: 28 }}>
               <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#22c55e', animation: 'blink 1.5s ease-in-out infinite' }} />
               840+ criadores automatizando conteúdo agora
             </div>
 
-            <h1 style={{ margin: '0 0 22px', fontSize: 'clamp(2.5rem,4.5vw,3.75rem)', fontWeight: 900, lineHeight: 1.08, letterSpacing: '-0.035em', animation: 'fadeInUp 0.6s 0.1s ease both' }}>
-              Seu conteúdo<br />
-              no piloto<br />
-              <Typewriter words={['automático.', 'inteligente.', 'aprovado.', 'publicado.']} />
+            <h1 style={{ margin: '0 0 22px', fontSize: 'clamp(2.5rem,4.5vw,3.75rem)', fontWeight: 900, lineHeight: 1.08, letterSpacing: '-0.035em' }}>
+              <span className="gs-hero-line" style={{ display: 'block' }}>Seu conteúdo</span>
+              <span className="gs-hero-line" style={{ display: 'block' }}>no piloto</span>
+              <span className="gs-hero-line" style={{ display: 'block' }}>
+                <Typewriter words={['automático.', 'inteligente.', 'aprovado.', 'publicado.']} />
+              </span>
             </h1>
 
-            <p style={{ margin: '0 0 36px', fontSize: '1.125rem', color: '#71717a', lineHeight: 1.72, maxWidth: 460, animation: 'fadeInUp 0.6s 0.2s ease both' }}>
+            <p className="gs-hero-sub" style={{ margin: '0 0 36px', fontSize: '1.125rem', color: '#71717a', lineHeight: 1.72, maxWidth: 460 }}>
               IA gera posts para <strong style={{ color: '#c4b5fd' }}>LinkedIn</strong>, <strong style={{ color: '#c4b5fd' }}>Instagram</strong> e <strong style={{ color: '#c4b5fd' }}>GitHub</strong>. Você aprova pelo WhatsApp em segundos. Zero esforço manual.
             </p>
 
-            <div style={{ display: 'flex', gap: 14, animation: 'fadeInUp 0.6s 0.3s ease both' }}>
+            <div className="gs-hero-cta" style={{ display: 'flex', gap: 14 }}>
               <MagneticBtn primary large onClick={() => onNavigate('signup')}>Começar Grátis →</MagneticBtn>
               <MagneticBtn large onClick={() => setShowPricing(true)}>Ver Planos</MagneticBtn>
             </div>
 
-            <div style={{ display: 'flex', gap: 22, marginTop: 28, fontSize: '0.8125rem', color: '#3f3f46', animation: 'fadeInUp 0.6s 0.4s ease both' }}>
+            <div className="gs-hero-trust" style={{ display: 'flex', gap: 22, marginTop: 28, fontSize: '0.8125rem', color: '#3f3f46' }}>
               {['🚀 Sem cartão', '✅ Cancele quando quiser', '⚡ 5 min de setup'].map(t => <span key={t}>{t}</span>)}
             </div>
           </div>
 
-          <div style={{ display: 'flex', justifyContent: 'center', animation: 'fadeInRight 0.9s 0.15s ease both' }}>
-            <LiveMockup />
+          <div data-parallax style={{ display: 'flex', justifyContent: 'center' }}>
+            <div className="gs-hero-mock">
+              <div className="gs-hero-mock-inner">
+                <LiveMockup />
+              </div>
+            </div>
           </div>
         </div>
       </section>
@@ -666,7 +675,7 @@ export default function Landing({ onNavigate, user, initialPricing }: { onNaviga
       <div style={{ position: 'relative', zIndex: 1 }}><Ticker /></div>
 
       {/* ── STATS ── */}
-      <section style={{ position: 'relative', zIndex: 1, padding: '64px 24px' }}>
+      <section data-reveal style={{ position: 'relative', zIndex: 1, padding: '64px 24px' }}>
         <div style={{ maxWidth: 900, margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', background: 'rgba(255,255,255,0.03)', borderRadius: 20, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.07)' }}>
           {(metrics ? [
             { value: metrics.total_posts || 0, suffix: '+', label: 'posts publicados' },
@@ -685,11 +694,11 @@ export default function Landing({ onNavigate, user, initialPricing }: { onNaviga
       </section>
 
       {/* ── WHATSAPP SECTION ── */}
-      <section style={{ position: 'relative', zIndex: 1, padding: '80px 24px', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+      <section data-reveal style={{ position: 'relative', zIndex: 1, padding: '80px 24px', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
         <div style={{ maxWidth: 1100, margin: '0 auto', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 80, alignItems: 'center' }}>
           <div>
             <span style={{ fontSize: '0.6875rem', fontWeight: 700, color: '#25d366', textTransform: 'uppercase', letterSpacing: '0.1em', display: 'block', marginBottom: 14 }}>Aprovação Instantânea</span>
-            <h2 style={{ margin: '0 0 18px', fontSize: 'clamp(1.75rem,3vw,2.5rem)', fontWeight: 900, lineHeight: 1.1, letterSpacing: '-0.03em' }}>
+            <h2 className="split-lines" style={{ margin: '0 0 18px', fontSize: 'clamp(1.75rem,3vw,2.5rem)', fontWeight: 900, lineHeight: 1.1, letterSpacing: '-0.03em' }}>
               Você toca.<br />
               <span style={{ color: '#25d366' }}>A IA publica.</span>
             </h2>
@@ -720,11 +729,11 @@ export default function Landing({ onNavigate, user, initialPricing }: { onNaviga
       </section>
 
       {/* ── FEATURES ── */}
-      <section style={{ position: 'relative', zIndex: 1, padding: '80px 24px', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+      <section data-reveal style={{ position: 'relative', zIndex: 1, padding: '80px 24px', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
         <div style={{ maxWidth: 1160, margin: '0 auto' }}>
           <div style={{ textAlign: 'center', marginBottom: 56 }}>
             <span style={{ fontSize: '0.6875rem', fontWeight: 700, color: '#10b981', textTransform: 'uppercase', letterSpacing: '0.1em', display: 'block', marginBottom: 14 }}>Recursos</span>
-            <h2 style={{ margin: '0 0 12px', fontSize: 'clamp(1.75rem,3vw,2.5rem)', fontWeight: 900, letterSpacing: '-0.03em' }}>Construído para escala</h2>
+            <h2 className="split-lines" style={{ margin: '0 0 12px', fontSize: 'clamp(1.75rem,3vw,2.5rem)', fontWeight: 900, letterSpacing: '-0.03em' }}>Construído para escala</h2>
             <p style={{ margin: 0, color: '#71717a', fontSize: '1rem' }}>Tudo que você precisa para publicar em volume sem perder qualidade</p>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 14 }}>
@@ -740,7 +749,7 @@ export default function Landing({ onNavigate, user, initialPricing }: { onNaviga
       </section>
 
       {/* ── SCREENSHOT STRIP ── */}
-      <section style={{ position: 'relative', zIndex: 1, padding: '0 0 80px', overflow: 'hidden', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+      <section data-reveal style={{ position: 'relative', zIndex: 1, padding: '0 0 80px', overflow: 'hidden', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
         <div style={{ textAlign: 'center', padding: '64px 24px 32px' }}>
           <h2 style={{ margin: 0, fontSize: 'clamp(1.5rem,2.5vw,2rem)', fontWeight: 900, letterSpacing: '-0.025em' }}>Interface feita para produtividade</h2>
         </div>
@@ -769,16 +778,16 @@ export default function Landing({ onNavigate, user, initialPricing }: { onNaviga
 
       {/* ── PRICING ── */}
       {showPricing && (
-        <section style={{ position: 'relative', zIndex: 1, padding: '80px 24px', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+        <section data-reveal style={{ position: 'relative', zIndex: 1, padding: '80px 24px', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
           <Pricing onNavigate={onNavigate} user={user} plan={null} />
         </section>
       )}
 
       {/* ── TESTIMONIALS ── */}
-      <section style={{ position: 'relative', zIndex: 1, padding: '80px 24px', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+      <section data-reveal style={{ position: 'relative', zIndex: 1, padding: '80px 24px', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
         <div style={{ maxWidth: 1100, margin: '0 auto' }}>
           <div style={{ textAlign: 'center', marginBottom: 52 }}>
-            <h2 style={{ margin: '0 0 12px', fontSize: 'clamp(1.75rem,3vw,2.5rem)', fontWeight: 900, letterSpacing: '-0.03em' }}>Quem usa, aprova</h2>
+            <h2 className="split-lines" style={{ margin: '0 0 12px', fontSize: 'clamp(1.75rem,3vw,2.5rem)', fontWeight: 900, letterSpacing: '-0.03em' }}>Quem usa, aprova</h2>
             <p style={{ margin: 0, color: '#71717a', fontSize: '1rem' }}>Sem post patrocinado. Feedback real de usuários reais.</p>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 16 }}>
@@ -802,11 +811,11 @@ export default function Landing({ onNavigate, user, initialPricing }: { onNaviga
       </section>
 
       {/* ── CTA ── */}
-      <section style={{ position: 'relative', zIndex: 1, padding: '80px 24px 110px' }}>
+      <section data-reveal style={{ position: 'relative', zIndex: 1, padding: '80px 24px 110px' }}>
         <div style={{ maxWidth: 680, margin: '0 auto' }}>
           <TiltCard accent="#10b981" style={{ padding: '60px 48px', textAlign: 'center' }}>
             <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse at 50% 0%, rgba(16,185,129,0.12) 0%, transparent 60%)', pointerEvents: 'none', borderRadius: 20 }} />
-            <h2 style={{ margin: '0 0 14px', fontSize: 'clamp(1.75rem,3vw,2.75rem)', fontWeight: 900, letterSpacing: '-0.03em' }}>
+            <h2 className="split-lines" style={{ margin: '0 0 14px', fontSize: 'clamp(1.75rem,3vw,2.75rem)', fontWeight: 900, letterSpacing: '-0.03em' }}>
               Pronto para publicar<br />no piloto automático?
             </h2>
             <p style={{ margin: '0 0 36px', color: '#71717a', fontSize: '1.0625rem', lineHeight: 1.65 }}>
