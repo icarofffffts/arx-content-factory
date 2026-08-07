@@ -111,7 +111,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--base", default="https://conteudos.icarodev.cloud")
     parser.add_argument("--token", default=None)
-    parser.add_argument("--email", default="admin")
+    parser.add_argument("--email", default="admin@arx.dev")
     parser.add_argument("--password", default="arx_secret_2026!")
     args = parser.parse_args()
     base = args.base.rstrip("/")

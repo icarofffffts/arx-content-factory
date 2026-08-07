@@ -8,11 +8,11 @@ export class PromoService {
 
   constructor() {
     this.pool = new Pool({
-      user: 'supabase_admin',
-      host: '10.0.1.20',
-      database: 'postgres',
-      password: '635ddc870eca917c87aa2fcbf0abeef59fe5a4e5608f14b055d2884e7b163bfc',
-      port: 5432,
+      user: process.env.DB_USER || 'supabase_admin',
+      host: process.env.DB_HOST || '10.0.1.20',
+      database: process.env.DB_NAME || 'postgres',
+      password: process.env.DB_PASSWORD || 'REDACTED_OLD_DB_PASSWORD',
+      port: parseInt(process.env.DB_PORT || '5432', 10),
     });
   }
 

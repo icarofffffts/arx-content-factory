@@ -12,8 +12,8 @@ echo "=== 2. BACKUP DASHBOARD ANTIGO ==="
 cp -r "$DEST/dashboard" "$DEST/dashboard_backup_$(date +%Y%m%d_%H%M)" 2>/dev/null || true
 
 echo "=== 3. SQL SCHEMA ==="
-PGPASSWORD='635ddc870eca917c87aa2fcbf0abeef59fe5a4e5608f14b055d2884e7b163bfc' \
-  psql -h 10.0.1.20 -U supabase_admin -d postgres -f "$TMP/sql_schema_novo.sql"
+PGPASSWORD="${DB_PASSWORD:-REDACTED_OLD_DB_PASSWORD}" \
+  psql -h "${DB_HOST:-10.0.1.20}" -U "${DB_USER:-supabase_admin}" -d "${DB_NAME:-postgres}" -f "$TMP/sql_schema_novo.sql"
 
 echo "=== 4. BUILD REACT ==="
 cd "$TMP/frontend"

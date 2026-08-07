@@ -1,11 +1,11 @@
 const { Client } = require('pg');
 
 const DB = {
-  host: 'postgres-main',
-  port: 5432,
-  user: 'arx',
-  password: 'EhW=jvdLGhYZ4k=)]}[0Jz|l=*R7?',
-  database: 'n8n'
+  host: process.env.N8N_DB_HOST || 'postgres-main',
+  port: parseInt(process.env.N8N_DB_PORT || '5432', 10),
+  user: process.env.N8N_DB_USER || 'arx',
+  password: process.env.N8N_DB_PASSWORD || 'REDACTED_N8N_PASSWORD',
+  database: process.env.N8N_DB_NAME || 'n8n'
 };
 
 async function addWebhookToWorkflow(workflowId, workflowName, webhookPath) {

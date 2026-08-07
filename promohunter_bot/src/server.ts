@@ -9,7 +9,7 @@ const promoService = new PromoService();
 // 1. API: Create & Broadcast New Promotion
 app.post('/api/v1/promos/broadcast', async (req: Request, res: Response) => {
   try {
-    const { title, original_price, promo_price, store_name, original_url, image_url, telegram_bot_token, telegram_channel_id } = req.body;
+    const { title, original_price, promo_price, store_name, original_url, image_url } = req.body;
 
     if (!title || !promo_price || !original_url) {
       return res.status(400).json({ error: 'title, promo_price e original_url são obrigatórios!' });
@@ -26,10 +26,12 @@ app.post('/api/v1/promos/broadcast', async (req: Request, res: Response) => {
 
     const copyText = promoService.generateCopy(offer);
 
-    // Telegram Dispatch (if token provided)
+    // Telegram Dispatch (read strictly from ENV for safety against SSRF/Open Relay abuse)
     let telegramSent = false;
-    if (telegram_bot_token && telegram_channel_id) {
-      telegramSent = await promoService.sendTelegram(telegram_bot_token, telegram_channel_id, copyText, offer.image_url);
+    const botToken = process.env.TELEGRAM_BOT_TOKEN;
+    const channelId = process.env.TELEGRAM_CHANNEL_ID;
+    if (botToken && channelId) {
+      telegramSent = await promoService.sendTelegram(botToken, channelId, copyText, offer.image_url);
     }
 
     res.json({
@@ -55,6 +57,6 @@ app.get('/api/v1/promos', async (req: Request, res: Response) => {
 });
 
 const PORT = 9880;
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`PromoHunter Bot Engine running in TypeScript on port ${PORT}`);
+app.listen(PORT, '127.0.0.1', () => {
+  console.log(`PromoHunter Bot Engine running in TypeScript on loopback port ${PORT}`);
 });

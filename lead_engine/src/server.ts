@@ -55,6 +55,6 @@ app.get('/api/v1/leads/stats', async (req: Request, res: Response) => {
 });
 
 const PORT = 9879;
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`TypeScript Lead Engine running on port ${PORT}`);
+app.listen(PORT, '127.0.0.1', () => {
+  console.log(`TypeScript Lead Engine running on loopback port ${PORT}`);
 });

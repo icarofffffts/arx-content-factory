@@ -11,10 +11,14 @@
             "id": "65f92510b952934c",
             "type": "leaf",
             "state": {
-              "type": "empty",
-              "state": {},
+              "type": "markdown",
+              "state": {
+                "file": "KEYS.md",
+                "mode": "source",
+                "source": false
+              },
               "icon": "lucide-file",
-              "title": "Nova aba"
+              "title": "KEYS"
             }
           }
         ]
@@ -37,7 +41,9 @@
               "type": "file-explorer",
               "state": {
                 "sortOrder": "alphabetical",
-                "autoReveal": false
+                "autoReveal": false,
+                "showSearch": false,
+                "searchQuery": ""
               },
               "icon": "lucide-folder-closed",
               "title": "Explorador de arquivos"
@@ -178,18 +184,48 @@
   },
   "active": "65f92510b952934c",
   "lastOpenFiles": [
-    "deploy_vps.sh",
-    "stop_orphans_vps.sh",
-    "cleanup_vps.sh",
-    "temp_inspect.py",
-    "temp_check_labels.py",
-    "frontend/src/pages/DashboardCEO.tsx",
-    "frontend/src/components/PostCard.tsx",
-    "frontend/src/components/WhatsAppModal.tsx",
-    "frontend/src/components",
-    "frontend/src/pages/Pricing.tsx",
-    "frontend/src/pages/Signup.tsx",
-    "dashboard/node_modules/pg-protocol/README.md",
+    "frontend_para_gemini.md",
+    "landing_para_gemini.md",
+    "frontend/dist/assets/index-DFJfnnye.js",
+    "frontend/vite.config.ts.timestamp-1785973721688-713655b1d84b38.mjs",
+    "frontend/dist/assets/Signup-BfyGL44y.js",
+    "frontend/dist/assets/Login-BgDpPSyf.js",
+    "frontend/dist/assets/Landing-HtkS8xc9.js",
+    "frontend/vite.config.ts.timestamp-1785973637447-704a44c0f58c18.mjs",
+    "frontend/node_modules/@gsap/react/types/index.d.ts",
+    "frontend/node_modules/@gsap/react/types",
+    "frontend/src/imports/GsapLanding.tsx",
+    "frontend/node_modules/gsap/types/utils/VelocityTracker.d.ts",
+    "Sessao - Update n8n 2.32.7 + Fix Exec 4291.md",
+    "Sessao IA ArxDevs 2026-08-03.md",
+    "IA ArxDevs.md",
+    "Plano de Correcao Frontend.md",
+    "KEYS.md",
+    "UI2 Integracao Figma.md",
+    "Arx Content Factory Roadmap.md",
+    "Completing Content Factory VPS.md",
+    "DESIGN.md",
+    "EXPLICATIVO.md",
+    "figma-prompt.md",
+    "Fixing Duplicate Approval Message Issue.md",
+    "linkedin_slide_preview_1785034796279.png",
+    "frontend/node_modules/lucide-react/README.md",
+    "frontend/node_modules/framer-motion/dom/README.md",
+    "frontend/node_modules/@babel/helper-validator-option/README.md",
+    "frontend/node_modules/@babel/compat-data/README.md",
+    "frontend/node_modules/@babel/code-frame/README.md",
+    "frontend/node_modules/semver/README.md",
+    "frontend/node_modules/lru-cache/README.md",
+    "frontend/node_modules/js-tokens/README.md",
+    "frontend/node_modules/js-tokens/CHANGELOG.md",
+    "frontend/node_modules/debug/README.md",
+    "frontend/node_modules/convert-source-map/README.md",
+    "frontend/dist/assets/whatsapp-approval-CtbdMfZ9.png",
+    "frontend/src/imports/Gemini_Generated_Image_y16noby16noby16n__1_.png",
+    "frontend/src/imports/whatsapp-approval.png",
+    "Social Media Automation UI2/src/imports/pasted_text/figma-ai-design-tokens.md",
+    "Social Media Automation UI2/src/imports/whatsapp-approval.png",
+    "Social Media Automation UI2/src/imports/Gemini_Generated_Image_y16noby16noby16n__1_.png",
     "Enhance_design/thumbnail.png"
   ]
 }

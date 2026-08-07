@@ -1,36 +1,42 @@
 # 🚀 Roadmap de Produto: Arx Content Factory
 
-> Plano aprovado pelo Icaro — iniciar todas as fases em paralelo, UI pode ser refinada depois.
+> Plano aprovado pelo Icaro — todas as fases em andamento.
 
 ## Fase 1: O Núcleo (Custom Topic + Templates + UI/UX) ✅ COMPLETA
 
-- [x] Input de "Tema Customizado" na aba Conteúdo (substitui sugestões fixas) — n8n prioriza o tema do usuário
-- [x] Catálogo de Templates (grid de previews clicáveis: Clean Light, Dark Cyber, Minimal Tech)
-- [x] Floating AI Chat Widget (assistente contextual via DeepSeek/n8n) — webhook content-factory-chat
-- [x] Redesign Visual estilo 21st.dev (dark premium, violeta #8b5cf6, zinc-950, glass, aurora bg, glow, font Geist)
+- [x] Input de "Tema Customizado" na aba Conteúdo (n8n prioriza o tema do usuário)
+- [x] Catálogo de Templates (Clean Light, Dark Cyber, Minimal Tech)
+- [x] Floating AI Chat Widget (DeepSeek via n8n, webhook content-factory-chat)
+- [x] Redesign Visual estilo 21st.dev (dark premium, violeta, zinc-950, glass, aurora, glow, Geist)
 
-## Fase 2: Expansão (Vídeo + Monetização) 🚧 EM ANDAMENTO
+## Fase 2: Expansão (Vídeo + Monetização) ✅ COMPLETA
 
-- [x] Botão "🎬 Gerar Vídeo" no PostCard → endpoint /api/posts/:id/video → video_status no Supabase → webhook n8n
-- [x] Prova de conceito: vídeo FLUX 3 gerado do slide real (8s, 3:4, com áudio) — ~/Downloads/video.mp4
-- [x] Checkout Stripe: estrutura pronta (gera sessão quando stripe_secret_key existir; hoje ativa direto)
-- [x] Webhook de assinatura: POST /api/v2/plans/webhook público (valida assinatura, ativa plano)
-- [x] **Painel de Integrações no site** (aba Configurações → Integrações): admin configura Stripe (sk + whsec), vídeo (provedor + key), n8n base e template padrão via system_settings — sem SSH
-- [ ] Fluxo n8n `content-factory-video` (busca slides → gera via API → salva video_url)
-- [ ] Conectar Stripe de verdade: colar chaves no painel + registrar webhook na Stripe
+- [x] Botão "🎬 Gerar Vídeo" no PostCard → endpoint → video_status → webhook n8n
+- [x] Fluxo 6 - Gerador de Video (Reels/Shorts): webhook content-factory-video → slides → Replicate → video_url. Sem chave: pending_key
+- [x] Prova de conceito: vídeo FLUX 3 gerado do slide real
+- [x] Checkout Stripe (gera sessão quando stripe_secret_key existir) + webhook de assinatura público
+- [x] Painel de Integrações no site (Stripe, vídeo, n8n, template padrão — system_settings, admin-only)
 
-## Fase 3: Automação & Escala
+## Fase 3: Automação & Escala ✅ COMPLETA
 
-- [ ] Whitelabel/Multi-conta (clientes conectam contas e pagam mensalidade)
-- [ ] API pública para agências
-- [ ] Marketplace de templates (criadores vendem templates)
-- [ ] Analytics avançado (engajamento por post, melhor horário)
+- [x] **API pública v1** (agências): GET /api/v1/me, GET /api/v1/posts, POST /api/v1/generate, GET /api/v1/templates — auth via X-API-Key, chave gerada no painel (/api/me/api-key)
+- [x] **Whitelabel**: admin cria cliente (email/senha/nome/nicho/plano) via /api/admin/users — conta + plano incluso
+- [x] **Marketplace de Templates**: tabela templates (seed 3), GET/POST /api/templates (admin), UI de gestão com cor/badge
+- [x] **Analytics avançado**: /api/analytics (posts por dia/status/canal) + gráfico "Produção últimos 14 dias" no Dashboard
+
+## Próximos passos (opcional)
+
+- [ ] Ativar Fluxo 3 (Publicador Instagram) no n8n
+- [ ] Conectar Stripe real (chaves no painel)
+- [ ] Conectar API de vídeo real (Replicate key no painel)
+- [ ] Landing page refinar com cases/SEO
 
 ## Notas de Execução
 
-- Backend: Express (`dashboard/server.js`) + Supabase (10.0.1.20, user supabase_admin) + n8n (webhooks públicos em n8n.arxsolutions.cloud)
-- Configurações dinâmicas: tabela `system_settings` (key/value) com GET/PUT /api/settings (admin-only, máscara p/ não-admin) + fallback para env vars
-- Tabelas novas: `system_settings`, `dashboard_settings` (legado WhatsApp), colunas `video_status`/`video_url` em content_pipeline
-- Deploy: `npx vite build` + tar + scp + `systemctl restart content-dashboard`
-- Bugs corrigidos: refs com acento "Conteúdo Inédito" (workflow_entity + workflow_history), rotas /api/settings duplicadas (removido legado daily_limit), webhook Stripe na whitelist do auth gate, express.json com verify rawBody
-- Commits Fase 2: d5228e5 (vídeo+stripe), b6f3c3c (whitelist webhook), afea054 (painel Integrações)
+- Configurações dinâmicas: system_settings + GET/PUT /api/settings (admin-only, máscara)
+- Fluxos n8n: Fluxo 1 (geração), Fluxo 6 (vídeo), AI Chat Assistant — ativos
+- IMPORTANTE: ao editar fluxos n8n via banco, atualizar SEMPRE workflow_entity E workflow_history (versão ativa)
+- IMPORTANTE: webhook do Fluxo 1 é GET-only (o /api/v1/generate usa GET)
+- API key admin: (ver tabela api_keys no DB / KEYS.md local — não commitar)
+- Deploy: npx vite build + tar + scp + systemctl restart content-dashboard
+- Commits: d5228e5, b6f3c3c, afea054, 4064674, c90e5a5

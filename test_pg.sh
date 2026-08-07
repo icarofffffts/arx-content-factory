@@ -1,4 +1,4 @@
-export PGPASSWORD="635ddc870eca917c87aa2fcbf0abeef59fe5a4e5608f14b055d2884e7b163bfc"
+export PGPASSWORD="${DB_PASSWORD:-REDACTED_OLD_DB_PASSWORD}"
 echo "=== Test 1: via 172.18.0.1 ==="
 psql -h 172.18.0.1 -p 5432 -U supabase_admin -d postgres -c "SELECT 1 AS test;"
 echo "=== Test 2: via 10.0.4.10 ==="
