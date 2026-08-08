@@ -58,12 +58,12 @@
   50%      { background-position: 100% 50%; }
 }
 @keyframes pulse-glow-nav {
-  0%,100% { box-shadow: 0 0 12px rgba(255,92,56,0.4); }
-  50%     { box-shadow: 0 0 24px rgba(255,92,56,0.7); }
+  0%,100% { box-shadow: 0 0 12px rgba(147,102,57,0.4); }
+  50%     { box-shadow: 0 0 24px rgba(147,102,57,0.7); }
 }
 @keyframes pulse-glow {
-  0%,100% { box-shadow: 0 0 8px rgba(255,92,56,0.3); }
-  50%     { box-shadow: 0 0 20px rgba(255,92,56,0.6); }
+  0%,100% { box-shadow: 0 0 8px rgba(147,102,57,0.3); }
+  50%     { box-shadow: 0 0 20px rgba(147,102,57,0.6); }
 }
 @keyframes spin {
   to { transform: rotate(360deg); }
@@ -81,15 +81,15 @@ html, body {
   margin: 0;
   padding: 0;
   font-family: 'Inter', system-ui, sans-serif;
-  background: #09090b;
-  color: #fafafa;
+  background: #13150F;
+  color: #F2EFE8;
   -webkit-font-smoothing: antialiased;
 }
 
 ::-webkit-scrollbar { width: 4px; height: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: rgba(255,92,56,0.3); border-radius: 9999px; }
-::-webkit-scrollbar-thumb:hover { background: rgba(255,92,56,0.5); }
+::-webkit-scrollbar-thumb { background: rgba(147,102,57,0.3); border-radius: 9999px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(147,102,57,0.5); }
 
 /* ── React Bits overrides ─────────────────────────────────────────────────── */
 
@@ -97,8 +97,8 @@ html, body {
 .shiny-text { animation: none; }
 
 /* SplitText headings (login/signup) */
-.login-title { margin: 0 0 6px; font-size: 1.875rem; font-weight: 900; color: #fafafa; letter-spacing: -0.03em; }
-.signup-title { margin: 0 0 6px; font-size: 2rem; font-weight: 900; color: #fafafa; letter-spacing: -0.035em; line-height: 1.1; }
+.login-title { margin: 0 0 6px; font-size: 1.875rem; font-weight: 900; color: #F2EFE8; letter-spacing: -0.03em; }
+.signup-title { margin: 0 0 6px; font-size: 2rem; font-weight: 900; color: #F2EFE8; letter-spacing: -0.035em; line-height: 1.1; }
 
 /* Shuffle heading (screenshot strip) */
 .strip-heading {
@@ -111,3 +111,26 @@ html, body {
   margin: 0;
 }
 .strip-heading .shuffle-char { line-height: 1.2; font-weight: 900; }
+
+/* Acessibilidade: foco visível em todos os clicáveis */
+:focus-visible {
+  outline: 2px solid #936639;
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Navbar mobile */
+.nav-burger { display: none; }
+
+/* Login: painel direito some em telas menores */
+.login-right { display: block; }
+
+@media (max-width: 1024px) {
+  .login-right { display: none; }
+}
+
+@media (max-width: 768px) {
+  .nav-burger { display: flex; }
+  .nav-links { display: none !important; }
+  .nav-cta-desktop { display: none !important; }
+}

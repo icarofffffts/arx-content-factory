@@ -47,11 +47,11 @@ export default function Login({ onLogin, onNavigate }: {
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: '#0a0a0a', display: 'flex', fontFamily: 'Inter, system-ui, sans-serif', overflow: 'hidden' }}>
+    <div style={{ minHeight: '100vh', background: '#13150F', display: 'flex', fontFamily: 'Inter, system-ui, sans-serif', overflow: 'hidden' }}>
       {/* Left — form */}
       <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px 24px', position: 'relative', zIndex: 1 }}>
         {/* Aurora */}
-        <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse at 30% 40%, rgba(255,92,56,0.12) 0%, transparent 60%)', pointerEvents: 'none' }} />
+        <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse at 30% 40%, rgba(147,102,57,0.12) 0%, transparent 60%)', pointerEvents: 'none' }} />
 
         <div style={{ width: '100%', maxWidth: 380 }}>
           {/* Logo */}
@@ -60,7 +60,7 @@ export default function Login({ onLogin, onNavigate }: {
           </button>
 
           <SplitText text="Bem-vindo de volta" tag="h1" splitType="words" from={{ opacity: 0, y: 24 }} duration={0.8} delay={40} className="login-title" />
-          <p style={{ margin: '0 0 36px', fontSize: '0.9375rem', color: '#71717a' }}>Acesse seu painel de automação</p>
+          <p style={{ margin: '0 0 36px', fontSize: '0.9375rem', color: '#B6AD90' }}>Acesse seu painel de automação</p>
 
           <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             {error && (
@@ -70,52 +70,45 @@ export default function Login({ onLogin, onNavigate }: {
             )}
 
             <div>
-              <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, color: '#a1a1aa', marginBottom: 7 }}>E-mail</label>
+              <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, color: '#C2C5AA', marginBottom: 7 }}>E-mail</label>
               <input
                 type="email" value={email} onChange={e => setEmail(e.target.value)}
                 placeholder="seu@email.com" required
-                style={{ width: '100%', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, padding: '11px 14px', color: '#fafafa', fontSize: '0.9375rem', fontFamily: 'Inter, sans-serif', outline: 'none', transition: 'border-color 0.15s', boxSizing: 'border-box' }}
-                onFocus={e => (e.target.style.borderColor = '#ff5c38')}
+                style={{ width: '100%', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, padding: '11px 14px', color: '#F2EFE8', fontSize: '0.9375rem', fontFamily: 'Inter, sans-serif', outline: 'none', transition: 'border-color 0.15s', boxSizing: 'border-box' }}
+                onFocus={e => (e.target.style.borderColor = '#936639')}
                 onBlur={e => (e.target.style.borderColor = 'rgba(255,255,255,0.1)')}
               />
             </div>
 
             <div>
-              <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, color: '#a1a1aa', marginBottom: 7 }}>Senha</label>
+              <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, color: '#C2C5AA', marginBottom: 7 }}>Senha</label>
               <input
                 type="password" value={password} onChange={e => setPassword(e.target.value)}
                 placeholder="••••••••" required
-                style={{ width: '100%', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, padding: '11px 14px', color: '#fafafa', fontSize: '0.9375rem', fontFamily: 'Inter, sans-serif', outline: 'none', transition: 'border-color 0.15s', boxSizing: 'border-box' }}
-                onFocus={e => (e.target.style.borderColor = '#ff5c38')}
+                style={{ width: '100%', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, padding: '11px 14px', color: '#F2EFE8', fontSize: '0.9375rem', fontFamily: 'Inter, sans-serif', outline: 'none', transition: 'border-color 0.15s', boxSizing: 'border-box' }}
+                onFocus={e => (e.target.style.borderColor = '#936639')}
                 onBlur={e => (e.target.style.borderColor = 'rgba(255,255,255,0.1)')}
               />
             </div>
 
             <button
               type="submit" disabled={loading}
-              style={{ background: loading ? 'rgba(255,92,56,0.5)' : 'linear-gradient(135deg,#ff5c38,#e0491f)', color: '#fff', border: 'none', borderRadius: 10, padding: '13px 0', fontSize: '0.9375rem', fontWeight: 700, cursor: loading ? 'default' : 'pointer', boxShadow: '0 4px 20px rgba(255,92,56,0.4)', transition: 'opacity 0.2s', fontFamily: 'Inter, sans-serif', marginTop: 4 }}
+              style={{ background: loading ? 'rgba(147,102,57,0.5)' : 'linear-gradient(135deg,#936639,#7F4F24)', color: '#F2EFE8', border: 'none', borderRadius: 10, padding: '13px 0', fontSize: '0.9375rem', fontWeight: 700, cursor: loading ? 'default' : 'pointer', boxShadow: '0 4px 20px rgba(147,102,57,0.4)', transition: 'opacity 0.2s', fontFamily: 'Inter, sans-serif', marginTop: 4 }}
             >
               {loading ? 'Entrando…' : 'Entrar →'}
             </button>
           </form>
 
-          <p style={{ textAlign: 'center', marginTop: 20, fontSize: '0.875rem', color: '#71717a' }}>
+          <p style={{ textAlign: 'center', marginTop: 20, fontSize: '0.875rem', color: '#B6AD90' }}>
             Não tem conta?{' '}
-            <button onClick={() => onNavigate('signup')} style={{ background: 'none', border: 'none', color: '#ff8a5c', fontWeight: 600, cursor: 'pointer', fontFamily: 'Inter, sans-serif', fontSize: '0.875rem' }}>
+            <button onClick={() => onNavigate('signup')} style={{ background: 'none', border: 'none', color: '#A68A64', fontWeight: 600, cursor: 'pointer', fontFamily: 'Inter, sans-serif', fontSize: '0.875rem' }}>
               Criar conta grátis
             </button>
           </p>
 
-          <button
-            onClick={() => { setEmail('admin@arx.dev'); setPassword('arx_secret_2026!') }}
-            style={{ display: 'block', width: '100%', marginTop: 8, background: 'none', border: 'none', color: '#3f3f46', fontSize: '0.75rem', cursor: 'pointer', fontFamily: 'Inter, sans-serif' }}
-          >
-            Preencher credenciais de demo
-          </button>
-
           {/* Platform logos */}
           <div style={{ marginTop: 44, borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: 28 }}>
-            <p style={{ textAlign: 'center', fontSize: '0.75rem', color: '#3f3f46', marginBottom: 16, fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Integra com</p>
+            <p style={{ textAlign: 'center', fontSize: '0.75rem', color: '#656D4A', marginBottom: 16, fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Integra com</p>
             <div style={{ display: 'flex', justifyContent: 'center', gap: 20, alignItems: 'center' }}>
               {[
                 { logo: <LogoLinkedIn />, name: 'LinkedIn' },
@@ -133,33 +126,33 @@ export default function Login({ onLogin, onNavigate }: {
       </div>
 
       {/* Right — visual panel */}
-      <div style={{ width: '48%', background: 'rgba(15,15,15,0.95)', borderLeft: '1px solid rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 48, position: 'relative', overflow: 'hidden' }}>
+      <div className="login-right" style={{ width: '48%', background: 'rgba(26,28,20,0.95)', borderLeft: '1px solid rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 48, position: 'relative', overflow: 'hidden' }}>
         {/* BG glow */}
-        <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse at 60% 40%, rgba(255,92,56,0.18) 0%, transparent 65%)', pointerEvents: 'none' }} />
-        <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '40%', background: 'radial-gradient(ellipse at 40% 100%, rgba(59,130,246,0.08) 0%, transparent 60%)', pointerEvents: 'none' }} />
+        <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse at 60% 40%, rgba(147,102,57,0.18) 0%, transparent 65%)', pointerEvents: 'none' }} />
+        <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '40%', background: 'radial-gradient(ellipse at 40% 100%, rgba(164,172,134,0.08) 0%, transparent 60%)', pointerEvents: 'none' }} />
         {/* Grid */}
         <div style={{ position: 'absolute', inset: 0, backgroundImage: 'linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px)', backgroundSize: '40px 40px', pointerEvents: 'none' }} />
 
         <div style={{ position: 'relative', zIndex: 1, textAlign: 'center' }}>
-          {/* Stats floating cards */}
+          {/* Flow cards — funcionalidade real, sem números inventados */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 32 }}>
             {[
-              { icon: '⚡', label: 'Posts publicados hoje', value: '142', color: '#ff5c38' },
-              { icon: '✅', label: 'Aprovados via WhatsApp', value: '98%', color: '#ff5c38' },
-              { icon: '📈', label: 'Engajamento médio', value: '6.4k', color: '#ffb347' },
+              { icon: '🤖', title: 'IA gera o conteúdo', desc: 'Posts, carrosséis e legendas escritos para o seu nicho.' },
+              { icon: '💬', title: 'Aprovação no WhatsApp', desc: 'Aprove ou rejeite cada post em um toque, direto do celular.' },
+              { icon: '🚀', title: 'Publicação automática', desc: 'O calendário inteligente agenda e publica no melhor horário.' },
             ].map((s, i) => (
               <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 14, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 14, padding: '14px 18px', backdropFilter: 'blur(10px)', textAlign: 'left', animation: `fadeInRight 0.5s ${i * 0.12}s ease both` }}>
-                <div style={{ width: 38, height: 38, borderRadius: 10, background: `${s.color}18`, border: `1px solid ${s.color}30`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, flexShrink: 0 }}>{s.icon}</div>
+                <div style={{ width: 38, height: 38, borderRadius: 10, background: 'rgba(147,102,57,0.12)', border: '1px solid rgba(147,102,57,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, flexShrink: 0 }}>{s.icon}</div>
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: '0.75rem', color: '#71717a', marginBottom: 2 }}>{s.label}</div>
-                  <div style={{ fontSize: '1.125rem', fontWeight: 800, color: s.color, letterSpacing: '-0.02em' }}>{s.value}</div>
+                  <div style={{ fontSize: '0.875rem', fontWeight: 700, color: '#F2EFE8', marginBottom: 2 }}>{s.title}</div>
+                  <div style={{ fontSize: '0.75rem', color: '#B6AD90', lineHeight: 1.5 }}>{s.desc}</div>
                 </div>
               </div>
             ))}
           </div>
 
-          <p style={{ fontSize: '0.8125rem', color: '#52525b', lineHeight: 1.6 }}>
-            840+ criadores já automatizando<br />conteúdo com Arx Factory
+          <p style={{ fontSize: '0.8125rem', color: '#7C786A', lineHeight: 1.6 }}>
+            IA que escreve, WhatsApp que aprova,<br />calendário que publica.
           </p>
 
           {/* Platform row */}

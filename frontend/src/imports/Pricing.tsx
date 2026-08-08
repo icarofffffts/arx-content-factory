@@ -100,13 +100,13 @@ function PricingSwitch({ onSwitch }: { onSwitch: (value: string) => void }) {
           style={{
             position: 'relative', zIndex: 10, height: 44, padding: '6px 24px', borderRadius: 9999, border: 'none', background: 'transparent', cursor: 'pointer',
             fontFamily: 'Inter, sans-serif', fontWeight: 500, fontSize: '0.875rem',
-            color: selected === '0' ? '#fff' : '#71717a',
+            color: selected === '0' ? '#fff' : '#B6AD90',
           }}
         >
           {selected === '0' && (
             <motion.span
               layoutId="pricing-switch"
-              style={{ position: 'absolute', top: 0, left: 0, height: 44, width: '100%', borderRadius: 9999, background: 'linear-gradient(135deg, #ff5c38, #e0491f)', boxShadow: '0 4px 16px rgba(255,92,56,0.4)' }}
+              style={{ position: 'absolute', top: 0, left: 0, height: 44, width: '100%', borderRadius: 9999, background: 'linear-gradient(135deg, #936639, #7F4F24)', boxShadow: '0 4px 16px rgba(147,102,57,0.4)' }}
               transition={{ type: 'spring', stiffness: 500, damping: 30 }}
             />
           )}
@@ -117,19 +117,19 @@ function PricingSwitch({ onSwitch }: { onSwitch: (value: string) => void }) {
           style={{
             position: 'relative', zIndex: 10, height: 44, padding: '6px 24px', borderRadius: 9999, border: 'none', background: 'transparent', cursor: 'pointer',
             fontFamily: 'Inter, sans-serif', fontWeight: 500, fontSize: '0.875rem', flexShrink: 0,
-            color: selected === '1' ? '#fff' : '#71717a',
+            color: selected === '1' ? '#fff' : '#B6AD90',
           }}
         >
           {selected === '1' && (
             <motion.span
               layoutId="pricing-switch"
-              style={{ position: 'absolute', top: 0, left: 0, height: 44, width: '100%', borderRadius: 9999, background: 'linear-gradient(135deg, #ff5c38, #e0491f)', boxShadow: '0 4px 16px rgba(255,92,56,0.4)' }}
+              style={{ position: 'absolute', top: 0, left: 0, height: 44, width: '100%', borderRadius: 9999, background: 'linear-gradient(135deg, #936639, #7F4F24)', boxShadow: '0 4px 16px rgba(147,102,57,0.4)' }}
               transition={{ type: 'spring', stiffness: 500, damping: 30 }}
             />
           )}
           <span style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: 8 }}>
             Anual
-            <span style={{ borderRadius: 9999, background: 'rgba(255,92,56,0.15)', padding: '2px 8px', fontSize: '0.6875rem', fontWeight: 600, color: '#ff8a5c' }}>
+            <span style={{ borderRadius: 9999, background: 'rgba(147,102,57,0.15)', padding: '2px 8px', fontSize: '0.6875rem', fontWeight: 600, color: '#A68A64' }}>
               Economize 20%
             </span>
           </span>
@@ -158,7 +158,7 @@ function PriceFlow({ value }: { value: number }) {
   return (
     <number-flow
       ref={ref}
-      style={{ fontSize: '2.5rem', fontWeight: 600, color: '#fafafa', letterSpacing: '-0.02em' }}
+      style={{ fontSize: '2.5rem', fontWeight: 600, color: '#F2EFE8', letterSpacing: '-0.02em' }}
       locales="pt-BR"
     />
   )
@@ -212,17 +212,17 @@ export default function Pricing({ onNavigate, user, plan }: { onNavigate?: (p: s
       {/* Glow de fundo */}
       <div style={{
         position: 'absolute', top: 0, left: '10%', right: '10%', width: '80%', height: '100%', zIndex: 0,
-        backgroundImage: 'radial-gradient(circle at center, rgba(255,92,56,0.12) 0%, transparent 70%)',
+        backgroundImage: 'radial-gradient(circle at center, rgba(147,102,57,0.12) 0%, transparent 70%)',
         pointerEvents: 'none',
       }} />
 
       {/* Header */}
       <div style={{ textAlign: 'center', marginBottom: 24, maxWidth: 768, margin: '0 auto 24px', position: 'relative', zIndex: 1 }}>
-        <h2 style={{ margin: '0 0 16px', fontSize: 'clamp(2rem, 4vw, 3.5rem)', fontWeight: 600, color: '#fafafa', letterSpacing: '-0.02em' }}>
+        <h2 style={{ margin: '0 0 16px', fontSize: 'clamp(2rem, 4vw, 3.5rem)', fontWeight: 600, color: '#F2EFE8', letterSpacing: '-0.02em' }}>
           Planos que funcionam para o seu{' '}
-          <span style={{ color: '#ff8a5c' }}>negócio</span>
+          <span style={{ color: '#A68A64' }}>negócio</span>
         </h2>
-        <p style={{ margin: '0 auto', fontSize: '1rem', color: '#71717a', maxWidth: '70%' }}>
+        <p style={{ margin: '0 auto', fontSize: '1rem', color: '#B6AD90', maxWidth: '70%' }}>
           Confiado por criadores e agências. Explore qual opção é ideal para você.
         </p>
       </div>
@@ -247,25 +247,25 @@ export default function Pricing({ onNavigate, user, plan }: { onNavigate?: (p: s
                 className="glass-card"
                 style={{
                   position: 'relative', height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden',
-                  border: plan.highlighted ? '1px solid rgba(255,92,56,0.45)' : '1px solid rgba(255,255,255,0.06)',
-                  background: plan.highlighted ? 'rgba(255,92,56,0.05)' : undefined,
-                  boxShadow: plan.highlighted ? '0 0 40px rgba(255,92,56,0.12)' : undefined,
+                  border: plan.highlighted ? '1px solid rgba(147,102,57,0.45)' : '1px solid rgba(255,255,255,0.06)',
+                  background: plan.highlighted ? 'rgba(147,102,57,0.05)' : undefined,
+                  boxShadow: plan.highlighted ? '0 0 40px rgba(147,102,57,0.12)' : undefined,
                 }}
               >
                 <div style={{ padding: '24px 24px 0' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
-                    <h3 style={{ margin: 0, fontSize: '1.5rem', fontWeight: 600, color: '#fafafa' }}>{plan.name}</h3>
+                    <h3 style={{ margin: 0, fontSize: '1.5rem', fontWeight: 600, color: '#F2EFE8' }}>{plan.name}</h3>
                     {plan.highlighted && (
-                      <span style={{ background: '#ff5c38', color: '#fff', padding: '4px 12px', borderRadius: 9999, fontSize: '0.75rem', fontWeight: 500, whiteSpace: 'nowrap' }}>
+                      <span style={{ background: '#936639', color: '#fff', padding: '4px 12px', borderRadius: 9999, fontSize: '0.75rem', fontWeight: 500, whiteSpace: 'nowrap' }}>
                         {plan.badge || 'Popular'}
                       </span>
                     )}
                   </div>
-                  <p style={{ margin: '0 0 16px', fontSize: '0.8125rem', color: '#71717a' }}>{plan.description}</p>
+                  <p style={{ margin: '0 0 16px', fontSize: '0.8125rem', color: '#B6AD90' }}>{plan.description}</p>
                   <div style={{ display: 'flex', alignItems: 'baseline', marginBottom: 16 }}>
-                    <span style={{ fontSize: '2.5rem', fontWeight: 600, color: '#fafafa', letterSpacing: '-0.02em' }}>R$</span>
+                    <span style={{ fontSize: '2.5rem', fontWeight: 600, color: '#F2EFE8', letterSpacing: '-0.02em' }}>R$</span>
                     <PriceFlow value={price} />
-                    <span style={{ color: '#71717a', marginLeft: 4, fontSize: '0.875rem' }}>/{isYearly ? 'ano' : 'mês'}</span>
+                    <span style={{ color: '#B6AD90', marginLeft: 4, fontSize: '0.875rem' }}>/{isYearly ? 'ano' : 'mês'}</span>
                   </div>
                 </div>
 
@@ -275,8 +275,8 @@ export default function Pricing({ onNavigate, user, plan }: { onNavigate?: (p: s
                     style={{
                       width: '100%', marginBottom: 24, padding: 16, borderRadius: 12, border: 'none', cursor: 'pointer',
                       fontFamily: 'Inter, sans-serif', fontSize: '1rem', fontWeight: 600, color: '#fff',
-                      background: plan.highlighted ? 'linear-gradient(135deg, #ff5c38, #e0491f)' : 'linear-gradient(135deg, #27272a, #3f3f46)',
-                      boxShadow: plan.highlighted ? '0 8px 24px rgba(255,92,56,0.35)' : 'none',
+                      background: plan.highlighted ? 'linear-gradient(135deg, #936639, #7F4F24)' : 'linear-gradient(135deg, #27272a, #656D4A)',
+                      boxShadow: plan.highlighted ? '0 8px 24px rgba(147,102,57,0.35)' : 'none',
                       transition: 'transform 0.15s, box-shadow 0.15s',
                     }}
                     onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-1px)' }}
@@ -290,24 +290,24 @@ export default function Pricing({ onNavigate, user, plan }: { onNavigate?: (p: s
                   <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 10 }}>
                     {(plan.features || []).map((f: any, fi: number) => (
                       <li key={fi} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                        <span style={{ color: '#ff5c38', display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+                        <span style={{ color: '#936639', display: 'flex', alignItems: 'center', flexShrink: 0 }}>
                           {typeof f.icon === 'string' ? (PLAN_ICONS[f.icon] || PLAN_ICONS.layers) : f.icon}
                         </span>
-                        <span style={{ fontSize: '0.8125rem', color: '#a1a1aa' }}>{f.text}</span>
+                        <span style={{ fontSize: '0.8125rem', color: '#C2C5AA' }}>{f.text}</span>
                       </li>
                     ))}
                   </ul>
 
                   {plan.includes && plan.includes.length > 0 && (
                     <div style={{ paddingTop: 16, borderTop: '1px solid rgba(255,255,255,0.06)', marginTop: 16 }}>
-                      <h4 style={{ margin: '0 0 10px', fontSize: '0.9375rem', fontWeight: 500, color: '#fafafa' }}>{plan.includes[0]}</h4>
+                      <h4 style={{ margin: '0 0 10px', fontSize: '0.9375rem', fontWeight: 500, color: '#F2EFE8' }}>{plan.includes[0]}</h4>
                       <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 8 }}>
                         {plan.includes.slice(1).map((inc: string, ii: number) => (
                           <li key={ii} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                            <span style={{ width: 22, height: 22, background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.3)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color: '#ff5c38' }}>
+                            <span style={{ width: 22, height: 22, background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.3)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color: '#936639' }}>
                               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6L9 17l-5-5" /></svg>
                             </span>
-                            <span style={{ fontSize: '0.8125rem', color: '#a1a1aa' }}>{inc}</span>
+                            <span style={{ fontSize: '0.8125rem', color: '#C2C5AA' }}>{inc}</span>
                           </li>
                         ))}
                       </ul>

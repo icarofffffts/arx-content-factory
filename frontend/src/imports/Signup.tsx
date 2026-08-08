@@ -40,7 +40,7 @@ function PasswordStrength({ password }: { password: string }) {
     return s
   })()
   if (!password) return null
-  const colors = ['#ef4444', '#f97316', '#eab308', '#ff5c38', '#ff5c38']
+  const colors = ['#ef4444', '#f97316', '#eab308', '#936639', '#936639']
   const labels = ['Muito fraca', 'Fraca', 'Média', 'Boa', 'Forte']
   return (
     <div style={{ marginTop: 8 }}>
@@ -49,7 +49,7 @@ function PasswordStrength({ password }: { password: string }) {
           <div key={i} style={{ flex: 1, height: 3, borderRadius: 99, background: i <= score ? colors[score - 1] : 'rgba(255,255,255,0.08)', transition: 'background 0.3s' }} />
         ))}
       </div>
-      <div style={{ fontSize: '0.75rem', color: colors[score - 1] || '#52525b' }}>{labels[score - 1] || ''}</div>
+      <div style={{ fontSize: '0.75rem', color: colors[score - 1] || '#7C786A' }}>{labels[score - 1] || ''}</div>
     </div>
   )
 }
@@ -57,9 +57,9 @@ function PasswordStrength({ password }: { password: string }) {
 function OrbField() {
   return (
     <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', pointerEvents: 'none' }}>
-      <div style={{ position: 'absolute', width: 420, height: 420, borderRadius: '50%', background: 'radial-gradient(circle, rgba(255,92,56,0.18) 0%, transparent 70%)', top: '-80px', right: '-80px', animation: 'orb1 12s ease-in-out infinite' }} />
-      <div style={{ position: 'absolute', width: 320, height: 320, borderRadius: '50%', background: 'radial-gradient(circle, rgba(20,184,166,0.14) 0%, transparent 70%)', bottom: '60px', left: '-60px', animation: 'orb2 15s ease-in-out infinite' }} />
-      <div style={{ position: 'absolute', width: 240, height: 240, borderRadius: '50%', background: 'radial-gradient(circle, rgba(255,92,56,0.1) 0%, transparent 70%)', top: '50%', left: '40%', animation: 'orb3 9s ease-in-out infinite' }} />
+      <div style={{ position: 'absolute', width: 420, height: 420, borderRadius: '50%', background: 'radial-gradient(circle, rgba(147,102,57,0.18) 0%, transparent 70%)', top: '-80px', right: '-80px', animation: 'orb1 12s ease-in-out infinite' }} />
+      <div style={{ position: 'absolute', width: 320, height: 320, borderRadius: '50%', background: 'radial-gradient(circle, rgba(147,102,57,0.14) 0%, transparent 70%)', bottom: '60px', left: '-60px', animation: 'orb2 15s ease-in-out infinite' }} />
+      <div style={{ position: 'absolute', width: 240, height: 240, borderRadius: '50%', background: 'radial-gradient(circle, rgba(147,102,57,0.1) 0%, transparent 70%)', top: '50%', left: '40%', animation: 'orb3 9s ease-in-out infinite' }} />
     </div>
   )
 }
@@ -70,11 +70,11 @@ function PlatformBadge({ logo, name, metric }: { logo: React.ReactNode, name: st
     <div
       onMouseEnter={() => setHov(true)}
       onMouseLeave={() => setHov(false)}
-      style={{ display: 'flex', alignItems: 'center', gap: 10, background: hov ? 'rgba(255,92,56,0.12)' : 'rgba(255,255,255,0.04)', border: `1px solid ${hov ? 'rgba(255,92,56,0.3)' : 'rgba(255,255,255,0.07)'}`, borderRadius: 12, padding: '10px 14px', cursor: 'default', transition: 'all 0.25s' }}>
+      style={{ display: 'flex', alignItems: 'center', gap: 10, background: hov ? 'rgba(147,102,57,0.12)' : 'rgba(255,255,255,0.04)', border: `1px solid ${hov ? 'rgba(147,102,57,0.3)' : 'rgba(255,255,255,0.07)'}`, borderRadius: 12, padding: '10px 14px', cursor: 'default', transition: 'all 0.25s' }}>
       {logo}
       <div>
-        <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#fafafa' }}>{name}</div>
-        <div style={{ fontSize: '0.6875rem', color: '#71717a' }}>{metric}</div>
+        <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#F2EFE8' }}>{name}</div>
+        <div style={{ fontSize: '0.6875rem', color: '#B6AD90' }}>{metric}</div>
       </div>
     </div>
   )
@@ -148,20 +148,20 @@ export default function Signup({ onLogin, onNavigate }: {
   return (
     <div
       ref={containerRef}
-      style={{ minHeight: '100vh', background: '#0a0a0a', display: 'flex', fontFamily: 'Inter, system-ui, sans-serif', overflow: 'hidden', position: 'relative' }}
+      style={{ minHeight: '100vh', background: '#13150F', display: 'flex', fontFamily: 'Inter, system-ui, sans-serif', overflow: 'hidden', position: 'relative' }}
     >
       {/* Mouse-tracking glow */}
-      <div style={{ position: 'fixed', width: 600, height: 600, borderRadius: '50%', background: 'radial-gradient(circle, rgba(255,92,56,0.06) 0%, transparent 70%)', pointerEvents: 'none', zIndex: 0, transform: `translate(${mousePos.x - 300}px, ${mousePos.y - 300}px)`, transition: 'transform 0.4s ease-out' }} />
+      <div style={{ position: 'fixed', width: 600, height: 600, borderRadius: '50%', background: 'radial-gradient(circle, rgba(147,102,57,0.06) 0%, transparent 70%)', pointerEvents: 'none', zIndex: 0, transform: `translate(${mousePos.x - 300}px, ${mousePos.y - 300}px)`, transition: 'transform 0.4s ease-out' }} />
 
       {/* ─── LEFT: Form ──────────────────────────────────────────── */}
       <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px 24px', position: 'relative', zIndex: 1 }}>
-        <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse at 20% 50%, rgba(255,92,56,0.1) 0%, transparent 55%)', pointerEvents: 'none' }} />
+        <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse at 20% 50%, rgba(147,102,57,0.1) 0%, transparent 55%)', pointerEvents: 'none' }} />
 
         {step === 'success' ? (
           <div style={{ textAlign: 'center', animation: 'fadeInUp 0.5s ease forwards' }}>
             <div style={{ width: 72, height: 72, borderRadius: '50%', background: 'rgba(34,197,94,0.15)', border: '2px solid rgba(34,197,94,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px', fontSize: 32 }}>✓</div>
-            <h2 style={{ margin: '0 0 8px', fontSize: '1.5rem', fontWeight: 800, color: '#fafafa' }}>Conta criada!</h2>
-            <p style={{ margin: 0, color: '#71717a', fontSize: '0.9375rem' }}>Entrando no seu painel...</p>
+            <h2 style={{ margin: '0 0 8px', fontSize: '1.5rem', fontWeight: 800, color: '#F2EFE8' }}>Conta criada!</h2>
+            <p style={{ margin: 0, color: '#B6AD90', fontSize: '0.9375rem' }}>Entrando no seu painel...</p>
           </div>
         ) : (
           <div style={{ width: '100%', maxWidth: 400 }}>
@@ -172,7 +172,7 @@ export default function Signup({ onLogin, onNavigate }: {
 
             <div style={{ marginBottom: 32 }}>
               <SplitText text="Crie sua conta" tag="h1" splitType="words" from={{ opacity: 0, y: 24 }} duration={0.8} delay={40} className="signup-title" />
-              <p style={{ margin: 0, fontSize: '0.9375rem', color: '#71717a' }}>Grátis por 14 dias, sem cartão de crédito</p>
+              <p style={{ margin: 0, fontSize: '0.9375rem', color: '#B6AD90' }}>Grátis por 14 dias, sem cartão de crédito</p>
             </div>
 
             <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
@@ -184,36 +184,36 @@ export default function Signup({ onLogin, onNavigate }: {
 
               {/* Name */}
               <div>
-                <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, color: '#a1a1aa', marginBottom: 7 }}>Nome completo</label>
+                <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, color: '#C2C5AA', marginBottom: 7 }}>Nome completo</label>
                 <input
                   type="text" value={name} onChange={e => setName(e.target.value)}
                   placeholder="Seu nome" required
-                  style={{ width: '100%', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, padding: '11px 14px', color: '#fafafa', fontSize: '0.9375rem', fontFamily: 'Inter, sans-serif', outline: 'none', boxSizing: 'border-box', transition: 'border-color 0.15s, box-shadow 0.15s' }}
-                  onFocus={e => { e.target.style.borderColor = '#ff5c38'; e.target.style.boxShadow = '0 0 0 3px rgba(255,92,56,0.12)' }}
+                  style={{ width: '100%', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, padding: '11px 14px', color: '#F2EFE8', fontSize: '0.9375rem', fontFamily: 'Inter, sans-serif', outline: 'none', boxSizing: 'border-box', transition: 'border-color 0.15s, box-shadow 0.15s' }}
+                  onFocus={e => { e.target.style.borderColor = '#936639'; e.target.style.boxShadow = '0 0 0 3px rgba(147,102,57,0.12)' }}
                   onBlur={e => { e.target.style.borderColor = 'rgba(255,255,255,0.1)'; e.target.style.boxShadow = 'none' }}
                 />
               </div>
 
               {/* Email */}
               <div>
-                <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, color: '#a1a1aa', marginBottom: 7 }}>E-mail</label>
+                <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, color: '#C2C5AA', marginBottom: 7 }}>E-mail</label>
                 <input
                   type="email" value={email} onChange={e => setEmail(e.target.value)}
                   placeholder="seu@email.com" required
-                  style={{ width: '100%', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, padding: '11px 14px', color: '#fafafa', fontSize: '0.9375rem', fontFamily: 'Inter, sans-serif', outline: 'none', boxSizing: 'border-box', transition: 'border-color 0.15s, box-shadow 0.15s' }}
-                  onFocus={e => { e.target.style.borderColor = '#ff5c38'; e.target.style.boxShadow = '0 0 0 3px rgba(255,92,56,0.12)' }}
+                  style={{ width: '100%', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, padding: '11px 14px', color: '#F2EFE8', fontSize: '0.9375rem', fontFamily: 'Inter, sans-serif', outline: 'none', boxSizing: 'border-box', transition: 'border-color 0.15s, box-shadow 0.15s' }}
+                  onFocus={e => { e.target.style.borderColor = '#936639'; e.target.style.boxShadow = '0 0 0 3px rgba(147,102,57,0.12)' }}
                   onBlur={e => { e.target.style.borderColor = 'rgba(255,255,255,0.1)'; e.target.style.boxShadow = 'none' }}
                 />
               </div>
 
               {/* Password */}
               <div>
-                <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, color: '#a1a1aa', marginBottom: 7 }}>Senha</label>
+                <label style={{ display: 'block', fontSize: '0.8125rem', fontWeight: 600, color: '#C2C5AA', marginBottom: 7 }}>Senha</label>
                 <input
                   type="password" value={password} onChange={e => setPassword(e.target.value)}
                   placeholder="Mínimo 6 caracteres" required minLength={6}
-                  style={{ width: '100%', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, padding: '11px 14px', color: '#fafafa', fontSize: '0.9375rem', fontFamily: 'Inter, sans-serif', outline: 'none', boxSizing: 'border-box', transition: 'border-color 0.15s, box-shadow 0.15s' }}
-                  onFocus={e => { e.target.style.borderColor = '#ff5c38'; e.target.style.boxShadow = '0 0 0 3px rgba(255,92,56,0.12)' }}
+                  style={{ width: '100%', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, padding: '11px 14px', color: '#F2EFE8', fontSize: '0.9375rem', fontFamily: 'Inter, sans-serif', outline: 'none', boxSizing: 'border-box', transition: 'border-color 0.15s, box-shadow 0.15s' }}
+                  onFocus={e => { e.target.style.borderColor = '#936639'; e.target.style.boxShadow = '0 0 0 3px rgba(147,102,57,0.12)' }}
                   onBlur={e => { e.target.style.borderColor = 'rgba(255,255,255,0.1)'; e.target.style.boxShadow = 'none' }}
                 />
                 <PasswordStrength password={password} />
@@ -223,24 +223,24 @@ export default function Signup({ onLogin, onNavigate }: {
               <label style={{ display: 'flex', alignItems: 'flex-start', gap: 10, cursor: 'pointer', userSelect: 'none' }}>
                 <div
                   onClick={() => setAgreed(a => !a)}
-                  style={{ width: 18, height: 18, borderRadius: 5, border: `2px solid ${agreed ? '#ff5c38' : 'rgba(255,255,255,0.2)'}`, background: agreed ? '#ff5c38' : 'transparent', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s', marginTop: 1 }}
+                  style={{ width: 18, height: 18, borderRadius: 5, border: `2px solid ${agreed ? '#936639' : 'rgba(255,255,255,0.2)'}`, background: agreed ? '#936639' : 'transparent', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s', marginTop: 1 }}
                 >
                   {agreed && <svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4l3 3 5-6" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>}
                 </div>
-                <span style={{ fontSize: '0.8125rem', color: '#71717a', lineHeight: 1.5 }}>
+                <span style={{ fontSize: '0.8125rem', color: '#B6AD90', lineHeight: 1.5 }}>
                   Concordo com os{' '}
-                  <span style={{ color: '#ff8a5c', cursor: 'pointer' }}>Termos de Serviço</span>
+                  <span style={{ color: '#A68A64', cursor: 'pointer' }}>Termos de Serviço</span>
                   {' '}e a{' '}
-                  <span style={{ color: '#ff8a5c', cursor: 'pointer' }}>Política de Privacidade</span>
+                  <span style={{ color: '#A68A64', cursor: 'pointer' }}>Política de Privacidade</span>
                 </span>
               </label>
 
               {/* Submit */}
               <button
                 type="submit" disabled={loading}
-                style={{ width: '100%', padding: '13px', background: loading ? 'rgba(255,92,56,0.5)' : 'linear-gradient(135deg, #ff5c38 0%, #ffb347 100%)', border: 'none', borderRadius: 11, color: '#fff', fontSize: '0.9375rem', fontWeight: 700, fontFamily: 'Inter, sans-serif', cursor: loading ? 'not-allowed' : 'pointer', transition: 'all 0.2s', boxShadow: loading ? 'none' : '0 4px 20px rgba(255,92,56,0.4)', marginTop: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
-                onMouseEnter={e => { if (!loading) { (e.currentTarget as HTMLButtonElement).style.transform = 'translateY(-1px)'; (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 8px 28px rgba(255,92,56,0.55)' } }}
-                onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.transform = 'translateY(0)'; (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 4px 20px rgba(255,92,56,0.4)' }}
+                style={{ width: '100%', padding: '13px', background: loading ? 'rgba(147,102,57,0.5)' : 'linear-gradient(135deg, #936639 0%, #B6AD90 100%)', border: 'none', borderRadius: 11, color: '#fff', fontSize: '0.9375rem', fontWeight: 700, fontFamily: 'Inter, sans-serif', cursor: loading ? 'not-allowed' : 'pointer', transition: 'all 0.2s', boxShadow: loading ? 'none' : '0 4px 20px rgba(147,102,57,0.4)', marginTop: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+                onMouseEnter={e => { if (!loading) { (e.currentTarget as HTMLButtonElement).style.transform = 'translateY(-1px)'; (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 8px 28px rgba(147,102,57,0.55)' } }}
+                onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.transform = 'translateY(0)'; (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 4px 20px rgba(147,102,57,0.4)' }}
               >
                 {loading ? (
                   <>
@@ -250,9 +250,9 @@ export default function Signup({ onLogin, onNavigate }: {
                 ) : 'Criar conta grátis →'}
               </button>
 
-              <p style={{ textAlign: 'center', fontSize: '0.8125rem', color: '#52525b', margin: '4px 0 0' }}>
+              <p style={{ textAlign: 'center', fontSize: '0.8125rem', color: '#7C786A', margin: '4px 0 0' }}>
                 Já tem uma conta?{' '}
-                <button type="button" onClick={() => onNavigate('login')} style={{ background: 'none', border: 'none', color: '#ff8a5c', fontWeight: 600, cursor: 'pointer', fontSize: '0.8125rem', fontFamily: 'Inter, sans-serif', padding: 0 }}>
+                <button type="button" onClick={() => onNavigate('login')} style={{ background: 'none', border: 'none', color: '#A68A64', fontWeight: 600, cursor: 'pointer', fontSize: '0.8125rem', fontFamily: 'Inter, sans-serif', padding: 0 }}>
                   Entrar
                 </button>
               </p>
@@ -268,13 +268,13 @@ export default function Signup({ onLogin, onNavigate }: {
         <div style={{ position: 'relative', zIndex: 1 }}>
           {/* Headline */}
           <div style={{ marginBottom: 36 }}>
-            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'rgba(255,92,56,0.15)', border: '1px solid rgba(255,92,56,0.25)', borderRadius: 20, padding: '5px 12px', fontSize: '0.75rem', fontWeight: 700, color: '#ff8a5c', letterSpacing: '0.04em', marginBottom: 16, textTransform: 'uppercase' }}>
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'rgba(147,102,57,0.15)', border: '1px solid rgba(147,102,57,0.25)', borderRadius: 20, padding: '5px 12px', fontSize: '0.75rem', fontWeight: 700, color: '#A68A64', letterSpacing: '0.04em', marginBottom: 16, textTransform: 'uppercase' }}>
               ✦ Plano gratuito
             </div>
-            <h2 style={{ margin: '0 0 10px', fontSize: '1.625rem', fontWeight: 900, color: '#fafafa', letterSpacing: '-0.03em', lineHeight: 1.2 }}>
+            <h2 style={{ margin: '0 0 10px', fontSize: '1.625rem', fontWeight: 900, color: '#F2EFE8', letterSpacing: '-0.03em', lineHeight: 1.2 }}>
               Tudo que você precisa para crescer nas redes sociais
             </h2>
-            <p style={{ margin: 0, fontSize: '0.9rem', color: '#71717a', lineHeight: 1.6 }}>
+            <p style={{ margin: 0, fontSize: '0.9rem', color: '#B6AD90', lineHeight: 1.6 }}>
               Automatize, analise e publique com inteligência artificial em todas as plataformas.
             </p>
           </div>
@@ -294,17 +294,17 @@ export default function Signup({ onLogin, onNavigate }: {
               { n: 3200000, s: '', label: 'posts publicados' },
             ].map((st, i) => (
               <div key={i} style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 12, padding: '14px 12px', textAlign: 'center' }}>
-                <div style={{ fontSize: '1.25rem', fontWeight: 900, color: '#ff8a5c', letterSpacing: '-0.02em' }}>
+                <div style={{ fontSize: '1.25rem', fontWeight: 900, color: '#A68A64', letterSpacing: '-0.02em' }}>
                   <AnimatedCounter target={st.n} suffix={st.s} />
                 </div>
-                <div style={{ fontSize: '0.6875rem', color: '#52525b', marginTop: 3, fontWeight: 500 }}>{st.label}</div>
+                <div style={{ fontSize: '0.6875rem', color: '#7C786A', marginTop: 3, fontWeight: 500 }}>{st.label}</div>
               </div>
             ))}
           </div>
 
           {/* Platform badges */}
           <div style={{ marginBottom: 28 }}>
-            <div style={{ fontSize: '0.75rem', fontWeight: 600, color: '#52525b', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 12 }}>Conecte suas contas</div>
+            <div style={{ fontSize: '0.75rem', fontWeight: 600, color: '#7C786A', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 12 }}>Conecte suas contas</div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
               <PlatformBadge logo={<LogoLinkedIn />} name="LinkedIn" metric="Carrossel + texto" />
               <PlatformBadge logo={<LogoInstagram />} name="Instagram" metric="Reels + carrossel" />
@@ -316,11 +316,11 @@ export default function Signup({ onLogin, onNavigate }: {
           {/* Trust line */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <div style={{ display: 'flex' }}>
-              {['#f59e0b','#ff5c38','#ff5c38','#ffb347','#ec4899'].map((c, i) => (
-                <div key={i} style={{ width: 24, height: 24, borderRadius: '50%', background: c, border: '2px solid #0a0a0a', marginLeft: i === 0 ? 0 : -8, fontSize: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 700 }}>{String.fromCharCode(65+i)}</div>
+              {['#f59e0b','#936639','#936639','#B6AD90','#A68A64'].map((c, i) => (
+                <div key={i} style={{ width: 24, height: 24, borderRadius: '50%', background: c, border: '2px solid #13150F', marginLeft: i === 0 ? 0 : -8, fontSize: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 700 }}>{String.fromCharCode(65+i)}</div>
               ))}
             </div>
-            <span style={{ fontSize: '0.8rem', color: '#52525b' }}><span style={{ color: '#a1a1aa', fontWeight: 600 }}>+12.400</span> criadores de conteúdo confiam</span>
+            <span style={{ fontSize: '0.8rem', color: '#7C786A' }}><span style={{ color: '#C2C5AA', fontWeight: 600 }}>+12.400</span> criadores de conteúdo confiam</span>
           </div>
         </div>
       </div>
@@ -340,10 +340,10 @@ function FeatureRow({ icon, title, desc, delay }: { icon: string, title: string,
       ref={ref}
       style={{ display: 'flex', alignItems: 'flex-start', gap: 12, opacity: vis ? 1 : 0, transform: vis ? 'translateX(0)' : 'translateX(16px)', transition: 'opacity 0.45s ease, transform 0.45s ease' }}
     >
-      <div style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(255,92,56,0.12)', border: '1px solid rgba(255,92,56,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 17, flexShrink: 0 }}>{icon}</div>
+      <div style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(147,102,57,0.12)', border: '1px solid rgba(147,102,57,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 17, flexShrink: 0 }}>{icon}</div>
       <div>
-        <div style={{ fontSize: '0.875rem', fontWeight: 700, color: '#fafafa', marginBottom: 2 }}>{title}</div>
-        <div style={{ fontSize: '0.8125rem', color: '#71717a', lineHeight: 1.5 }}>{desc}</div>
+        <div style={{ fontSize: '0.875rem', fontWeight: 700, color: '#F2EFE8', marginBottom: 2 }}>{title}</div>
+        <div style={{ fontSize: '0.8125rem', color: '#B6AD90', lineHeight: 1.5 }}>{desc}</div>
       </div>
     </div>
   )

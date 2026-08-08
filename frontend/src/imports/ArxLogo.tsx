@@ -14,7 +14,7 @@ interface ArxLogoProps {
 export default function ArxLogo({
   size = 32,
   showWordmark = true,
-  wordmarkColor = '#fafafa',
+  wordmarkColor = '#F2EFE8',
   glow = false,
 }: ArxLogoProps) {
   const raw = useId()
@@ -36,16 +36,16 @@ export default function ArxLogo({
           flexShrink: 0,
           display: 'block',
           filter: glow
-            ? 'drop-shadow(0 0 6px rgba(255,92,56,0.8)) drop-shadow(0 0 14px rgba(255,92,56,0.4))'
+            ? 'drop-shadow(0 0 6px rgba(147,102,57,0.8)) drop-shadow(0 0 14px rgba(147,102,57,0.4))'
             : 'none',
         }}
       >
         <defs>
           {/* Orange gradient — top-left light to bottom-right deep */}
           <linearGradient id={`ap-g-${uid}`} x1="0" y1="0" x2="108" y2="100" gradientUnits="userSpaceOnUse">
-            <stop offset="0%" stopColor="#ff8a5c" />
-            <stop offset="55%" stopColor="#ff5c38" />
-            <stop offset="100%" stopColor="#e0491f" />
+            <stop offset="0%" stopColor="#A68A64" />
+            <stop offset="55%" stopColor="#936639" />
+            <stop offset="100%" stopColor="#7F4F24" />
           </linearGradient>
         </defs>
 
