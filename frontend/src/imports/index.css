@@ -58,12 +58,12 @@
   50%      { background-position: 100% 50%; }
 }
 @keyframes pulse-glow-nav {
-  0%,100% { box-shadow: 0 0 12px rgba(16,185,129,0.4); }
-  50%     { box-shadow: 0 0 24px rgba(16,185,129,0.7); }
+  0%,100% { box-shadow: 0 0 12px rgba(255,92,56,0.4); }
+  50%     { box-shadow: 0 0 24px rgba(255,92,56,0.7); }
 }
 @keyframes pulse-glow {
-  0%,100% { box-shadow: 0 0 8px rgba(16,185,129,0.3); }
-  50%     { box-shadow: 0 0 20px rgba(16,185,129,0.6); }
+  0%,100% { box-shadow: 0 0 8px rgba(255,92,56,0.3); }
+  50%     { box-shadow: 0 0 20px rgba(255,92,56,0.6); }
 }
 @keyframes spin {
   to { transform: rotate(360deg); }
@@ -88,54 +88,13 @@ html, body {
 
 ::-webkit-scrollbar { width: 4px; height: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: rgba(16,185,129,0.3); border-radius: 9999px; }
-::-webkit-scrollbar-thumb:hover { background: rgba(16,185,129,0.5); }
+::-webkit-scrollbar-thumb { background: rgba(255,92,56,0.3); border-radius: 9999px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(255,92,56,0.5); }
 
 /* ── React Bits overrides ─────────────────────────────────────────────────── */
 
 /* ShinyText: motion controla backgroundPosition via inline; CSS animation briga */
 .shiny-text { animation: none; }
-
-/* StarBorder CTA hero */
-.hero-star { border-radius: 14px; }
-.hero-star .inner-content {
-  background: linear-gradient(135deg, #10b981, #059669);
-  border: none;
-  color: #fff;
-  font-family: 'Inter', system-ui, sans-serif;
-  font-size: 1.0625rem;
-  font-weight: 700;
-  letter-spacing: -0.01em;
-  padding: 16px 36px;
-  border-radius: 14px;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  cursor: pointer;
-  transition: box-shadow 0.2s;
-}
-.hero-star:hover .inner-content { box-shadow: 0 0 32px rgba(16,185,129,0.6); }
-
-/* GradientText heading (features) */
-.gradient-heading { margin: 0 0 12px; cursor: default; backdrop-filter: none; }
-.gradient-heading .text-content { animation: none; }
-
-/* SpotlightCard features grid */
-.feature-spotlight {
-  background: rgba(12,12,12,0.8);
-  border: 1px solid rgba(255,255,255,0.07);
-  border-radius: 20px;
-  padding: 28px;
-  backdrop-filter: blur(14px);
-}
-.feature-spotlight::before { border-radius: 20px; }
-
-/* PixelTransition screenshot strip: largura fixa, sem borda branca padrão */
-.strip-pixel { width: 360px; border: none; border-radius: 16px; background: transparent; }
-
-/* GradientText inline no h2 do pricing */
-.pricing-word { margin: 0; display: inline-block; vertical-align: baseline; cursor: default; backdrop-filter: none; }
-.pricing-word .text-content { animation: none; }
 
 /* SplitText headings (login/signup) */
 .login-title { margin: 0 0 6px; font-size: 1.875rem; font-weight: 900; color: #fafafa; letter-spacing: -0.03em; }

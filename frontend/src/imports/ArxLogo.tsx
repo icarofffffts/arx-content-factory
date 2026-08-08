@@ -8,9 +8,9 @@ interface ArxLogoProps {
 }
 
 // AP monogram — same geometric interlocking language as the Arx Developers "AD" logo.
-// Structure: bold violet "A" triangle on top; white thick diagonal left-leg, white vertical
+// Structure: bold orange "A" triangle on top; white thick diagonal left-leg, white vertical
 // right-leg (doubles as P's stem); white crossbar that notches into the P bowl;
-// violet P-bowl (ring shape via evenodd) sitting flush with the A on the right.
+// orange P-bowl (ring shape via evenodd) sitting flush with the A on the right.
 export default function ArxLogo({
   size = 32,
   showWordmark = true,
@@ -36,27 +36,27 @@ export default function ArxLogo({
           flexShrink: 0,
           display: 'block',
           filter: glow
-            ? 'drop-shadow(0 0 6px rgba(16,185,129,0.8)) drop-shadow(0 0 14px rgba(16,185,129,0.4))'
+            ? 'drop-shadow(0 0 6px rgba(255,92,56,0.8)) drop-shadow(0 0 14px rgba(255,92,56,0.4))'
             : 'none',
         }}
       >
         <defs>
-          {/* Violet gradient — top-left light to bottom-right deep */}
+          {/* Orange gradient — top-left light to bottom-right deep */}
           <linearGradient id={`ap-g-${uid}`} x1="0" y1="0" x2="108" y2="100" gradientUnits="userSpaceOnUse">
-            <stop offset="0%" stopColor="#c4b5fd" />
-            <stop offset="55%" stopColor="#10b981" />
-            <stop offset="100%" stopColor="#5b21b6" />
+            <stop offset="0%" stopColor="#ff8a5c" />
+            <stop offset="55%" stopColor="#ff5c38" />
+            <stop offset="100%" stopColor="#e0491f" />
           </linearGradient>
         </defs>
 
-        {/* ── A triangle (violet fill) ─────────────────────────── */}
+        {/* ── A triangle (orange fill) ─────────────────────────── */}
         {/* Apex at (46, 6); base spans (8, 65) → (88, 65) — same bold proportions as AD mark */}
         <polygon
           points="46,6 8,65 88,65"
           fill={`url(#ap-g-${uid})`}
         />
 
-        {/* ── P bowl (violet ring via evenodd) ─────────────────── */}
+        {/* ── P bowl (orange ring via evenodd) ─────────────────── */}
         {/* Outer arc: x 72→108, y 12→64; Inner arc (hole): x 78→100, y 20→56  */}
         {/* The bowl shares its left edge (x 72-88) with the A's right-base region. */}
         <path
