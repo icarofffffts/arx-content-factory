@@ -9,6 +9,7 @@ import StarBorder from '../components/StarBorder'
 import GradientText from '../components/GradientText'
 import SpotlightCard from '../components/SpotlightCard'
 import PixelTransition from '../components/PixelTransition'
+import Shuffle from '../components/Shuffle'
 
 // ─── Real SVG logos ───────────────────────────────────────────────────────────
 
@@ -760,7 +761,19 @@ export default function Landing({ onNavigate, user, initialPricing }: { onNaviga
       {/* ── SCREENSHOT STRIP ── */}
       <section data-reveal style={{ position: 'relative', zIndex: 1, padding: '0 0 80px', overflow: 'hidden', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
         <div style={{ textAlign: 'center', padding: '64px 24px 32px' }}>
-          <h2 style={{ margin: 0, fontSize: 'clamp(1.5rem,2.5vw,2rem)', fontWeight: 900, letterSpacing: '-0.025em' }}>Interface feita para produtividade</h2>
+          <Shuffle
+            text="Interface feita para produtividade"
+            tag="h2"
+            shuffleDirection="up"
+            duration={0.4}
+            stagger={0.045}
+            shuffleTimes={1}
+            animationMode="evenodd"
+            scrambleCharset="!<>-_\\/[]{}—=+*^?#"
+            colorFrom="#10b981"
+            colorTo="#fafafa"
+            className="strip-heading"
+          />
         </div>
         <div style={{ display: 'flex', gap: 20, animation: 'scrollLeft 28s linear infinite', width: 'max-content', padding: '4px 20px' }}>
           {[
