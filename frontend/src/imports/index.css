@@ -134,3 +134,17 @@ html, body {
   .nav-links { display: none !important; }
   .nav-cta-desktop { display: none !important; }
 }
+
+/* ── Bento showcase ───────────────────────────────────────────────────────── */
+
+.bento-card:hover .bento-lift { transform: translateY(-10px); }
+.bento-card:hover .bento-cta { opacity: 1; transform: translateY(0); }
+.bento-card:hover .bento-overlay { background: rgba(147,102,57,0.15); }
+.bento-card:hover img { opacity: 0.55; }
+.bento-card img:hover { transform: scale(1.05); }
+
+@media (max-width: 768px) {
+  .bento-grid { grid-template-columns: 1fr !important; }
+  .bento-card { grid-column: auto !important; min-height: 220px !important; }
+}
+

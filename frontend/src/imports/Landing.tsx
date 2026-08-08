@@ -670,37 +670,35 @@ export default function Landing({ onNavigate, user, initialPricing }: { onNaviga
       </nav>
 
       {/* ── HERO ── */}
-      <section style={{ position: 'relative', zIndex: 1, padding: '132px 24px 80px', minHeight: '100vh', display: 'flex', alignItems: 'center' }}>
-        <div style={{ maxWidth: 1160, margin: '0 auto', width: '100%', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 64, alignItems: 'center' }}>
-          <div>
-            <div className="gs-badge" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'rgba(147,102,57,0.1)', border: '1px solid rgba(147,102,57,0.22)', borderRadius: 9999, padding: '7px 16px', fontSize: '0.75rem', color: '#A68A64', fontWeight: 600, marginBottom: 28 }}>
-              <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#936639', animation: 'blink 1.5s ease-in-out infinite' }} />
-              <ShinyText text="Publicação no piloto automático" color="#A68A64" shineColor="#ffffff" speed={3} />
-            </div>
-
-            <h1 style={{ margin: '0 0 22px', fontSize: 'clamp(2.5rem,4.5vw,3.75rem)', fontWeight: 900, lineHeight: 1.08, letterSpacing: '-0.035em' }}>
-              <span className="gs-hero-line" style={{ display: 'block' }}>Seu conteúdo</span>
-              <span className="gs-hero-line" style={{ display: 'block' }}>no piloto</span>
-              <span className="gs-hero-line" style={{ display: 'block' }}>
-                <Typewriter words={['automático.', 'inteligente.', 'aprovado.', 'publicado.']} />
-              </span>
-            </h1>
-
-            <p className="gs-hero-sub" style={{ margin: '0 0 36px', fontSize: '1.125rem', color: '#B6AD90', lineHeight: 1.72, maxWidth: 460 }}>
-              O ARX Publish gera posts para <strong style={{ color: '#A68A64' }}>LinkedIn</strong>, <strong style={{ color: '#A68A64' }}>Instagram</strong> e <strong style={{ color: '#A68A64' }}>GitHub</strong> com IA — você aprova pelo WhatsApp em segundos, sem abrir dashboard.
-            </p>
-
-            <div className="gs-hero-cta" style={{ display: 'flex', gap: 14, alignItems: 'center' }}>
-              <MagneticBtn primary large onClick={() => onNavigate('signup')}>Começar Grátis →</MagneticBtn>
-              <MagneticBtn large onClick={() => setShowPricing(true)}>Ver Planos</MagneticBtn>
-            </div>
-
-            <div className="gs-hero-trust" style={{ display: 'flex', gap: 22, marginTop: 28, fontSize: '0.8125rem', color: '#656D4A' }}>
-              {['🚀 Sem cartão', '✅ Cancele quando quiser', '⚡ 5 min de setup'].map(t => <span key={t}>{t}</span>)}
-            </div>
+      <section style={{ position: 'relative', zIndex: 1, padding: '150px 24px 64px', minHeight: '100vh', display: 'flex', alignItems: 'center' }}>
+        <div style={{ maxWidth: 1000, margin: '0 auto', width: '100%', textAlign: 'center' }}>
+          <div className="gs-badge" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'rgba(147,102,57,0.1)', border: '1px solid rgba(147,102,57,0.22)', borderRadius: 9999, padding: '7px 16px', fontSize: '0.75rem', color: '#A68A64', fontWeight: 600, marginBottom: 30 }}>
+            <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#936639', animation: 'blink 1.5s ease-in-out infinite' }} />
+            <ShinyText text="Publicação no piloto automático" color="#A68A64" shineColor="#ffffff" speed={3} />
           </div>
 
-          <div data-parallax style={{ display: 'flex', justifyContent: 'center' }}>
+          <h1 style={{ margin: '0 auto 24px', maxWidth: 880, fontSize: 'clamp(2.75rem,6vw,5rem)', fontWeight: 900, lineHeight: 1.05, letterSpacing: '-0.04em' }}>
+            <span className="gs-hero-line" style={{ display: 'block' }}>Seu conteúdo</span>
+            <span className="gs-hero-line" style={{ display: 'block' }}>no piloto</span>
+            <span className="gs-hero-line" style={{ display: 'block' }}>
+              <Typewriter words={['automático.', 'inteligente.', 'aprovado.', 'publicado.']} />
+            </span>
+          </h1>
+
+          <p className="gs-hero-sub" style={{ margin: '0 auto 40px', fontSize: '1.125rem', color: '#B6AD90', lineHeight: 1.72, maxWidth: 600 }}>
+            O ARX Publish gera posts para <strong style={{ color: '#A68A64' }}>LinkedIn</strong>, <strong style={{ color: '#A68A64' }}>Instagram</strong> e <strong style={{ color: '#A68A64' }}>GitHub</strong> com IA — você aprova pelo WhatsApp em segundos, sem abrir dashboard.
+          </p>
+
+          <div className="gs-hero-cta" style={{ display: 'flex', gap: 14, alignItems: 'center', justifyContent: 'center' }}>
+            <MagneticBtn primary large onClick={() => onNavigate('signup')}>Começar Grátis →</MagneticBtn>
+            <MagneticBtn large onClick={() => setShowPricing(true)}>Ver Planos</MagneticBtn>
+          </div>
+
+          <div className="gs-hero-trust" style={{ display: 'flex', gap: 22, marginTop: 28, justifyContent: 'center', fontSize: '0.8125rem', color: '#656D4A' }}>
+            {['🚀 Sem cartão', '✅ Cancele quando quiser', '⚡ 5 min de setup'].map(t => <span key={t}>{t}</span>)}
+          </div>
+
+          <div data-parallax style={{ display: 'flex', justifyContent: 'center', marginTop: 76 }}>
             <div className="gs-hero-mock">
               <div className="gs-hero-mock-inner">
                 <LiveMockup />
@@ -789,9 +787,9 @@ export default function Landing({ onNavigate, user, initialPricing }: { onNaviga
         </div>
       </section>
 
-      {/* ── SCREENSHOT STRIP ── */}
-      <section id="interface" data-reveal style={{ position: 'relative', zIndex: 1, padding: '0 0 80px', overflow: 'hidden', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-        <div style={{ textAlign: 'center', padding: '64px 24px 32px' }}>
+      {/* ── SHOWCASE BENTO ── */}
+      <section id="interface" data-reveal style={{ position: 'relative', zIndex: 1, padding: '0 24px 80px', overflow: 'hidden', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+        <div style={{ textAlign: 'center', padding: '64px 24px 44px' }}>
           <Shuffle
             text="Interface feita para produtividade"
             tag="h2"
@@ -806,23 +804,29 @@ export default function Landing({ onNavigate, user, initialPricing }: { onNaviga
             className="strip-heading"
           />
         </div>
-        <div style={{ display: 'flex', gap: 20, animation: 'scrollLeft 28s linear infinite', width: 'max-content', padding: '4px 20px' }}>
+        <div className="bento-grid" style={{ maxWidth: 1160, margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 14 }}>
           {[
-            { url: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=420&h=268&fit=crop&auto=format', label: 'Análises' },
-            { url: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=420&h=268&fit=crop&auto=format', label: 'Calendário' },
-            { url: 'https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=420&h=268&fit=crop&auto=format', label: 'Performance' },
-            { url: 'https://images.unsplash.com/photo-1556761175-4b46a572b786?w=420&h=268&fit=crop&auto=format', label: 'Modelos' },
-            { url: 'https://images.unsplash.com/photo-1553877522-43269d4ea984?w=420&h=268&fit=crop&auto=format', label: 'Geração com IA' },
-            { url: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=420&h=268&fit=crop&auto=format', label: 'Análises' },
-            { url: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=420&h=268&fit=crop&auto=format', label: 'Calendário' },
-            { url: 'https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=420&h=268&fit=crop&auto=format', label: 'Performance' },
-          ].map((img, i) => (
-            <div key={i} style={{ flexShrink: 0, width: 360, borderRadius: 16, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.08)', position: 'relative', transition: 'transform 0.3s, border-color 0.3s' }} onMouseEnter={e => { const d = e.currentTarget as HTMLDivElement; d.style.transform = 'scale(1.03)'; d.style.borderColor = 'rgba(147,102,57,0.35)' }} onMouseLeave={e => { const d = e.currentTarget as HTMLDivElement; d.style.transform = 'none'; d.style.borderColor = 'rgba(255,255,255,0.08)' }}>
-              <img src={img.url} alt={img.label} style={{ width: '100%', height: 230, objectFit: 'cover', display: 'block', filter: 'brightness(0.65) saturate(0.8)' }} />
-              <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, transparent 50%, rgba(0,0,0,0.75))' }} />
-              <div style={{ position: 'absolute', bottom: 14, left: 16, fontSize: '0.8125rem', fontWeight: 700, color: '#F2EFE8' }}>{img.label}</div>
-              <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 28, display: 'flex', alignItems: 'center', padding: '0 10px', gap: 5, background: 'rgba(0,0,0,0.4)' }}>
-                {['#ef4444','#f59e0b','#22c55e'].map((c, j) => <div key={j} style={{ width: 8, height: 8, borderRadius: '50%', background: c, opacity: 0.7 }} />)}
+            { url: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=800&h=600&fit=crop&auto=format', label: 'Análises', desc: 'Métricas de cada post em tempo real, sem planilha.', badge: 'Analytics', col: 'span 2', icon: '📊' },
+            { url: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=600&h=600&fit=crop&auto=format', label: 'Calendário', desc: 'Agendamento inteligente no melhor horário.', badge: 'Schedule', col: 'span 1', icon: '🗓️' },
+            { url: 'https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=600&h=600&fit=crop&auto=format', label: 'Performance', desc: 'Saiba o que engajou e dobre.', badge: 'Insights', col: 'span 1', icon: '📈' },
+            { url: 'https://images.unsplash.com/photo-1553877522-43269d4ea984?w=800&h=600&fit=crop&auto=format', label: 'Geração com IA', desc: 'Posts, carrosséis e legendas escritos para o seu nicho.', badge: 'IA', col: 'span 2', icon: '✨' },
+            { url: 'https://images.unsplash.com/photo-1556761175-4b46a572b786?w=600&h=600&fit=crop&auto=format', label: 'Modelos', desc: 'Templates prontos para cada plataforma.', badge: 'Templates', col: 'span 1', icon: '🧩' },
+            { url: 'https://images.unsplash.com/photo-1488590528505-98d2b5aba04b?w=800&h=600&fit=crop&auto=format', label: 'Templates Premium', desc: 'Estruturas validadas que convertem seguidores em clientes.', badge: 'Design', col: 'span 2', icon: '🎨' },
+          ].map((c, i) => (
+            <div key={i} className="bento-card" style={{ gridColumn: c.col, position: 'relative', overflow: 'hidden', borderRadius: 16, border: '1px solid rgba(255,255,255,0.08)', background: '#151812', minHeight: 260, display: 'flex', alignItems: 'flex-end' }}>
+              <img src={c.url} alt={c.label} loading="lazy" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: 0.4, transition: 'opacity 0.4s, transform 0.6s' }} />
+              <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(19,21,15,0.96) 0%, rgba(19,21,15,0.4) 55%, rgba(19,21,15,0.2) 100%)' }} />
+              <div className="bento-overlay" style={{ position: 'absolute', inset: 0, background: 'rgba(147,102,57,0)', transition: 'background 0.3s' }} />
+              <div className="bento-lift" style={{ position: 'relative', zIndex: 2, padding: 22, transition: 'transform 0.35s' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                  <span style={{ fontSize: 20 }}>{c.icon}</span>
+                  <span style={{ fontSize: '0.625rem', fontWeight: 700, color: '#A68A64', textTransform: 'uppercase', letterSpacing: '0.1em', background: 'rgba(147,102,57,0.15)', border: '1px solid rgba(147,102,57,0.3)', borderRadius: 9999, padding: '3px 10px' }}>{c.badge}</span>
+                </div>
+                <h3 style={{ margin: '0 0 6px', fontSize: '1.0625rem', fontWeight: 700, color: '#F2EFE8' }}>{c.label}</h3>
+                <p style={{ margin: 0, fontSize: '0.8125rem', color: '#B6AD90', lineHeight: 1.6, maxWidth: 420 }}>{c.desc}</p>
+                <div className="bento-cta" style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 14, color: '#A68A64', fontSize: '0.8125rem', fontWeight: 600, opacity: 0, transform: 'translateY(10px)', transition: 'opacity 0.3s, transform 0.3s' }}>
+                  Ver no produto <span aria-hidden>→</span>
+                </div>
               </div>
             </div>
           ))}
