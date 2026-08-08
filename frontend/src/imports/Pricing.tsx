@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { api } from '../lib/api'
 import { motion } from 'motion/react'
 import NumberFlow, { styles as numberFlowStyles } from 'number-flow'
+import GradientText from '../components/GradientText'
 
 // Registra o custom element <number-flow> e injeta os estilos uma única vez
 if (typeof window !== 'undefined') {
@@ -220,9 +221,7 @@ export default function Pricing({ onNavigate, user, plan }: { onNavigate?: (p: s
       <div style={{ textAlign: 'center', marginBottom: 24, maxWidth: 768, margin: '0 auto 24px', position: 'relative', zIndex: 1 }}>
         <h2 style={{ margin: '0 0 16px', fontSize: 'clamp(2rem, 4vw, 3.5rem)', fontWeight: 600, color: '#fafafa', letterSpacing: '-0.02em' }}>
           Planos que funcionam para o seu{' '}
-          <span style={{ border: '1px dashed rgba(16,185,129,0.6)', padding: '2px 10px', borderRadius: 12, background: 'rgba(16,185,129,0.1)', color: '#34d399', display: 'inline-block' }}>
-            negócio
-          </span>
+          <GradientText className="pricing-word" colors={['#34d399', '#10b981', '#14b8a6', '#a7f3d0']} animationSpeed={8}>negócio</GradientText>
         </h2>
         <p style={{ margin: '0 auto', fontSize: '1rem', color: '#71717a', maxWidth: '70%' }}>
           Confiado por criadores e agências. Explore qual opção é ideal para você.

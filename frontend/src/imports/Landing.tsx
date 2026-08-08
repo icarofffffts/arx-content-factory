@@ -3,6 +3,12 @@ import Pricing from './Pricing'
 import ArxLogo from './ArxLogo'
 import { api } from '../lib/api'
 import { useGsapLanding } from './GsapLanding'
+import ClickSpark from '../components/ClickSpark'
+import ShinyText from '../components/ShinyText'
+import StarBorder from '../components/StarBorder'
+import GradientText from '../components/GradientText'
+import SpotlightCard from '../components/SpotlightCard'
+import PixelTransition from '../components/PixelTransition'
 
 // ─── Real SVG logos ───────────────────────────────────────────────────────────
 
@@ -605,6 +611,7 @@ export default function Landing({ onNavigate, user, initialPricing }: { onNaviga
 
   return (
     <div ref={rootRef} style={{ minHeight: '100vh', backgroundColor: '#0a0a0a', color: '#fafafa', fontFamily: 'Inter, system-ui, sans-serif', overflowX: 'hidden' }}>
+      <ClickSpark sparkColor="#34d399" sparkSize={12} sparkRadius={18} sparkCount={9}>
       <AuroraBackground />
       <ParticleField />
       <ScrollBar />
@@ -636,7 +643,7 @@ export default function Landing({ onNavigate, user, initialPricing }: { onNaviga
           <div>
             <div className="gs-badge" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.22)', borderRadius: 9999, padding: '7px 16px', fontSize: '0.75rem', color: '#34d399', fontWeight: 600, marginBottom: 28 }}>
               <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#22c55e', animation: 'blink 1.5s ease-in-out infinite' }} />
-              840+ criadores automatizando conteúdo agora
+              <ShinyText text="840+ criadores automatizando conteúdo agora" color="#34d399" shineColor="#ffffff" speed={3} />
             </div>
 
             <h1 style={{ margin: '0 0 22px', fontSize: 'clamp(2.5rem,4.5vw,3.75rem)', fontWeight: 900, lineHeight: 1.08, letterSpacing: '-0.035em' }}>
@@ -651,8 +658,10 @@ export default function Landing({ onNavigate, user, initialPricing }: { onNaviga
               IA gera posts para <strong style={{ color: '#c4b5fd' }}>LinkedIn</strong>, <strong style={{ color: '#c4b5fd' }}>Instagram</strong> e <strong style={{ color: '#c4b5fd' }}>GitHub</strong>. Você aprova pelo WhatsApp em segundos. Zero esforço manual.
             </p>
 
-            <div className="gs-hero-cta" style={{ display: 'flex', gap: 14 }}>
-              <MagneticBtn primary large onClick={() => onNavigate('signup')}>Começar Grátis →</MagneticBtn>
+            <div className="gs-hero-cta" style={{ display: 'flex', gap: 14, alignItems: 'center' }}>
+              <StarBorder as="button" color="#34d399" speed="5s" thickness={1.5} className="hero-star" onClick={() => onNavigate('signup')}>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>Começar Grátis <span aria-hidden>→</span></span>
+              </StarBorder>
               <MagneticBtn large onClick={() => setShowPricing(true)}>Ver Planos</MagneticBtn>
             </div>
 
@@ -733,16 +742,16 @@ export default function Landing({ onNavigate, user, initialPricing }: { onNaviga
         <div style={{ maxWidth: 1160, margin: '0 auto' }}>
           <div style={{ textAlign: 'center', marginBottom: 56 }}>
             <span style={{ fontSize: '0.6875rem', fontWeight: 700, color: '#10b981', textTransform: 'uppercase', letterSpacing: '0.1em', display: 'block', marginBottom: 14 }}>Recursos</span>
-            <h2 className="split-lines" style={{ margin: '0 0 12px', fontSize: 'clamp(1.75rem,3vw,2.5rem)', fontWeight: 900, letterSpacing: '-0.03em' }}>Construído para escala</h2>
+            <GradientText className="gradient-heading" colors={['#34d399', '#10b981', '#14b8a6', '#a7f3d0']} animationSpeed={8}>Construído para escala</GradientText>
             <p style={{ margin: 0, color: '#71717a', fontSize: '1rem' }}>Tudo que você precisa para publicar em volume sem perder qualidade</p>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 14 }}>
             {FEATURES.map((f, i) => (
-              <TiltCard key={i} accent={f.accent} style={{ padding: 28 }}>
+              <SpotlightCard key={i} className="feature-spotlight" spotlightColor="rgba(16, 185, 129, 0.15)">
                 <div style={{ width: 48, height: 48, borderRadius: 14, background: `${f.accent}15`, border: `1px solid ${f.accent}28`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, marginBottom: 16 }}>{f.icon}</div>
                 <h3 style={{ margin: '0 0 10px', fontSize: '0.9375rem', fontWeight: 700, color: '#fafafa' }}>{f.title}</h3>
                 <p style={{ margin: 0, fontSize: '0.8125rem', color: '#71717a', lineHeight: 1.65 }}>{f.desc}</p>
-              </TiltCard>
+              </SpotlightCard>
             ))}
           </div>
         </div>
@@ -764,11 +773,28 @@ export default function Landing({ onNavigate, user, initialPricing }: { onNaviga
             { url: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=420&h=268&fit=crop&auto=format', label: 'Calendário' },
             { url: 'https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=420&h=268&fit=crop&auto=format', label: 'Performance' },
           ].map((img, i) => (
-            <div key={i} style={{ flexShrink: 0, width: 360, borderRadius: 16, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.08)', position: 'relative', transition: 'transform 0.3s, border-color 0.3s' }} onMouseEnter={e => { const d = e.currentTarget as HTMLDivElement; d.style.transform = 'scale(1.03)'; d.style.borderColor = 'rgba(16,185,129,0.35)' }} onMouseLeave={e => { const d = e.currentTarget as HTMLDivElement; d.style.transform = 'none'; d.style.borderColor = 'rgba(255,255,255,0.08)' }}>
-              <img src={img.url} alt={img.label} style={{ width: '100%', height: 230, objectFit: 'cover', display: 'block', filter: 'brightness(0.65) saturate(0.8)' }} />
-              <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, transparent 50%, rgba(0,0,0,0.75))' }} />
-              <div style={{ position: 'absolute', bottom: 14, left: 16, fontSize: '0.8125rem', fontWeight: 700, color: '#fafafa' }}>{img.label}</div>
-              <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 28, display: 'flex', alignItems: 'center', padding: '0 10px', gap: 5, background: 'rgba(0,0,0,0.4)' }}>
+            <div key={i} style={{ flexShrink: 0, width: 360, borderRadius: 16, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.08)', position: 'relative' }}>
+              <PixelTransition
+                className="strip-pixel"
+                aspectRatio="230px"
+                pixelColor="rgba(16,185,129,0.9)"
+                gridSize={7}
+                firstContent={
+                  <>
+                    <img src={img.url} alt={img.label} style={{ width: '100%', height: 230, objectFit: 'cover', display: 'block', filter: 'brightness(0.65) saturate(0.8)' }} />
+                    <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, transparent 50%, rgba(0,0,0,0.75))' }} />
+                    <div style={{ position: 'absolute', bottom: 14, left: 16, fontSize: '0.8125rem', fontWeight: 700, color: '#fafafa' }}>{img.label}</div>
+                  </>
+                }
+                secondContent={
+                  <>
+                    <img src={img.url} alt={img.label} style={{ width: '100%', height: 230, objectFit: 'cover', display: 'block' }} />
+                    <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, transparent 30%, rgba(0,0,0,0.85))' }} />
+                    <div style={{ position: 'absolute', bottom: 14, left: 16, fontSize: '0.8125rem', fontWeight: 700, color: '#34d399' }}>{img.label}</div>
+                  </>
+                }
+              />
+              <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 28, display: 'flex', alignItems: 'center', padding: '0 10px', gap: 5, background: 'rgba(0,0,0,0.4)', zIndex: 4, pointerEvents: 'none' }}>
                 {['#ef4444','#f59e0b','#22c55e'].map((c, j) => <div key={j} style={{ width: 8, height: 8, borderRadius: '50%', background: c, opacity: 0.7 }} />)}
               </div>
             </div>
@@ -887,10 +913,11 @@ export default function Landing({ onNavigate, user, initialPricing }: { onNaviga
 
           <div style={{ marginTop: 36, paddingTop: 20, borderTop: '1px solid rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
             <span style={{ fontSize: '0.75rem', color: '#3f3f46' }}>© 2026 Arx Content Factory. Todos os direitos reservados.</span>
-            <span style={{ fontSize: '0.75rem', color: '#3f3f46' }}>Feito com 💜 no Brasil</span>
+            <span style={{ fontSize: '0.75rem', color: '#3f3f46' }}>Feito com 💚 no Brasil</span>
           </div>
         </div>
       </footer>
+      </ClickSpark>
     </div>
   )
 }

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { api } from '../lib/api'
 import ArxLogo from './ArxLogo'
+import SplitText from '../components/SplitText'
 
 // Real platform SVG logos
 const LogoLinkedIn = () => (
@@ -58,7 +59,7 @@ export default function Login({ onLogin, onNavigate }: {
             <ArxLogo size={36} glow />
           </button>
 
-          <h1 style={{ margin: '0 0 6px', fontSize: '1.875rem', fontWeight: 900, color: '#fafafa', letterSpacing: '-0.03em' }}>Bem-vindo de volta</h1>
+          <SplitText text="Bem-vindo de volta" tag="h1" splitType="words" from={{ opacity: 0, y: 24 }} duration={0.8} delay={40} className="login-title" />
           <p style={{ margin: '0 0 36px', fontSize: '0.9375rem', color: '#71717a' }}>Acesse seu painel de automação</p>
 
           <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>

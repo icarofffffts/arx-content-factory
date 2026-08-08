@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { api } from '../lib/api'
 import ArxLogo from './ArxLogo'
+import SplitText from '../components/SplitText'
 
 const LogoLinkedIn = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="#0a66c2"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
@@ -57,8 +58,8 @@ function OrbField() {
   return (
     <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', pointerEvents: 'none' }}>
       <div style={{ position: 'absolute', width: 420, height: 420, borderRadius: '50%', background: 'radial-gradient(circle, rgba(16,185,129,0.18) 0%, transparent 70%)', top: '-80px', right: '-80px', animation: 'orb1 12s ease-in-out infinite' }} />
-      <div style={{ position: 'absolute', width: 320, height: 320, borderRadius: '50%', background: 'radial-gradient(circle, rgba(99,102,241,0.14) 0%, transparent 70%)', bottom: '60px', left: '-60px', animation: 'orb2 15s ease-in-out infinite' }} />
-      <div style={{ position: 'absolute', width: 240, height: 240, borderRadius: '50%', background: 'radial-gradient(circle, rgba(167,139,250,0.1) 0%, transparent 70%)', top: '50%', left: '40%', animation: 'orb3 9s ease-in-out infinite' }} />
+      <div style={{ position: 'absolute', width: 320, height: 320, borderRadius: '50%', background: 'radial-gradient(circle, rgba(20,184,166,0.14) 0%, transparent 70%)', bottom: '60px', left: '-60px', animation: 'orb2 15s ease-in-out infinite' }} />
+      <div style={{ position: 'absolute', width: 240, height: 240, borderRadius: '50%', background: 'radial-gradient(circle, rgba(16,185,129,0.1) 0%, transparent 70%)', top: '50%', left: '40%', animation: 'orb3 9s ease-in-out infinite' }} />
     </div>
   )
 }
@@ -170,7 +171,7 @@ export default function Signup({ onLogin, onNavigate }: {
             </button>
 
             <div style={{ marginBottom: 32 }}>
-              <h1 style={{ margin: '0 0 6px', fontSize: '2rem', fontWeight: 900, color: '#fafafa', letterSpacing: '-0.035em', lineHeight: 1.1 }}>Crie sua conta</h1>
+              <SplitText text="Crie sua conta" tag="h1" splitType="words" from={{ opacity: 0, y: 24 }} duration={0.8} delay={40} className="signup-title" />
               <p style={{ margin: 0, fontSize: '0.9375rem', color: '#71717a' }}>Grátis por 14 dias, sem cartão de crédito</p>
             </div>
 
